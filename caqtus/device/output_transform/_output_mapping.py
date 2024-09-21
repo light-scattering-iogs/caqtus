@@ -20,6 +20,7 @@ from caqtus.types.units import (
     UnitLike,
     DimensionalityError,
     InvalidDimensionalityError,
+    UndefinedUnitError,
 )
 from caqtus.types.variable_name import DottedVariableName
 from ._converter import converter, structure_evaluable_output
@@ -79,7 +80,7 @@ class LinearInterpolation(Transformation):
         try:
             return interpolator(input_value)
         except DimensionalityError as e:
-            raise InvalidDimensionalityError(f"Invalid dimensionality") from e
+            raise InvalidDimensionalityError("Invalid dimensionality") from e
 
 
 # Workaround for https://github.com/python-attrs/cattrs/issues/430
@@ -100,12 +101,12 @@ def to_base_units(
         return values, None
     try:
         unit = Unit(required_unit)
-    except NotDefinedUnitError:
-        raise NotDefinedUnitError(f"Undefined {fmt.unit(required_unit)}.")
+    except UndefinedUnitError:
+        raise NotDefinedUnitError(f"Undefined {fmt.unit(required_unit)}.") from None
     base_unit = Quantity(1, unit).to_base_units().units
     return [
         Quantity(value, unit).to(base_unit).magnitude for value in values
-    ], base_unit
+    ], base_unit  # pyright: ignore[reportReturnType]
 
 
 class Interpolator:
@@ -125,10 +126,10 @@ class Interpolator:
 
     def __call__(self, input_value: AnalogValue) -> AnalogValue:
 
-        input_value = magnitude_in_unit(input_value, self.input_unit)
+        input_magnitudes = magnitude_in_unit(input_value, self.input_unit)
 
         output_magnitude = np.interp(
-            x=input_value,
+            x=input_magnitudes,
             xp=self.input_points,
             fp=self.output_points,
             left=self.output_points[0],
