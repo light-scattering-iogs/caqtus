@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import Any, Optional, TypeGuard, overload, TypeVar, TypeAlias
+from typing import Any, Optional, TypeGuard, overload, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -42,27 +42,20 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
     return None
 
 
-_R = TypeVar("_R", bound=Real)
-
-
-@overload
-def magnitude_in_unit(value: _R, unit: None) -> _R: ...
-
-
-@overload
-def magnitude_in_unit(value: _R, unit: UnitLike) -> _R: ...
-
-
 @overload
 def magnitude_in_unit(
-    value: NDArray[np.floating], unit: None
-) -> NDArray[np.floating]: ...
-
-
-@overload
-def magnitude_in_unit(
-    value: Quantity, unit: UnitLike
+    value: Quantity, unit: Optional[UnitLike]
 ) -> Real | NDArray[np.floating]: ...
+
+
+@overload
+def magnitude_in_unit[R: Real](value: R, unit: Optional[UnitLike]) -> R: ...
+
+
+@overload
+def magnitude_in_unit[
+    A: NDArray[np.floating]
+](value: A, unit: Optional[UnitLike]) -> A: ...
 
 
 def magnitude_in_unit(value, unit):
