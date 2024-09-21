@@ -22,8 +22,11 @@ class Quantity[M: pint._typing.Magnitude](
     pint.facets.nonmultiplicative.objects.NonMultiplicativeQuantity[M],
     pint.facets.plain.PlainQuantity[M],
 ):
+
     @overload
-    def __new__(cls, value: M, units: UnitLike | None = None) -> Quantity[M]: ...
+    def __new__(
+        cls, value: int | float, units: UnitLike | None = None
+    ) -> Quantity[float]: ...
 
     @overload
     def __new__(cls, value: str, units: UnitLike | None = None) -> Self: ...
@@ -37,6 +40,12 @@ class Quantity[M: pint._typing.Magnitude](
     def __new__(cls, value: Self, units: UnitLike | None = None) -> Self: ...
 
     def __new__(cls, value, units=None):
+        if isinstance(value, int):
+            return super().__new__(  # pyright: ignore[reportCallIssue]
+                cls,
+                float(value),  # pyright: ignore[reportArgumentType]
+                units,
+            )
         return super().__new__(cls, value, units)
 
     @property
