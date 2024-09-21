@@ -54,6 +54,11 @@ class Quantity[M: pint._typing.Magnitude](
         assert isinstance(u, Unit)
         return u
 
+    def to_base_units(self) -> Quantity[M]:
+        result = super().to_base_units()
+        assert isinstance(result, Quantity)
+        return result
+
 
 class Unit(
     pint.facets.SystemRegistry.Unit,
