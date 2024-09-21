@@ -7,7 +7,7 @@ from typing_extensions import TypeIs
 from ..recoverable_exceptions import InvalidTypeError
 from ..units import Quantity, Unit, dimensionless, UnitLike
 
-ScalarAnalogValue: TypeAlias = float | int | Quantity[float | int]
+ScalarAnalogValue: TypeAlias = float | Quantity[float]
 ArrayAnalogValue: TypeAlias = NDArray[np.floating] | Quantity[NDArray[np.floating]]
 AnalogValue: TypeAlias = ScalarAnalogValue | ArrayAnalogValue
 
@@ -23,11 +23,11 @@ class NotQuantityError(InvalidTypeError):
 def is_scalar_analog_value(value: Any) -> TypeIs[ScalarAnalogValue]:
     """Returns True if the value is a scalar analog value, False otherwise."""
 
-    if isinstance(value, (float, int)):
+    if isinstance(value, float):
         return True
 
     if isinstance(value, Quantity):
-        return isinstance(value.magnitude, (float, int))
+        return isinstance(value.magnitude, float)
 
     return False
 
