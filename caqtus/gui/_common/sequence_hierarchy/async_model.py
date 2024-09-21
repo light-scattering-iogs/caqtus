@@ -281,10 +281,18 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert session.paths.does_path_exists(path)
         item = QStandardItem()
         item.setData(path.name, Qt.ItemDataRole.DisplayRole)
-        is_sequence = session.sequences.is_sequence(path).unwrap()
-        creation_date = session.paths.get_path_creation_date(path).unwrap()
+        is_sequence_result = session.sequences.is_sequence(path)
+        assert not is_failure_type(is_sequence_result, PathNotFoundError)
+        is_sequence = is_sequence_result.value
+        creation_date_result = session.paths.get_path_creation_date(path)
+        assert not is_failure_type(creation_date_result, PathNotFoundError)
+        assert not is_failure_type(creation_date_result, PathIsRootError)
+        creation_date = creation_date_result.value
         if is_sequence:
-            stats = session.sequences.get_stats(path).unwrap()
+            stats_result = session.sequences.get_stats(path)
+            assert not is_failure_type(stats_result, PathNotFoundError)
+            assert not is_failure_type(stats_result, PathIsNotSequenceError)
+            stats = stats_result.value
             item.setData(
                 SequenceNode(
                     path=path,
@@ -310,10 +318,18 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert await session.paths.does_path_exists(path)
         item = QStandardItem()
         item.setData(path.name, Qt.ItemDataRole.DisplayRole)
-        is_sequence = (await session.sequences.is_sequence(path)).unwrap()
-        creation_date = (await session.paths.get_path_creation_date(path)).unwrap()
+        is_sequence_result = await session.sequences.is_sequence(path)
+        assert not is_failure_type(is_sequence_result, PathNotFoundError)
+        is_sequence = is_sequence_result.value
+        creation_date_result = await session.paths.get_path_creation_date(path)
+        assert not is_failure_type(creation_date_result, PathNotFoundError)
+        assert not is_failure_type(creation_date_result, PathIsRootError)
+        creation_date = creation_date_result.value
         if is_sequence:
-            stats = (await session.sequences.get_stats(path)).unwrap()
+            stats_result = await session.sequences.get_stats(path)
+            assert not is_failure_type(stats_result, PathNotFoundError)
+            assert not is_failure_type(stats_result, PathIsNotSequenceError)
+            stats = stats_result.value
             item.setData(
                 SequenceNode(
                     path=path,
