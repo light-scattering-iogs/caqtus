@@ -46,10 +46,11 @@ def test_4():
     assert s == d
 
 
-def test_5():
+def test_lane_values():
     lane_output = LaneValues("lane", default=None)
 
     u = converter.unstructure(lane_output, ChannelOutput)
+    assert u == {"lane": "lane", "type": "LaneValues", "default": None}
     s = converter.structure(u, ChannelOutput)
     assert lane_output == s
 

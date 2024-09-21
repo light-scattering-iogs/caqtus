@@ -1,12 +1,10 @@
 import decimal
-from typing import Optional
 
 import cattrs.strategies
 from cattrs.gen import make_dict_structure_fn, override
 
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
-from .timing import TimeStep
 from .channel_commands import (
     CalibratedAnalogMapping,
     ChannelOutput,
@@ -15,6 +13,7 @@ from .channel_commands import (
     DeviceTrigger,
 )
 from .channel_commands.timing import Advance, Delay, BroadenLeft
+from .timing import TimeStep
 from .trigger import TriggerEdge, Trigger
 
 converter = serialization.copy_converter()
@@ -39,13 +38,13 @@ converter.register_unstructure_hook(TriggerEdge, lambda edge: edge.value)
 cattrs.strategies.configure_tagged_union(Trigger, converter, tag_name="trigger type")
 
 
+# This is a legacy workaround for structuring ChannelOutput subclasses.
+# This is because at the beginning of the project, the type field was not serialized
+# but instead the type was inferred from the structure of the data.
+# For new data, we can use the type field to determine the type of the
+# ChannelOutput subclass, but for old data, we need to infer the type from the
+# fields present in the data.
 def structure_channel_output(data, _):
-    # This is a legacy workaround for structuring ChannelOutput subclasses.
-    # This is because at the beginning of the project, the type field was not serialized
-    # but instead the type was inferred from the structure of the data.
-    # For new data, we can use the type field to determine the type of the
-    # ChannelOutput subclass, but for old data, we need to infer the type from the
-    # fields present in the data.
     if "type" in data:
         return converter.structure(data, ChannelOutput)
     elif "lane" in data:
@@ -56,7 +55,6 @@ def structure_channel_output(data, _):
         raise ValueError(f"Cannot structure {data} as a ChannelOutput")
 
 
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
 structure_hook = cattrs.gen.make_dict_structure_fn(
     CalibratedAnalogMapping,
     converter,
@@ -65,7 +63,6 @@ structure_hook = cattrs.gen.make_dict_structure_fn(
 
 converter.register_structure_hook(CalibratedAnalogMapping, structure_hook)
 
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
 advance_structure_hook = cattrs.gen.make_dict_structure_fn(
     Advance,
     converter,
@@ -74,7 +71,6 @@ advance_structure_hook = cattrs.gen.make_dict_structure_fn(
 
 converter.register_structure_hook(Advance, advance_structure_hook)
 
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
 delay_structure_hook = cattrs.gen.make_dict_structure_fn(
     Delay,
     converter,
@@ -110,8 +106,6 @@ structure_device_trigger = make_dict_structure_fn(
     converter,
     default=override(struct_hook=structure_default),
 )
-
-
 converter.register_structure_hook(DeviceTrigger, structure_device_trigger)
 
 
@@ -136,17 +130,7 @@ structure_lane_values = make_dict_structure_fn(
     converter,
     default=override(struct_hook=structure_lane_default),
 )
-
-
-def unstructure_lane_values(lane_values):
-    return {
-        "lane": lane_values.lane,
-        "default": converter.unstructure(lane_values.default, Optional[ChannelOutput]),
-    }
-
-
 converter.register_structure_hook(LaneValues, structure_lane_values)
-converter.register_unstructure_hook(LaneValues, unstructure_lane_values)
 
 
 def union_strategy(union, converter):
