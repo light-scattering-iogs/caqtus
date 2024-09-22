@@ -265,7 +265,9 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_state(self, path: PureSequencePath, state: State) -> None:
+    def set_state(
+        self, path: PureSequencePath, state: State
+    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
         raise NotImplementedError
 
     @abc.abstractmethod

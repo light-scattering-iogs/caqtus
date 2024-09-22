@@ -272,8 +272,13 @@ class SQLSequenceCollection(SequenceCollection):
     ):
         return _set_exception(self._get_sql_session(), path, exception)
 
-    def set_state(self, path: PureSequencePath, state: State) -> None:
-        sequence = self._query_sequence_model(path).unwrap()
+    def set_state(
+        self, path: PureSequencePath, state: State
+    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        sequence_result = self._query_sequence_model(path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.value
         if not State.is_transition_allowed(sequence.state, state):
             raise InvalidStateTransitionError(
                 f"Sequence at {path} can't transition from {sequence.state} to {state}"
@@ -304,6 +309,7 @@ class SQLSequenceCollection(SequenceCollection):
             ).replace(tzinfo=None)
 
         assert sequence.state == state
+        return Success(None)
 
     def set_device_configurations(
         self,
