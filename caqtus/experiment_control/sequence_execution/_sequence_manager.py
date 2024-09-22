@@ -237,4 +237,4 @@ class SequenceManager:
                 shot_data.data,
                 shot_data.start_time,
                 shot_data.end_time,
-            )
+            ).unwrap()

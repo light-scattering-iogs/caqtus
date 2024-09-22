@@ -56,6 +56,12 @@ class SequenceRunningError(SequenceStateError):
     pass
 
 
+class SequenceNotRunningError(SequenceStateError):
+    """Raised when trying to perform an invalid operation on a non-running sequence."""
+
+    pass
+
+
 class InvalidStateTransitionError(SequenceStateError):
     """Raised when an invalid state transition is attempted.
 
@@ -288,7 +294,12 @@ class SequenceCollection(Protocol):
         shot_data: Mapping[DataLabel, Data],
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
-    ) -> None:
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotRunningError]
+    ):
         raise NotImplementedError
 
     @abc.abstractmethod

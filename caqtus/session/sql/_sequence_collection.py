@@ -60,6 +60,7 @@ from .._sequence_collection import (
     DataNotFoundError,
     SequenceNotCrashedError,
     InvalidStateTransitionError,
+    SequenceNotRunningError,
 )
 from .._sequence_collection import SequenceCollection
 from .._shot_id import ShotId
@@ -329,10 +330,18 @@ class SQLSequenceCollection(SequenceCollection):
         shot_data: Mapping[DataLabel, Data],
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
-    ) -> None:
-        sequence = self._query_sequence_model(shot_id.sequence_path).unwrap()
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotRunningError]
+    ):
+        sequence_result = self._query_sequence_model(shot_id.sequence_path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.value
         if sequence.state != State.RUNNING:
-            raise RuntimeError("Can't create shot in sequence that is not running")
+            return Failure(SequenceNotRunningError(shot_id.sequence_path))
         if shot_id.index < 0:
             raise ValueError("Shot index must be non-negative")
         if sequence.expected_number_of_shots is not None:
@@ -360,6 +369,7 @@ class SQLSequenceCollection(SequenceCollection):
             ),
         )
         self._get_sql_session().add(shot)
+        return Success(None)
 
     @staticmethod
     def serialize_data(

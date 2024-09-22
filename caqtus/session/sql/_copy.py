@@ -82,7 +82,7 @@ def copy_sequence(
             shot_data,
             shot_start_time,
             shot_stop_time,
-        )
+        ).unwrap()
 
     if state == State.FINISHED:
         set_state(destination, State.FINISHED, destination_session)
