@@ -11,6 +11,7 @@ from caqtus.session import (
     PathNotFoundError,
 )
 from caqtus.session import PureSequencePath, Sequence, State
+from caqtus.session._shot_id import ShotId
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
@@ -205,8 +206,7 @@ def test_shot_creation(
             DataLabel("c"): np.random.default_rng().normal(size=(10, 20)),
         }
         session.sequences.create_shot(
-            p,
-            0,
+            ShotId(p, 0),
             parameters,
             data,
             datetime.datetime.now(),
@@ -244,8 +244,7 @@ def test_data_not_existing(
             DataLabel("b"): np.linspace(0, 1, 100),
         }
         session.sequences.create_shot(
-            p,
-            0,
+            ShotId(p, 0),
             parameters,
             data,
             datetime.datetime.now(),

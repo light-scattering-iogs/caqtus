@@ -7,6 +7,7 @@ import anyio.lowlevel
 
 from caqtus.device import DeviceName
 from caqtus.experiment_control.device_manager_extension import DeviceManagerExtension
+from caqtus.experiment_control.sequence_execution._sequence_manager import run_sequence
 from caqtus.experiment_control.sequence_execution._shot_compiler import (
     ShotCompilerProtocol,
     ShotCompilerFactory,
@@ -19,7 +20,6 @@ from caqtus.experiment_control.sequence_execution._shot_runner import (
     ShotRunnerProtocol,
     ShotRunnerFactory,
 )
-from caqtus.experiment_control.sequence_execution._sequence_manager import run_sequence
 from caqtus.session import State
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.recoverable_exceptions import InvalidValueError
@@ -129,7 +129,7 @@ async def test_sequence_interruption(anyio_backend, session_maker, draft_sequenc
     with session_maker.session() as session:
         sequence = session.get_sequence(draft_sequence)
         assert sequence.get_state() == State.INTERRUPTED
-        assert len(list(sequence.get_shots())) == 7
+        assert len(list(sequence.get_shots())) <= 7
 
 
 class RaisingShotRunner(ShotRunnerProtocol):
@@ -185,7 +185,10 @@ async def test_sequence_execution_error(anyio_backend, session_maker, draft_sequ
     with session_maker.session() as session:
         sequence = session.get_sequence(draft_sequence)
         assert sequence.get_state() == State.CRASHED
-        assert len(list(sequence.get_shots())) == 7
+        # Shot 7 crashed, so at best we could have saved up to shot 6, but it can happen
+        # that saving shot 6 was cancelled due to the error in shot 7, so we can't
+        # guarantee that we saved shot 6 either.
+        assert 5 <= len(list(sequence.get_shots())) < 7
         tb_summary = sequence.get_traceback_summary()
         assert tb_summary is not None
 
@@ -247,6 +250,8 @@ async def test_sequence_compilation_error(anyio_backend, session_maker, draft_se
     with session_maker.session() as session:
         sequence = session.get_sequence(draft_sequence)
         assert sequence.get_state() == State.CRASHED
-        assert len(list(sequence.get_shots())) <= 7
+        # Compilation of shot 7 crashed, so at best we could have saved up to shot 6,
+        # but we have no guarantee any previous shot was run.
+        assert len(list(sequence.get_shots())) < 7
         tb_summary = sequence.get_traceback_summary()
         assert tb_summary is not None
