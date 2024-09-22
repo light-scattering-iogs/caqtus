@@ -224,17 +224,18 @@ class SequenceManager:
     ):
         async with data_stream_cm as shots_data:
             async for shot_data in shots_data:
-                self._store_shot(shot_data)
+                await self._store_shot(shot_data)
 
-    def _store_shot(self, shot_data: ShotData) -> None:
+    async def _store_shot(self, shot_data: ShotData) -> None:
         params = {
             name: value for name, value in shot_data.variables.to_flat_dict().items()
         }
-        with self._session_maker() as session:
-            session.sequences.create_shot(
+        async with self._session_maker.async_session() as session:
+            result = await session.sequences.create_shot(
                 ShotId(self._sequence_path, shot_data.index),
                 params,
                 shot_data.data,
                 shot_data.start_time,
                 shot_data.end_time,
-            ).unwrap()
+            )
+            result.unwrap()
