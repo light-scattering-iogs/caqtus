@@ -324,20 +324,19 @@ class SQLSequenceCollection(SequenceCollection):
 
     def create_shot(
         self,
-        path: PureSequencePath,
-        shot_index: int,
+        shot_id: ShotId,
         shot_parameters: Mapping[DottedVariableName, Parameter],
         shot_data: Mapping[DataLabel, Data],
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
     ) -> None:
-        sequence = self._query_sequence_model(path).unwrap()
+        sequence = self._query_sequence_model(shot_id.sequence_path).unwrap()
         if sequence.state != State.RUNNING:
             raise RuntimeError("Can't create shot in sequence that is not running")
-        if shot_index < 0:
+        if shot_id.index < 0:
             raise ValueError("Shot index must be non-negative")
         if sequence.expected_number_of_shots is not None:
-            if shot_index >= sequence.expected_number_of_shots:
+            if shot_id.index >= sequence.expected_number_of_shots:
                 raise ValueError(
                     f"Shot index must be less than the expected number of shots "
                     f"({sequence.expected_number_of_shots})"
@@ -349,7 +348,7 @@ class SQLSequenceCollection(SequenceCollection):
 
         shot = SQLShot(
             sequence=sequence,
-            index=shot_index,
+            index=shot_id.index,
             parameters=SQLShotParameter(content=parameters),
             array_data=array_data,
             structured_data=structured_data,

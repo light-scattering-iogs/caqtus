@@ -283,8 +283,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def create_shot(
         self,
-        path: PureSequencePath,
-        shot_index: int,
+        shot_id: ShotId,
         shot_parameters: Mapping[DottedVariableName, Parameter],
         shot_data: Mapping[DataLabel, Data],
         shot_start_time: datetime.datetime,

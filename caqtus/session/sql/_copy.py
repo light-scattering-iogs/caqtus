@@ -14,6 +14,7 @@ from caqtus.session import (
     SequenceStateError,
     SequenceNotCrashedError,
 )
+from caqtus.session._shot_id import ShotId
 from caqtus.utils._result import (
     Success,
     Failure,
@@ -66,14 +67,17 @@ def copy_sequence(
     )
     set_state(destination, State.RUNNING, destination_session)
 
-    for shot in range(stats.number_completed_shots):
-        shot_parameters = source_session.sequences.get_shot_parameters(source, shot)
-        shot_data = source_session.sequences.get_all_shot_data(source, shot)
-        shot_start_time = source_session.sequences.get_shot_start_time(source, shot)
-        shot_stop_time = source_session.sequences.get_shot_end_time(source, shot)
+    for shot_index in range(stats.number_completed_shots):
+        shot_parameters = source_session.sequences.get_shot_parameters(
+            source, shot_index
+        )
+        shot_data = source_session.sequences.get_all_shot_data(source, shot_index)
+        shot_start_time = source_session.sequences.get_shot_start_time(
+            source, shot_index
+        )
+        shot_stop_time = source_session.sequences.get_shot_end_time(source, shot_index)
         destination_session.sequences.create_shot(
-            destination,
-            shot,
+            ShotId(destination, shot_index),
             shot_parameters,
             shot_data,
             shot_start_time,

@@ -15,6 +15,7 @@ from caqtus.session import (
     State,
     TracebackSummary,
 )
+from caqtus.session._shot_id import ShotId
 from caqtus.shot_compilation import (
     DeviceCompiler,
     SequenceContext,
@@ -231,8 +232,7 @@ class SequenceManager:
         }
         with self._session_maker() as session:
             session.sequences.create_shot(
-                self._sequence_path,
-                shot_data.index,
+                ShotId(self._sequence_path, shot_data.index),
                 params,
                 shot_data.data,
                 shot_data.start_time,
