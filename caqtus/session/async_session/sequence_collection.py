@@ -46,6 +46,12 @@ class AsyncSequenceCollection(Protocol):
         return (await self.get_stats(path)).map(lambda stats: stats.state)
 
     @abc.abstractmethod
+    async def set_state(
+        self, path: PureSequencePath, state: State
+    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     async def get_traceback_summary(self, path: PureSequencePath) -> Result[
         Optional[TracebackSummary],
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,

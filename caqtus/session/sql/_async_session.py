@@ -30,6 +30,7 @@ from ._sequence_collection import (
     _get_shot_data_by_label,
     _get_all_shot_data,
     _get_exceptions,
+    _set_state,
 )
 from ._serializer import SerializerProtocol
 from .._data_id import DataId
@@ -44,6 +45,7 @@ from .._sequence_collection import (
     SequenceNotCrashedError,
 )
 from .._shot_id import ShotId
+from .._state import State
 from ..async_session import (
     AsyncExperimentSession,
     AsyncPathHierarchy,
@@ -198,6 +200,11 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         | Failure[PathIsNotSequenceError]
     ):
         return await self._run_sync(_get_stats, path)
+
+    async def set_state(
+        self, path: PureSequencePath, state: State
+    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        return await self._run_sync(_set_state, path, state)
 
     async def get_traceback_summary(self, path: PureSequencePath) -> Result[
         Optional[TracebackSummary],
