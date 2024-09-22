@@ -32,6 +32,7 @@ from ._sequence_collection import (
     _get_all_shot_data,
     _get_exceptions,
     _set_state,
+    _create_shot,
 )
 from ._serializer import SerializerProtocol
 from .._data_id import DataId
@@ -44,6 +45,7 @@ from .._sequence_collection import (
     SequenceStats,
     PathIsNotSequenceError,
     SequenceNotCrashedError,
+    SequenceNotRunningError,
 )
 from .._shot_id import ShotId
 from .._state import State
@@ -234,6 +236,28 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         self, path: PureSequencePath, shot_index: int
     ) -> Mapping[DottedVariableName, Parameter]:
         return await self._run_sync(_get_shot_parameters, path, shot_index)
+
+    async def create_shot(
+        self,
+        shot_id: ShotId,
+        shot_parameters: Mapping[DottedVariableName, Parameter],
+        shot_data: Mapping[DataLabel, Data],
+        shot_start_time: datetime,
+        shot_end_time: datetime,
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotRunningError]
+    ):
+        return await self._run_sync(
+            _create_shot,
+            shot_id,
+            shot_parameters,
+            shot_data,
+            shot_start_time,
+            shot_end_time,
+        )
 
     async def get_all_shot_data(
         self, path: PureSequencePath, shot_index: int

@@ -17,6 +17,7 @@ from .._sequence_collection import (
     PathIsNotSequenceError,
     SequenceStats,
     SequenceNotCrashedError,
+    SequenceNotRunningError,
 )
 from .._shot_id import ShotId
 from .._state import State
@@ -105,4 +106,20 @@ class AsyncSequenceCollection(Protocol):
     async def get_shot_end_time(
         self, path: PureSequencePath, shot_index: int
     ) -> datetime.datetime:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def create_shot(
+        self,
+        shot_id: ShotId,
+        shot_parameters: Mapping[DottedVariableName, Parameter],
+        shot_data: Mapping[DataLabel, Data],
+        shot_start_time: datetime.datetime,
+        shot_end_time: datetime.datetime,
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotRunningError]
+    ):
         raise NotImplementedError
