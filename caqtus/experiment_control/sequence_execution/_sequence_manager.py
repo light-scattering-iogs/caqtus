@@ -205,7 +205,7 @@ class SequenceManager:
 
     def _prepare_sequence(self):
         with self._session_maker() as session:
-            session.sequences.set_state(self._sequence_path, State.PREPARING)
+            session.sequences.set_state(self._sequence_path, State.PREPARING).unwrap()
             session.sequences.set_device_configurations(
                 self._sequence_path, self.device_configurations
             )
@@ -215,7 +215,7 @@ class SequenceManager:
 
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:
-            session.sequences.set_state(self._sequence_path, state)
+            session.sequences.set_state(self._sequence_path, state).unwrap()
 
     async def _store_shots(
         self,
