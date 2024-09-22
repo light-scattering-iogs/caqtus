@@ -32,10 +32,10 @@ def test_set_exception_after_reset(session_maker, crashed_sequence):
         session.sequences.set_exception(crashed_sequence, tb).unwrap()
 
     with session_maker.session() as session:
-        session.sequences.set_state(crashed_sequence, State.DRAFT)
-        session.sequences.set_state(crashed_sequence, State.PREPARING)
-        session.sequences.set_state(crashed_sequence, State.RUNNING)
-        session.sequences.set_state(crashed_sequence, State.CRASHED)
+        session.sequences.set_state(crashed_sequence, State.DRAFT).unwrap()
+        session.sequences.set_state(crashed_sequence, State.PREPARING).unwrap()
+        session.sequences.set_state(crashed_sequence, State.RUNNING).unwrap()
+        session.sequences.set_state(crashed_sequence, State.CRASHED).unwrap()
 
     with session_maker.session() as session:
         assert session.sequences.get_exception(crashed_sequence).unwrap() is None
