@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import functools
-from typing import assert_never
+from typing import assert_never, Optional
 
+import anyio
+import anyio.abc
+import anyio.lowlevel
 from PySide6 import QtCore
 from PySide6.QtCore import (
     QModelIndex,
@@ -19,7 +22,6 @@ from PySide6.QtWidgets import (
 from caqtus.gui._common.sequence_hierarchy import (
     AsyncPathHierarchyView,
 )
-from caqtus.gui._common.waiting_widget import run_with_wip_widget
 from caqtus.gui.qtutil import temporary_widget
 from caqtus.session import (
     ExperimentSessionMaker,
@@ -42,6 +44,7 @@ from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils._result import Failure, is_success, is_failure_type
 from ._icons import get_icon
+from .._common.waiting_widget import blocking_call
 
 
 class EditablePathHierarchyView(AsyncPathHierarchyView):
@@ -61,6 +64,11 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         self.viewport().setAcceptDrops(True)
         self.setDropIndicatorShown(True)
         self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self._task_group: Optional[anyio.abc.TaskGroup] = None
+
+    async def run_async(self) -> None:
+        async with anyio.create_task_group() as self._task_group:
+            await super().run_async()
 
     def show_context_menu(self, pos):
         proxy_index = self.indexAt(pos)
@@ -197,11 +205,20 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         from interacting with the sequence while it is being cleared.
         """
 
-        def clear():
-            with self.session_maker() as session:
-                session.sequences.set_state(path, State.DRAFT)
+        async def clear():
+            async with self.session_maker.async_session() as session:
+                await session.sequences.set_state(path, State.DRAFT)
+                await anyio.lowlevel.checkpoint()
 
-        run_with_wip_widget(self, "Clearing sequence", clear)
+        if self._task_group is None:
+            raise RuntimeError("Task group not initialized")
+
+        self._task_group.start_soon(
+            blocking_call,
+            self,
+            f"<p>Clearing <b><i>{path}</i></b></p><p>This may take a while...</p>",
+            clear,
+        )
 
     def on_sequence_duplication_requested(self, source: QModelIndex):
         """Ask the user for a new sequence name and duplicate the sequence."""

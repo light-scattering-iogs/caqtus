@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Renamed `caqtus.utils.contextlib` to `caqtus.utils.context_managers`
+- Clearing a sequence in Condetrol will pop a message box during the operation, with the
+  possibility to cancel the operation
 
 ### Deprecated
 
