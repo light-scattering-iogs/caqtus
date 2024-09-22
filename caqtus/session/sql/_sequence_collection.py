@@ -336,75 +336,14 @@ class SQLSequenceCollection(SequenceCollection):
         | Failure[PathIsNotSequenceError]
         | Failure[SequenceNotRunningError]
     ):
-        sequence_result = self._query_sequence_model(shot_id.sequence_path)
-        if is_failure(sequence_result):
-            return sequence_result
-        sequence = sequence_result.value
-        if sequence.state != State.RUNNING:
-            return Failure(SequenceNotRunningError(shot_id.sequence_path))
-        if shot_id.index < 0:
-            raise ValueError("Shot index must be non-negative")
-        if sequence.expected_number_of_shots is not None:
-            if shot_id.index >= sequence.expected_number_of_shots:
-                raise ValueError(
-                    f"Shot index must be less than the expected number of shots "
-                    f"({sequence.expected_number_of_shots})"
-                )
-
-        parameters = self.serialize_shot_parameters(shot_parameters)
-
-        array_data, structured_data = self.serialize_data(shot_data)
-
-        shot = SQLShot(
-            sequence=sequence,
-            index=shot_id.index,
-            parameters=SQLShotParameter(content=parameters),
-            array_data=array_data,
-            structured_data=structured_data,
-            start_time=shot_start_time.astimezone(datetime.timezone.utc).replace(
-                tzinfo=None
-            ),
-            end_time=shot_end_time.astimezone(datetime.timezone.utc).replace(
-                tzinfo=None
-            ),
+        return _create_shot(
+            self._get_sql_session(),
+            shot_id,
+            shot_parameters,
+            shot_data,
+            shot_start_time,
+            shot_end_time,
         )
-        self._get_sql_session().add(shot)
-        return Success(None)
-
-    @staticmethod
-    def serialize_data(
-        data: Mapping[DataLabel, Data]
-    ) -> tuple[list[SQLShotArray], list[SQLStructuredShotData]]:
-        arrays = []
-        structured_data = []
-        for label, value in data.items():
-            if not is_data(value):
-                raise TypeError(f"Invalid data type for {label}: {type(value)}")
-            if isinstance(value, np.ndarray):
-                arrays.append(
-                    SQLShotArray(
-                        label=label,
-                        dtype=str(value.dtype),
-                        shape=value.shape,
-                        bytes_=value.tobytes(),
-                    )
-                )
-            else:
-                structured_data.append(
-                    SQLStructuredShotData(label=label, content=value)
-                )
-        return arrays, structured_data
-
-    @staticmethod
-    def serialize_shot_parameters(
-        shot_parameters: Mapping[DottedVariableName, Parameter]
-    ) -> dict[str, serialization.JSON]:
-        return {
-            str(variable_name): serialization.converters["json"].unstructure(
-                parameter, Parameter
-            )
-            for variable_name, parameter in shot_parameters.items()
-        }
 
     def get_shots(
         self, path: PureSequencePath
@@ -711,6 +650,53 @@ def _get_shot_parameters(
     raise AssertionError("Unreachable code")
 
 
+def _create_shot(
+    session: Session,
+    shot_id: ShotId,
+    shot_parameters: Mapping[DottedVariableName, Parameter],
+    shot_data: Mapping[DataLabel, Data],
+    shot_start_time: datetime.datetime,
+    shot_end_time: datetime.datetime,
+) -> (
+    Success[None]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[SequenceNotRunningError]
+):
+    sequence_result = _query_sequence_model(session, shot_id.sequence_path)
+    if is_failure(sequence_result):
+        return sequence_result
+    sequence = sequence_result.value
+    if sequence.state != State.RUNNING:
+        return Failure(SequenceNotRunningError(shot_id.sequence_path))
+    if shot_id.index < 0:
+        raise ValueError("Shot index must be non-negative")
+    if sequence.expected_number_of_shots is not None:
+        if shot_id.index >= sequence.expected_number_of_shots:
+            raise ValueError(
+                f"Shot index must be less than the expected number of shots "
+                f"({sequence.expected_number_of_shots})"
+            )
+
+    parameters = serialize_shot_parameters(shot_parameters)
+
+    array_data, structured_data = serialize_data(shot_data)
+
+    shot = SQLShot(
+        sequence=sequence,
+        index=shot_id.index,
+        parameters=SQLShotParameter(content=parameters),
+        array_data=array_data,
+        structured_data=structured_data,
+        start_time=shot_start_time.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        ),
+        end_time=shot_end_time.astimezone(datetime.timezone.utc).replace(tzinfo=None),
+    )
+    session.add(shot)
+    return Success(None)
+
+
 def _get_all_shot_data(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> dict[DataLabel, Data]:
@@ -878,3 +864,36 @@ def _query_shot_model(
                 return failure
             case _:
                 assert_never(sequence_model_result)
+
+
+def serialize_data(
+    data: Mapping[DataLabel, Data]
+) -> tuple[list[SQLShotArray], list[SQLStructuredShotData]]:
+    arrays = []
+    structured_data = []
+    for label, value in data.items():
+        if not is_data(value):
+            raise TypeError(f"Invalid data type for {label}: {type(value)}")
+        if isinstance(value, np.ndarray):
+            arrays.append(
+                SQLShotArray(
+                    label=label,
+                    dtype=str(value.dtype),
+                    shape=value.shape,
+                    bytes_=value.tobytes(),
+                )
+            )
+        else:
+            structured_data.append(SQLStructuredShotData(label=label, content=value))
+    return arrays, structured_data
+
+
+def serialize_shot_parameters(
+    shot_parameters: Mapping[DottedVariableName, Parameter]
+) -> dict[str, serialization.JSON]:
+    return {
+        str(variable_name): serialization.converters["json"].unstructure(
+            parameter, Parameter
+        )
+        for variable_name, parameter in shot_parameters.items()
+    }
