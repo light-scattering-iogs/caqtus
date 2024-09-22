@@ -4,6 +4,7 @@ import functools
 from datetime import datetime
 from typing import Callable, Concatenate, TypeVar, ParamSpec, Mapping, Optional, Self
 
+import anyio.lowlevel
 import anyio.to_thread
 import attrs
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -134,9 +135,10 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await anyio.to_thread.run_sync(
-            self._session_context.__exit__, exc_type, exc_val, exc_tb
-        )
+        with anyio.CancelScope(shield=True):
+            await anyio.to_thread.run_sync(
+                self._session_context.__exit__, exc_type, exc_val, exc_tb
+            )
 
     async def _run_sync(
         self,
