@@ -1,5 +1,7 @@
 """Contains the copy function to transfer data between two sessions."""
 
+from typing import assert_type
+
 from caqtus.session import (
     PureSequencePath,
     ExperimentSession,
@@ -58,11 +60,11 @@ def copy_sequence(
 
     if state == State.DRAFT:
         return Success(None)
-    destination_session.sequences.set_state(destination, State.PREPARING)
+    set_state(destination, State.PREPARING, destination_session)
     destination_session.sequences.set_global_parameters(
         destination, source_session.sequences.get_global_parameters(source)
     )
-    destination_session.sequences.set_state(destination, State.RUNNING)
+    set_state(destination, State.RUNNING, destination_session)
 
     for shot in range(stats.number_completed_shots):
         shot_parameters = source_session.sequences.get_shot_parameters(source, shot)
@@ -79,13 +81,13 @@ def copy_sequence(
         )
 
     if state == State.FINISHED:
-        destination_session.sequences.set_state(destination, State.FINISHED)
+        set_state(destination, State.FINISHED, destination_session)
 
     if state == State.INTERRUPTED:
-        destination_session.sequences.set_state(destination, State.INTERRUPTED)
+        set_state(destination, State.INTERRUPTED, destination_session)
 
     if state == State.CRASHED:
-        destination_session.sequences.set_state(destination, State.CRASHED)
+        set_state(destination, State.CRASHED, destination_session)
         exception_result = source_session.sequences.get_exception(source)
         assert not is_failure_type(exception_result, PathNotFoundError)
         assert not is_failure_type(exception_result, PathIsNotSequenceError)
@@ -101,3 +103,10 @@ def copy_sequence(
     )
 
     return Success(None)
+
+
+def set_state(path: PureSequencePath, state: State, session: ExperimentSession) -> None:
+    result = session.sequences.set_state(path, state)
+    assert not is_failure_type(result, PathNotFoundError)
+    assert not is_failure_type(result, PathIsNotSequenceError)
+    assert_type(result, Success[None])
