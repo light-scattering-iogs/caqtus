@@ -6,7 +6,7 @@ import logging
 import threading
 from collections.abc import Mapping
 from contextlib import AbstractContextManager
-from typing import Optional
+from typing import Optional, assert_type
 
 import anyio
 import anyio.from_thread
@@ -17,10 +17,13 @@ from caqtus.session import (
     PureSequencePath,
     ExperimentSession,
     State,
+    PathNotFoundError,
+    PathIsNotSequenceError,
 )
 from caqtus.types.parameter import ParameterNamespace
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_execution import ShotRetryConfig, run_sequence
+from ...utils._result import is_failure_type, Success
 
 logger = logging.getLogger(__name__)
 
@@ -375,9 +378,15 @@ class BoundProcedure(Procedure):
 
 def _crash_running_sequences(session: ExperimentSession) -> None:
     for path in session.sequences.get_sequences_in_state(State.RUNNING):
-        session.sequences.set_state(path, State.CRASHED)
+        result = session.sequences.set_state(path, State.CRASHED)
+        assert not is_failure_type(result, PathNotFoundError)
+        assert not is_failure_type(result, PathIsNotSequenceError)
+        assert_type(result, Success[None])
     for path in session.sequences.get_sequences_in_state(State.PREPARING):
-        session.sequences.set_state(path, State.CRASHED)
+        result = session.sequences.set_state(path, State.CRASHED)
+        assert not is_failure_type(result, PathNotFoundError)
+        assert not is_failure_type(result, PathIsNotSequenceError)
+        assert_type(result, Success[None])
 
 
 class SequenceAlreadyRunningError(RuntimeError):
