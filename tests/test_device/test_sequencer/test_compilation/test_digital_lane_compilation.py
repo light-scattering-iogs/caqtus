@@ -1,14 +1,21 @@
+import decimal
+
 import pytest
 
 from caqtus.device.sequencer.instructions import Pattern
-from caqtus.device.sequencer.timing import to_time_step, number_time_steps
+from caqtus.device.sequencer.timing import to_time_step, ns
 from caqtus.shot_compilation import VariableNamespace, ShotContext, SequenceContext
 from caqtus.shot_compilation.lane_compilation import compile_digital_lane
+from caqtus.shot_compilation.timing import Time, number_ticks
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import RecoverableException
 from caqtus.types.timelane import DigitalTimeLane, TimeLanes
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
+
+
+def into_time(value) -> Time:
+    return Time(to_time_step(value) * ns)
 
 
 def test_0():
@@ -24,7 +31,7 @@ def test_0():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True, False])
-    result = compile_digital_lane(lane, to_time_step(1), shot_context)
+    result = compile_digital_lane(lane, into_time(1), shot_context)
     assert result == Pattern([True]) * 1_000_000_000 + Pattern([False]) * 1_000_000_000
 
 
@@ -41,7 +48,7 @@ def test_1():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([Expression("a"), Expression("b")])
-    result = compile_digital_lane(lane, to_time_step(1), shot_context)
+    result = compile_digital_lane(lane, into_time(1), shot_context)
 
     assert result == Pattern([True]) * 1_000_000_000 + Pattern([False]) * 1_000_000_000
 
@@ -59,7 +66,7 @@ def test_2():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True] * 2 + [False])
-    result = compile_digital_lane(lane, to_time_step(1), shot_context)
+    result = compile_digital_lane(lane, into_time(1), shot_context)
     assert (
         result == Pattern([True]) * 2_000_000_000 + Pattern([False]) * 1_000_000_000
     ), str(result)
@@ -123,9 +130,11 @@ def test_3():
         variables=variables.dict(),  # type: ignore[reportCallIssue]
         device_compilers={},  # type: ignore[reportCallIssue]
     )
-    time_step = to_time_step(1)
+    time_step = into_time(1)
     result = compile_digital_lane(lane, time_step, shot_context)
-    assert len(result) == number_time_steps(shot_context.get_shot_duration(), time_step)
+    assert len(result) == number_ticks(
+        Time(decimal.Decimal(0)), shot_context.get_shot_duration(), time_step
+    )
 
 
 # test for issue #23
@@ -143,7 +152,7 @@ def test_invalid_expression_cell():
     )
     lane = DigitalTimeLane([Expression("...")])
     with pytest.raises(RecoverableException):
-        compile_digital_lane(lane, to_time_step(1), shot_context)
+        compile_digital_lane(lane, into_time(1), shot_context)
 
 
 def test_non_integer_time_step():
@@ -159,5 +168,5 @@ def test_non_integer_time_step():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True, False])
-    result = compile_digital_lane(lane, to_time_step(0.5), shot_context)
+    result = compile_digital_lane(lane, into_time(0.5), shot_context)
     assert result == Pattern([True]) * 2_000_000_000 + Pattern([False]) * 2_000_000_000

@@ -10,12 +10,12 @@ from caqtus.shot_compilation.timed_instructions import (
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane
-from caqtus.device.sequencer.timing import number_time_steps_between, TimeStep
+from ..timing import Time, number_ticks
 
 
 def compile_digital_lane(
     lane: DigitalTimeLane,
-    time_step: TimeStep,
+    time_step: Time,
     shot_context: ShotContext,
 ) -> SequencerInstruction[np.bool_]:
     step_names = shot_context.get_step_names()
@@ -30,13 +30,11 @@ def compile_digital_lane(
     for cell_value, (start, stop) in zip(
         lane.block_values(), lane.block_bounds(), strict=True
     ):
-        length = number_time_steps_between(
-            step_bounds[start], step_bounds[stop], time_step
-        )
+        length = number_ticks(step_bounds[start], step_bounds[stop], time_step)
         if isinstance(cell_value, bool):
             instructions.append(get_constant_instruction(cell_value, length))
         elif isinstance(cell_value, Expression):
-            value = cell_value.evaluate(shot_context.get_variables())
+            value = cell_value.evaluate(shot_context.get_parameters())
             if not isinstance(value, bool):
                 raise InvalidTypeError(
                     f"{fmt.expression(cell_value)} does not evaluate to "
