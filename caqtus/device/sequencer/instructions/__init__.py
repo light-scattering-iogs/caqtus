@@ -1,3 +1,5 @@
+import warnings
+
 from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Concatenated,
@@ -12,6 +14,13 @@ from caqtus.shot_compilation.timed_instructions import (
     Ramp,
     plot_instruction,
     to_graph,
+)
+
+warnings.warn(
+    "caqtus.device.sequencer.instructions is deprecated, use "
+    "caqtus.shot_compilation.timed_instructions instead.",
+    DeprecationWarning,
+    stacklevel=2,
 )
 
 __all__ = [
