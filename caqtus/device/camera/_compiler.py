@@ -8,12 +8,16 @@ from caqtus.shot_compilation import (
     DeviceNotUsedException,
     ShotContext,
 )
+from caqtus.shot_compilation.timed_instructions import (
+    SequencerInstruction,
+    Pattern,
+    concatenate,
+)
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import CameraTimeLane, TakePicture
 from ._configuration import CameraConfiguration
 from ..sequencer import TimeStep
 from ..sequencer.compilation import TriggerableDeviceCompiler
-from ..sequencer.instructions import SequencerInstruction, Pattern, concatenate
 from ..sequencer.timing import ns, number_time_steps_between
 from ...types.image.roi import RectangularROI
 
