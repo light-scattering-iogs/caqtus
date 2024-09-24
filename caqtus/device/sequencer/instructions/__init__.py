@@ -1,7 +1,7 @@
 import warnings
 
 from caqtus.shot_compilation.timed_instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Concatenated,
     Repeated,
     Pattern,
@@ -23,8 +23,11 @@ warnings.warn(
     stacklevel=2,
 )
 
+SequencerInstruction = TimedInstruction
+
 __all__ = [
     "SequencerInstruction",
+    "TimedInstruction",
     "Concatenated",
     "Repeated",
     "Pattern",

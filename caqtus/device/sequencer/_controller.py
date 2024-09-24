@@ -1,4 +1,4 @@
-from caqtus.shot_compilation.timed_instructions import SequencerInstruction
+from caqtus.shot_compilation.timed_instructions import TimedInstruction
 from ._proxy import SequencerProxy, SequenceStatusProxy
 from .trigger import SoftwareTrigger
 from .._controller import DeviceController
@@ -11,7 +11,7 @@ class SequencerController(DeviceController):
         self,
         sequencer: SequencerProxy,
         /,
-        sequence: SequencerInstruction,
+        sequence: TimedInstruction,
         *args,
         **kwargs,
     ) -> None:

@@ -1,6 +1,6 @@
 from typing import Optional, TYPE_CHECKING
 
-from ._instructions import SequencerInstruction
+from ._instructions import TimedInstruction
 from ._to_time_array import convert_to_change_arrays
 
 if TYPE_CHECKING:
@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 def plot_instruction(
-    instruction: SequencerInstruction, ax: Optional["Axes"] = None
+    instruction: TimedInstruction, ax: Optional["Axes"] = None
 ) -> "Axes":
     """Plot the instruction on the given axis."""
 

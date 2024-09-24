@@ -14,7 +14,7 @@ from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.shot_compilation.timed_instructions import (
     with_name,
     stack_instructions,
-    SequencerInstruction,
+    TimedInstruction,
     Pattern,
     Ramp,
     Concatenated,
@@ -91,7 +91,7 @@ class SequencerCompiler(TriggerableDeviceCompiler):
             sequence: The instructions to execute on the sequencer.
         """
 
-        sequence: SequencerInstruction
+        sequence: TimedInstruction
 
     def compile_shot_parameters(
         self,
@@ -131,7 +131,7 @@ class SequencerCompiler(TriggerableDeviceCompiler):
 
     def compute_trigger(
         self, sequencer_time_step: TimeStep, shot_context: ShotContext
-    ) -> SequencerInstruction[np.bool_]:
+    ) -> TimedInstruction[np.bool_]:
         """Compile the trigger to generate for the current device."""
 
         length = number_time_steps(
@@ -204,7 +204,7 @@ def compile_parallel_instructions(
     instructions: Mapping[str, InstructionCompilationParameters],
     time_step: TimeStep,
     shot_context: ShotContext,
-) -> SequencerInstruction:
+) -> TimedInstruction:
     """Evaluates and merges the output for different channels.
 
     Args:
@@ -267,7 +267,7 @@ def _find_max_advance_and_delays(
 
 def get_master_clock_pulse(
     slave_time_step: TimeStep, master_time_step: TimeStep
-) -> SequencerInstruction[np.bool_]:
+) -> TimedInstruction[np.bool_]:
     _, high, low = high_low_clicks(slave_time_step, master_time_step)
     single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
     assert len(single_clock_pulse) * master_time_step == slave_time_step
@@ -308,8 +308,8 @@ def high_low_clicks(
 
 @functools.singledispatch
 def get_adaptive_clock(
-    slave_instruction: SequencerInstruction, clock_pulse: SequencerInstruction
-) -> SequencerInstruction:
+    slave_instruction: TimedInstruction, clock_pulse: TimedInstruction
+) -> TimedInstruction:
     """Generates a clock signal for a slave instruction."""
 
     raise NotImplementedError(
@@ -320,15 +320,13 @@ def get_adaptive_clock(
 
 @get_adaptive_clock.register
 def _(
-    target_sequence: Pattern | Ramp, clock_pulse: SequencerInstruction
-) -> SequencerInstruction:
+    target_sequence: Pattern | Ramp, clock_pulse: TimedInstruction
+) -> TimedInstruction:
     return clock_pulse * len(target_sequence)
 
 
 @get_adaptive_clock.register
-def _(
-    target_sequence: Concatenated, clock_pulse: SequencerInstruction
-) -> SequencerInstruction:
+def _(target_sequence: Concatenated, clock_pulse: TimedInstruction) -> TimedInstruction:
     return concatenate(
         *(
             get_adaptive_clock(sequence, clock_pulse)
@@ -338,9 +336,7 @@ def _(
 
 
 @get_adaptive_clock.register
-def _(
-    target_sequence: Repeated, clock_pulse: SequencerInstruction
-) -> SequencerInstruction:
+def _(target_sequence: Repeated, clock_pulse: TimedInstruction) -> TimedInstruction:
     if len(target_sequence.instruction) == 1:
         return clock_pulse + Pattern([False]) * (
             (len(target_sequence) - 1) * len(clock_pulse)
@@ -364,7 +360,7 @@ tblib.pickling_support.install(SequencerCompilationError, ChannelCompilationErro
 
 def _convert_series_to_instruction(
     series: DimensionedSeries, instruction: InstructionCompilationParameters
-) -> SequencerInstruction:
+) -> TimedInstruction:
     if instruction.units != series.units:
         raise InvalidDimensionalityError(
             f"Instruction {instruction.description} output has units {series.units}, "

@@ -3,7 +3,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext, DeviceCompiler
-from caqtus.shot_compilation.timed_instructions import SequencerInstruction, Pattern
+from caqtus.shot_compilation.timed_instructions import TimedInstruction, Pattern
 from ...timing import TimeStep, number_time_steps
 
 
@@ -21,7 +21,7 @@ class TriggerableDeviceCompiler(DeviceCompiler, Protocol):
 
     def compute_trigger(
         self, sequencer_time_step: TimeStep, shot_context: ShotContext
-    ) -> SequencerInstruction[np.bool_]:
+    ) -> TimedInstruction[np.bool_]:
         """Compute the trigger to be output for the associated device.
 
         The default implementation of this method provides a simple trigger that is

@@ -6,7 +6,7 @@ import numpy as np
 
 from caqtus.utils.itertools import pairwise
 from ._instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Pattern,
     Concatenated,
     Repeated,
@@ -16,7 +16,7 @@ from ._instructions import (
 from ._with_name import with_name
 
 
-def merge_instructions(**instructions: SequencerInstruction) -> SequencerInstruction:
+def merge_instructions(**instructions: TimedInstruction) -> TimedInstruction:
     """Merge several instructions by name.
 
     This function finds a common structure to the different instructions and produces
@@ -58,8 +58,8 @@ def merge_instructions(**instructions: SequencerInstruction) -> SequencerInstruc
 
 
 def stack_instructions(
-    *instructions: SequencerInstruction[np.void],
-) -> SequencerInstruction[np.void]:
+    *instructions: TimedInstruction[np.void],
+) -> TimedInstruction[np.void]:
     """Stack several instructions along their dtype names.
 
     Args:
@@ -90,8 +90,8 @@ def stack_instructions(
 
 
 def _stack_instructions_no_checks(
-    *instructions: SequencerInstruction[np.void],
-) -> SequencerInstruction:
+    *instructions: TimedInstruction[np.void],
+) -> TimedInstruction:
     # This uses a divide-and-conquer approach to merge the instructions.
     # Another approach is to stack the instructions into a single accumulator, but
     # it seems to give worse performance on typical uses.
@@ -110,10 +110,10 @@ def _stack_instructions_no_checks(
 stack = multipledispatch.Dispatcher("stack")
 
 
-@stack.register(SequencerInstruction, SequencerInstruction)
+@stack.register(TimedInstruction, TimedInstruction)
 def stack_generic(
-    a: SequencerInstruction[np.void], b: SequencerInstruction[np.void]
-) -> SequencerInstruction:
+    a: TimedInstruction[np.void], b: TimedInstruction[np.void]
+) -> TimedInstruction:
     assert len(a) == len(b)
     return _stack_patterns(a.to_pattern(), b.to_pattern())
 
@@ -133,7 +133,7 @@ def _stack_patterns(a: Pattern[np.void], b: Pattern[np.void]) -> Pattern[np.void
 
 
 @stack.register(Concatenated, Concatenated)
-def stack_concatenations(a: Concatenated, b: Concatenated) -> SequencerInstruction:
+def stack_concatenations(a: Concatenated, b: Concatenated) -> TimedInstruction:
     assert len(a) == len(b)
 
     new_bounds = heapq.merge(a._instruction_bounds, b._instruction_bounds)
@@ -145,10 +145,8 @@ def stack_concatenations(a: Concatenated, b: Concatenated) -> SequencerInstructi
     return concatenate(*results)
 
 
-@stack.register(Concatenated, SequencerInstruction)
-def stack_concatenation_left(
-    a: Concatenated, b: SequencerInstruction
-) -> SequencerInstruction:
+@stack.register(Concatenated, TimedInstruction)
+def stack_concatenation_left(a: Concatenated, b: TimedInstruction) -> TimedInstruction:
     assert len(a) == len(b)
 
     results = []
@@ -161,10 +159,8 @@ def stack_concatenation_left(
     return concatenate(*results)
 
 
-@stack.register(SequencerInstruction, Concatenated)
-def stack_concatenation_right(
-    a: SequencerInstruction, b: Concatenated
-) -> SequencerInstruction:
+@stack.register(TimedInstruction, Concatenated)
+def stack_concatenation_right(a: TimedInstruction, b: Concatenated) -> TimedInstruction:
     assert len(a) == len(b)
 
     results = []
@@ -178,7 +174,7 @@ def stack_concatenation_right(
 
 
 @stack.register(Repeated, Repeated)
-def stack_repeated(a: Repeated, b: Repeated) -> SequencerInstruction:
+def stack_repeated(a: Repeated, b: Repeated) -> TimedInstruction:
     assert len(a) == len(b)
 
     lcm = math.lcm(len(a.instruction), len(b.instruction))
@@ -205,5 +201,5 @@ def merge_dtypes(a: np.dtype[np.void], b: np.dtype[np.void]) -> np.dtype[np.void
 
 def tile[
     T: np.generic
-](instruction: SequencerInstruction[T], repetitions: int) -> SequencerInstruction[T]:
+](instruction: TimedInstruction[T], repetitions: int) -> TimedInstruction[T]:
     return concatenate(*([instruction] * repetitions))

@@ -2,7 +2,7 @@ import contextlib
 from typing import TypeVar
 
 from caqtus.device.remote import DeviceProxy, AsyncConverter
-from caqtus.shot_compilation.timed_instructions import SequencerInstruction
+from caqtus.shot_compilation.timed_instructions import TimedInstruction
 from .runtime import Sequencer
 from .trigger import Trigger
 from ..remote.rpc import Proxy
@@ -12,7 +12,7 @@ SequencerType = TypeVar("SequencerType", bound=Sequencer)
 
 class SequencerProxy(DeviceProxy[SequencerType]):
     @contextlib.asynccontextmanager
-    async def program_sequence(self, sequence: SequencerInstruction):
+    async def program_sequence(self, sequence: TimedInstruction):
         async with self.call_method_proxy_result(
             "program_sequence", sequence
         ) as sequence_proxy:

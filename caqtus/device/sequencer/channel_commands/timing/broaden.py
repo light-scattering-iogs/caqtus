@@ -10,7 +10,7 @@ import caqtus.formatter as fmt
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.shot_compilation.timed_instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Pattern,
     Concatenated,
     concatenate,
@@ -91,9 +91,7 @@ class BroadenLeft(ChannelOutput):
 
 
 @functools.singledispatch
-def _broaden_left(
-    instruction, width: int
-) -> tuple[SequencerInstruction[np.bool_], int]:
+def _broaden_left(instruction, width: int) -> tuple[TimedInstruction[np.bool_], int]:
     """Broaden the instruction to the left by n steps.
 
     Returns:

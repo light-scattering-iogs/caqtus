@@ -12,7 +12,7 @@ import numpy as np
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.shot_compilation.timed_instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Pattern,
     Concatenated,
     concatenate,
@@ -252,8 +252,8 @@ class DimensionlessCalibration:
         return f"Calibration({points})"
 
     def apply(
-        self, instruction: SequencerInstruction[np.float64]
-    ) -> SequencerInstruction[np.float64]:
+        self, instruction: TimedInstruction[np.float64]
+    ) -> TimedInstruction[np.float64]:
         # We raise errors in pathological cases when the calibration is not
         # well-defined.
         with np.errstate(
@@ -273,8 +273,8 @@ class DimensionlessCalibration:
 
     @functools.singledispatchmethod
     def _apply_without_checks(
-        self, instruction: SequencerInstruction[np.float64]
-    ) -> SequencerInstruction[np.float64]:
+        self, instruction: TimedInstruction[np.float64]
+    ) -> TimedInstruction[np.float64]:
         raise NotImplementedError(
             f"Don't know how to apply calibration to instruction of type "
             f"{type(instruction)}"
@@ -296,7 +296,7 @@ class DimensionlessCalibration:
     @_apply_without_checks.register
     def _apply_calibration_concatenation(
         self, concatenation: Concatenated
-    ) -> SequencerInstruction[np.float64]:
+    ) -> TimedInstruction[np.float64]:
         return concatenate(
             *(
                 self._apply_without_checks(instruction)
@@ -307,13 +307,13 @@ class DimensionlessCalibration:
     @_apply_without_checks.register
     def _apply_calibration_repetition(
         self, repetition: Repeated
-    ) -> SequencerInstruction[np.float64]:
+    ) -> TimedInstruction[np.float64]:
         return repetition.repetitions * self._apply_without_checks(
             repetition.instruction
         )
 
     @_apply_without_checks.register
-    def _apply_calibration_ramp(self, r: Ramp) -> SequencerInstruction[np.float64]:
+    def _apply_calibration_ramp(self, r: Ramp) -> TimedInstruction[np.float64]:
         # Ramp maps t -> x(t) = a + (b - a) * t / length
         # Calibration maps x -> y in a piecewise linear way
         # We want to map t -> y(t)

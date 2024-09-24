@@ -11,7 +11,7 @@ import numpy as np
 
 from caqtus.utils._no_public_constructor import NoPublicConstructor
 from ._instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     _normalize_slice,
     empty_with_dtype,
     Depth,
@@ -27,7 +27,7 @@ from ._stack import stack, merge_dtypes
 
 def create_ramp(
     start: SupportsFloat, stop: SupportsFloat, length: SupportsInt
-) -> SequencerInstruction[np.float64]:
+) -> TimedInstruction[np.float64]:
     """Create a linear ramp between two values.
 
     Args:
@@ -56,7 +56,7 @@ def create_ramp(
 
 
 class Ramp[T: (np.floating, np.void)](
-    SequencerInstruction[T], metaclass=NoPublicConstructor
+    TimedInstruction[T], metaclass=NoPublicConstructor
 ):
     """Represents an instruction that linearly ramps between two values.
 
@@ -135,7 +135,7 @@ class Ramp[T: (np.floating, np.void)](
     def __getitem__(self, item: int) -> T: ...
 
     @overload
-    def __getitem__(self, item: slice) -> SequencerInstruction[T]: ...
+    def __getitem__(self, item: slice) -> TimedInstruction[T]: ...
 
     @overload
     def __getitem__(self, item: str) -> Ramp: ...
@@ -170,7 +170,7 @@ class Ramp[T: (np.floating, np.void)](
             assert isinstance(self._stop, np.floating)
             return self._start + index * (self._stop - self._start) / self._length
 
-    def _get_slice(self, slice_: slice) -> SequencerInstruction[T]:
+    def _get_slice(self, slice_: slice) -> TimedInstruction[T]:
         start_index, stop_index, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
@@ -185,7 +185,7 @@ class Ramp[T: (np.floating, np.void)](
         else:
             return Ramp._create(start_value, stop_value, stop_index - start_index)
 
-    def _get_channel(self, channel: str) -> SequencerInstruction:
+    def _get_channel(self, channel: str) -> TimedInstruction:
         if not np.issubdtype(self.dtype, np.void):
             raise ValueError("Can't get field if dtype is not a structured type.")
         assert self.dtype.names is not None
@@ -197,7 +197,7 @@ class Ramp[T: (np.floating, np.void)](
         stop_value = self._stop[channel]
         return Ramp._create(start_value, stop_value, self._length)
 
-    def as_type[S: np.generic](self, dtype: np.dtype[S]) -> SequencerInstruction[S]:
+    def as_type[S: np.generic](self, dtype: np.dtype[S]) -> TimedInstruction[S]:
         start = self._start.astype(dtype)
         if not isinstance(start, (np.floating, np.void)):
             raise TypeError("Can only convert to floating point or structured type.")
@@ -240,7 +240,7 @@ class Ramp[T: (np.floating, np.void)](
 
     def apply[
         S: np.generic
-    ](self, func: Callable[[Array1D[T]], Array1D[S]]) -> SequencerInstruction[S]:
+    ](self, func: Callable[[Array1D[T]], Array1D[S]]) -> TimedInstruction[S]:
         """Map a function element-wise to the ramp.
 
         Warning:
@@ -253,7 +253,7 @@ class Ramp[T: (np.floating, np.void)](
 
 
 @stack.register(Ramp, Ramp)
-def _stack_ramps(a: Ramp, b: Ramp) -> SequencerInstruction:
+def _stack_ramps(a: Ramp, b: Ramp) -> TimedInstruction:
     assert len(a) == len(b)
 
     start = _merge_values(a._start, b._start)
@@ -262,7 +262,7 @@ def _stack_ramps(a: Ramp, b: Ramp) -> SequencerInstruction:
 
 
 @stack.register(Ramp, Repeated)
-def _stack_ramp_repeated(a: Ramp, b: Repeated) -> SequencerInstruction:
+def _stack_ramp_repeated(a: Ramp, b: Repeated) -> TimedInstruction:
     if len(b.instruction) == 1:
         value = b.instruction[0]
         if not Ramp.is_valid_dtype(value.dtype):
@@ -277,7 +277,7 @@ def _stack_ramp_repeated(a: Ramp, b: Repeated) -> SequencerInstruction:
 
 
 @stack.register(Repeated, Ramp)
-def _stack_repeated_ramp(a: Repeated, b: Ramp) -> SequencerInstruction:
+def _stack_repeated_ramp(a: Repeated, b: Ramp) -> TimedInstruction:
     assert len(a) == len(b)
 
     if len(a.instruction) == 1:

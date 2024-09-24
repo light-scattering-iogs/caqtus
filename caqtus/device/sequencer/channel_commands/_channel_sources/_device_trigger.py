@@ -11,7 +11,7 @@ from caqtus.device import DeviceName
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.shot_compilation.timed_instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Pattern,
 )
 from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableException
@@ -95,10 +95,8 @@ class DeviceTrigger(ChannelOutput):
         # down the line.
         # It means the target device compiler doesn't satisfy the trigger interface, so
         # we want to report it early.
-        if not isinstance(trigger_values, SequencerInstruction):
-            raise TypeError(
-                f"Expected {SequencerInstruction}, got {type(trigger_values)}"
-            )
+        if not isinstance(trigger_values, TimedInstruction):
+            raise TypeError(f"Expected {TimedInstruction}, got {type(trigger_values)}")
 
         if not np.issubdtype(trigger_values.dtype, np.bool_):
             raise TypeError(f"Expected boolean trigger, got {trigger_values.dtype}")

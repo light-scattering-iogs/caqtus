@@ -24,7 +24,7 @@ from caqtus.types.units import (
 from caqtus.types.units.base import is_in_base_units
 from caqtus.types.variable_name import VariableName, DottedVariableName
 from ..timed_instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Pattern,
     concatenate,
     create_ramp,
@@ -45,7 +45,7 @@ class DimensionedSeries[T: (np.number, np.bool_)]:
             If the values are dimensionless, the units must be `None`.
     """
 
-    values: SequencerInstruction[T]
+    values: TimedInstruction[T]
     units: Optional[Unit] = attrs.field(
         validator=attrs.validators.optional(attrs.validators.instance_of(Unit))
     )
@@ -359,7 +359,7 @@ class ConstantBlockResult:
     def get_final_value(self) -> float:
         return self.value
 
-    def to_instruction(self) -> SequencerInstruction[np.float64]:
+    def to_instruction(self) -> TimedInstruction[np.float64]:
         return Pattern([self.value]) * self.length
 
 
@@ -389,7 +389,7 @@ class TimeDependentBlockResult:
     def get_final_value(self) -> float:
         return self.final_value
 
-    def to_instruction(self) -> SequencerInstruction[np.float64]:
+    def to_instruction(self) -> TimedInstruction[np.float64]:
         return Pattern(self.values, dtype=np.dtype(np.float64))
 
 
@@ -441,5 +441,5 @@ class RampBlockResult:
             unit,  # pyright: ignore[reportArgumentType]
         )
 
-    def to_instruction(self) -> SequencerInstruction[np.float64]:
+    def to_instruction(self) -> TimedInstruction[np.float64]:
         return create_ramp(self.initial_value, self.final_value, self.length)

@@ -9,7 +9,7 @@ from typing import ClassVar, Protocol
 import attrs
 
 from caqtus.device.runtime import Device
-from caqtus.shot_compilation.timed_instructions import SequencerInstruction
+from caqtus.shot_compilation.timed_instructions import TimedInstruction
 from ..timing import TimeStep
 from ..trigger import Trigger, is_trigger
 
@@ -46,7 +46,7 @@ class Sequencer(Device, ABC):
             raise ValueError(f"Invalid trigger {value}")
 
     @abc.abstractmethod
-    def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
+    def program_sequence(self, sequence: TimedInstruction) -> ProgrammedSequence:
         """Program the sequence into the device.
 
         This method just writes the sequence to the device. It does not start the

@@ -2,12 +2,12 @@ import functools
 
 import numpy as np
 
-from ._instructions import SequencerInstruction, Pattern, Concatenated, Repeated
+from ._instructions import TimedInstruction, Pattern, Concatenated, Repeated
 from ._ramp import Ramp
 
 
 def convert_to_change_arrays(
-    sequence: SequencerInstruction,
+    sequence: TimedInstruction,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Convert a sequence to arrays of change times and values.
 
@@ -30,7 +30,7 @@ def convert_to_change_arrays(
 
 @functools.singledispatch
 def _convert_to_change_arrays(
-    sequence: SequencerInstruction,
+    sequence: TimedInstruction,
 ) -> tuple[np.ndarray, np.ndarray]:
     raise NotImplementedError(f"Cannot convert {type(sequence)} to time arrays")
 

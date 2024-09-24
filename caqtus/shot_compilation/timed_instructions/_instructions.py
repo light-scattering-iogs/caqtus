@@ -29,7 +29,7 @@ _S = TypeVar("_S", covariant=True, bound=DTypeLike)
 type Array1D[T: np.generic] = npt.NDArray[T]
 
 
-class SequencerInstruction[T: np.generic](abc.ABC):
+class TimedInstruction[T: np.generic](abc.ABC):
     """An immutable representation of instructions to output on a sequencer.
 
     This represents a high-level series of instructions to output on a sequencer.
@@ -60,7 +60,7 @@ class SequencerInstruction[T: np.generic](abc.ABC):
 
     @overload
     @abc.abstractmethod
-    def __getitem__(self, item: slice) -> SequencerInstruction[T]:
+    def __getitem__(self, item: slice) -> TimedInstruction[T]:
         """Returns a sub-instruction over the given slice.
 
         Warning:
@@ -72,7 +72,7 @@ class SequencerInstruction[T: np.generic](abc.ABC):
 
     @overload
     @abc.abstractmethod
-    def __getitem__(self, item: str) -> SequencerInstruction:
+    def __getitem__(self, item: str) -> TimedInstruction:
         """Returns a sub-instruction over the given field.
 
         Returns:
@@ -98,7 +98,7 @@ class SequencerInstruction[T: np.generic](abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def as_type[S: np.generic](self, dtype: numpy.dtype[S]) -> SequencerInstruction[S]:
+    def as_type[S: np.generic](self, dtype: numpy.dtype[S]) -> TimedInstruction[S]:
         """Returns a new instruction with the given dtype."""
 
         raise NotImplementedError
@@ -133,8 +133,8 @@ class SequencerInstruction[T: np.generic](abc.ABC):
     def __eq__(self, other):
         raise NotImplementedError
 
-    def __add__(self, other) -> SequencerInstruction[T]:
-        if isinstance(other, SequencerInstruction):
+    def __add__(self, other) -> TimedInstruction[T]:
+        if isinstance(other, TimedInstruction):
             if len(self) == 0:
                 return other
             elif len(other) == 0:
@@ -144,7 +144,7 @@ class SequencerInstruction[T: np.generic](abc.ABC):
         else:
             return NotImplemented
 
-    def __mul__(self, other) -> SequencerInstruction[T]:
+    def __mul__(self, other) -> TimedInstruction[T]:
         if isinstance(other, int):
             if other < 0:
                 raise ValueError("Repetitions must be a positive integer")
@@ -163,13 +163,13 @@ class SequencerInstruction[T: np.generic](abc.ABC):
             # array instead of a SequencerInstruction.
             raise TypeError(f"Cannot multiply instruction by {other!r}")
 
-    def __rmul__(self, other) -> SequencerInstruction[T]:
+    def __rmul__(self, other) -> TimedInstruction[T]:
         return self.__mul__(other)
 
     @abc.abstractmethod
     def apply[
         S: np.generic
-    ](self, func: Callable[[Array1D[T]], Array1D[S]]) -> SequencerInstruction[S]:
+    ](self, func: Callable[[Array1D[T]], Array1D[S]]) -> TimedInstruction[S]:
         """Applies an element-wise function to the values of the instruction.
 
         Args:
@@ -196,7 +196,7 @@ class SequencerInstruction[T: np.generic](abc.ABC):
         return graph._repr_mimebundle_(include, exclude)
 
 
-class Pattern[T: np.generic](SequencerInstruction[T]):
+class Pattern[T: np.generic](TimedInstruction[T]):
     """An instruction representing a sequence of values.
 
     This is a fully explicit instruction for which each sample point must be given.
@@ -238,7 +238,7 @@ class Pattern[T: np.generic](SequencerInstruction[T]):
     def __getitem__(self, item: slice) -> Pattern[T]: ...
 
     @overload
-    def __getitem__(self, item: str) -> SequencerInstruction: ...
+    def __getitem__(self, item: str) -> TimedInstruction: ...
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -305,7 +305,7 @@ def _has_only_finite_values[T: np.generic](array: Array1D[T]) -> bool:
         return True
 
 
-class Concatenated[T: np.generic](SequencerInstruction[T]):
+class Concatenated[T: np.generic](TimedInstruction[T]):
     """Represents an immutable concatenation of instructions.
 
     Use the `+` operator or the function :func:`concatenate` to concatenate
@@ -316,15 +316,14 @@ class Concatenated[T: np.generic](SequencerInstruction[T]):
     __match_args__ = ("instructions",)
 
     @property
-    def instructions(self) -> tuple[SequencerInstruction[T], ...]:
+    def instructions(self) -> tuple[TimedInstruction[T], ...]:
         """The instructions concatenated by this instruction."""
 
         return self._instructions
 
-    def __init__(self, *instructions: SequencerInstruction[T]):
+    def __init__(self, *instructions: TimedInstruction[T]):
         assert all(
-            isinstance(instruction, SequencerInstruction)
-            for instruction in instructions
+            isinstance(instruction, TimedInstruction) for instruction in instructions
         )
         # The following assertions define a "pure" concatenation.
         # (i.e. no empty instructions, no nested concatenations, and at least two
@@ -363,10 +362,10 @@ class Concatenated[T: np.generic](SequencerInstruction[T]):
     def __getitem__(self, item: int) -> T: ...
 
     @overload
-    def __getitem__(self, item: slice) -> SequencerInstruction[T]: ...
+    def __getitem__(self, item: slice) -> TimedInstruction[T]: ...
 
     @overload
-    def __getitem__(self, item: str) -> SequencerInstruction: ...
+    def __getitem__(self, item: str) -> TimedInstruction: ...
 
     def __getitem__(self, item):
         match item:
@@ -386,14 +385,14 @@ class Concatenated[T: np.generic](SequencerInstruction[T]):
         instruction_start_index = self._instruction_bounds[instruction_index]
         return instruction[index - instruction_start_index]
 
-    def _get_slice(self, slice_: slice) -> SequencerInstruction[T]:
+    def _get_slice(self, slice_: slice) -> TimedInstruction[T]:
         start, stop, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
         start_step_index = bisect.bisect_right(self._instruction_bounds, start) - 1
         stop_step_index = bisect.bisect_left(self._instruction_bounds, stop) - 1
 
-        results: list[SequencerInstruction[T]] = [empty_like(self)]
+        results: list[TimedInstruction[T]] = [empty_like(self)]
         for instruction_index in range(start_step_index, stop_step_index + 1):
             instruction_start_index = self._instruction_bounds[instruction_index]
             instruction_slice_start = max(start, instruction_start_index)
@@ -407,7 +406,7 @@ class Concatenated[T: np.generic](SequencerInstruction[T]):
             results.append(self._instructions[instruction_index][instruction_slice])
         return concatenate(*results)
 
-    def _get_field(self, field: str) -> SequencerInstruction:
+    def _get_field(self, field: str) -> TimedInstruction:
         return Concatenated(*(instruction[field] for instruction in self._instructions))
 
     @property
@@ -448,7 +447,7 @@ class Concatenated[T: np.generic](SequencerInstruction[T]):
         )
 
 
-class Repeated[T: np.generic](SequencerInstruction[T]):
+class Repeated[T: np.generic](TimedInstruction[T]):
     """Represents a repetition of an instruction.
 
     Use the `*` operator with an integer to repeat an instruction.
@@ -466,17 +465,17 @@ class Repeated[T: np.generic](SequencerInstruction[T]):
         return self._repetitions
 
     @property
-    def instruction(self) -> SequencerInstruction[T]:
+    def instruction(self) -> TimedInstruction[T]:
         return self._instruction
 
-    def __init__(self, repetitions: int, instruction: SequencerInstruction[T]):
+    def __init__(self, repetitions: int, instruction: TimedInstruction[T]):
         """
         Do not use this constructor in user code.
         Instead, use the `*` operator.
         """
 
         assert isinstance(repetitions, int)
-        assert isinstance(instruction, SequencerInstruction)
+        assert isinstance(instruction, TimedInstruction)
         assert repetitions >= 2
         assert len(instruction) >= 1
         assert not isinstance(instruction, Repeated)
@@ -504,10 +503,10 @@ class Repeated[T: np.generic](SequencerInstruction[T]):
     def __getitem__(self, item: int) -> T: ...
 
     @overload
-    def __getitem__(self, item: slice) -> SequencerInstruction[T]: ...
+    def __getitem__(self, item: slice) -> TimedInstruction[T]: ...
 
     @overload
-    def __getitem__(self, item: str) -> SequencerInstruction: ...
+    def __getitem__(self, item: str) -> TimedInstruction: ...
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -524,7 +523,7 @@ class Repeated[T: np.generic](SequencerInstruction[T]):
         _, r = divmod(index, len(self._instruction))
         return self._instruction[r]
 
-    def _get_slice(self, slice_: slice) -> SequencerInstruction[T]:
+    def _get_slice(self, slice_: slice) -> TimedInstruction[T]:
         start, stop, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
@@ -547,7 +546,7 @@ class Repeated[T: np.generic](SequencerInstruction[T]):
             append = self._instruction[: stop - last_repetition * length]
             return prepend + middle + append
 
-    def _get_field(self, field: str) -> SequencerInstruction:
+    def _get_field(self, field: str) -> TimedInstruction:
         return Repeated(self._repetitions, self._instruction[field])
 
     @property
@@ -612,7 +611,7 @@ def _normalize_slice(slice_: slice, length: int) -> tuple[int, int, int]:
     return start, stop, step
 
 
-def empty_like[T: np.generic](instruction: SequencerInstruction[T]) -> Pattern[T]:
+def empty_like[T: np.generic](instruction: TimedInstruction[T]) -> Pattern[T]:
     return empty_with_dtype(instruction.dtype)
 
 
@@ -622,7 +621,7 @@ def empty_with_dtype[T: np.generic](dtype: numpy.dtype[T]) -> Pattern[T]:
 
 def concatenate[
     T: np.generic
-](*instructions: SequencerInstruction[T]) -> SequencerInstruction[T]:
+](*instructions: TimedInstruction[T]) -> TimedInstruction[T]:
     """Concatenates the given instructions into a single instruction.
 
     If not all instructions have the same dtype, the result will have the dtype that
@@ -635,7 +634,7 @@ def concatenate[
     if len(instructions) == 0:
         raise ValueError("Must provide at least one instruction")
     if not all(
-        isinstance(instruction, SequencerInstruction) for instruction in instructions
+        isinstance(instruction, TimedInstruction) for instruction in instructions
     ):
         raise TypeError("All instructions must be instances of SequencerInstruction")
     dtype = instructions[0].dtype
@@ -651,17 +650,17 @@ def concatenate[
 
 def _concatenate[
     T: np.generic
-](*instructions: SequencerInstruction[T]) -> SequencerInstruction[T]:
+](*instructions: TimedInstruction[T]) -> TimedInstruction[T]:
     assert len(instructions) >= 1
     assert all(
         instruction.dtype == instructions[0].dtype for instruction in instructions
     )
 
-    instruction_deque = collections.deque[SequencerInstruction[T]](
+    instruction_deque = collections.deque[TimedInstruction[T]](
         _break_concatenations(instructions)
     )
 
-    useful_instructions: list[SequencerInstruction[T]] = []
+    useful_instructions: list[TimedInstruction[T]] = []
     while instruction_deque:
         instruction = instruction_deque.popleft()
         if len(instruction) == 0:
@@ -696,8 +695,8 @@ def _concatenate[
 
 def _break_concatenations[
     T: np.generic
-](instructions: Sequence[SequencerInstruction[T]],) -> list[SequencerInstruction[T]]:
-    flat: list[SequencerInstruction[T]] = []
+](instructions: Sequence[TimedInstruction[T]],) -> list[TimedInstruction[T]]:
+    flat: list[TimedInstruction[T]] = []
     for instruction in instructions:
         if isinstance(instruction, Concatenated):
             flat.extend(instruction.instructions)

@@ -4,10 +4,10 @@ from typing import Optional
 import graphviz
 import numpy as np
 
-from ._instructions import SequencerInstruction, Concatenated, Repeated, Pattern
+from ._instructions import TimedInstruction, Concatenated, Repeated, Pattern
 
 
-def to_graph(instruction: SequencerInstruction) -> graphviz.Digraph:
+def to_graph(instruction: TimedInstruction) -> graphviz.Digraph:
     """Convert a sequencer instruction to a graphiz graph for visualization.
 
     This function requires `Graphviz <https://www.graphviz.org/>`_ to be installed and

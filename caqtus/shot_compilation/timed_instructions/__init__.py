@@ -1,7 +1,7 @@
 """This module contains the implementation of timed instructions."""
 
 from ._instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Concatenated,
     Repeated,
     Pattern,
@@ -15,7 +15,7 @@ from ._to_time_array import convert_to_change_arrays
 from ._with_name import with_name
 
 __all__ = [
-    "SequencerInstruction",
+    "TimedInstruction",
     "Concatenated",
     "Repeated",
     "Pattern",

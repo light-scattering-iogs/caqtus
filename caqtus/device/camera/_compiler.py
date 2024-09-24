@@ -9,7 +9,7 @@ from caqtus.shot_compilation import (
     ShotContext,
 )
 from caqtus.shot_compilation.timed_instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Pattern,
     concatenate,
 )
@@ -119,7 +119,7 @@ class CameraCompiler(TriggerableDeviceCompiler):
 
     def compute_trigger(
         self, sequencer_time_step: TimeStep, shot_context: ShotContext
-    ) -> SequencerInstruction[np.bool_]:
+    ) -> TimedInstruction[np.bool_]:
         """Compute the trigger for the camera.
 
         For a camera, the trigger is high during the exposure time of each picture,
@@ -128,7 +128,7 @@ class CameraCompiler(TriggerableDeviceCompiler):
 
         step_bounds = shot_context.get_step_start_times()
 
-        instructions: list[SequencerInstruction[np.bool_]] = []
+        instructions: list[TimedInstruction[np.bool_]] = []
         for value, (start, stop) in zip(
             self.__lane.block_values(), self.__lane.block_bounds(), strict=True
         ):

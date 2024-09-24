@@ -5,7 +5,7 @@ import numpy as np
 
 import caqtus.formatter as fmt
 from caqtus.shot_compilation.timed_instructions import (
-    SequencerInstruction,
+    TimedInstruction,
     Pattern,
     concatenate,
 )
@@ -21,7 +21,7 @@ def compile_digital_lane(
     step_start_times: Sequence[Time],
     time_step: Time,
     parameters: Mapping[DottedVariableName, Any],
-) -> SequencerInstruction[np.bool_]:
+) -> TimedInstruction[np.bool_]:
     """Compile a digital lane into a sequence of instructions.
 
     Args:
@@ -62,9 +62,7 @@ def compile_digital_lane(
     return concatenate(*instructions)
 
 
-def get_constant_instruction(
-    value: bool, length: int
-) -> SequencerInstruction[np.bool_]:
+def get_constant_instruction(value: bool, length: int) -> TimedInstruction[np.bool_]:
     return Pattern([value]) * length
 
 
