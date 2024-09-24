@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Mapping, Any
+from typing import Mapping, Any, SupportsFloat
 
 import attrs
 import numpy as np
@@ -16,13 +16,12 @@ from caqtus.shot_compilation.timed_instructions import (
     concatenate,
     Repeated,
 )
-from caqtus.shot_compilation.timing import duration_to_ticks
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError, InvalidValueError
 from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_output import ChannelOutput
-from ...timing import TimeStep
+from ...timing import TimeStep, ns
 
 
 @attrs.define
@@ -163,3 +162,19 @@ def _expand_repeated_left(repeated: Repeated, width: int):
     else:
         instr = (kept + overwritten) * (repeated.repetitions - 1) + expanded
         return instr, bleed
+
+
+def duration_to_ticks(duration: SupportsFloat, time_step: TimeStep) -> int:
+    """Returns the nearest number of ticks for a given duration and time step.
+
+    Args:
+        duration: The duration in seconds.
+        time_step: The time step in nanoseconds.
+    """
+
+    dt = time_step * ns
+
+    rounded = round(float(duration) / float(dt))
+    if not isinstance(rounded, int):
+        raise TypeError(f"Expected integer number of ticks, got {rounded}")
+    return rounded
