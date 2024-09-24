@@ -11,11 +11,7 @@ import numpy.typing as npt
 
 import caqtus.formatter as fmt
 from caqtus.device.sequencer.timing import (
-    TimeStep,
     ns,
-    start_time_step,
-    stop_time_step,
-    number_time_steps_between,
 )
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
@@ -36,7 +32,7 @@ from ..timed_instructions import (
     concatenate,
     create_ramp,
 )
-from ..timing import Time
+from ..timing import Time, number_ticks, start_tick, stop_tick
 
 TIME_VARIABLE = VariableName("t")
 
@@ -72,7 +68,7 @@ def compile_analog_lane(
     lane: AnalogTimeLane,
     variables: Mapping[DottedVariableName, Any],
     step_start_times: Sequence[Time],
-    time_step: TimeStep,
+    time_step: Time,
 ) -> DimensionedSeries[np.float64]:
     """Compile the lane to a sequencer instruction.
 
@@ -86,7 +82,7 @@ def compile_analog_lane(
         step_start_times: The start times in seconds of each step.
             This must have one more element than the number of steps in the lane, with
             the last element being the total duration of the shot.
-        time_step: The time step in nanoseconds to use for the discretization.
+        time_step: The time step in seconds to use for the discretization.
 
     Returns:
         The computed instruction for the lane.
@@ -192,10 +188,10 @@ def _compile_expression_block(
     variables: Mapping[DottedVariableName, Any],
     start_time: Time,
     stop_time: Time,
-    time_step: TimeStep,
+    time_step: Time,
 ) -> ConstantBlockResult | TimeDependentBlockResult:
     if is_constant(expression):
-        length = number_time_steps_between(start_time, stop_time, time_step)
+        length = number_ticks(start_time, stop_time, time_step)
         return evaluate_constant_expression(expression, variables, length)
     else:
         return evaluate_time_dependent_expression(
@@ -238,7 +234,7 @@ def evaluate_time_dependent_expression(
     variables: Mapping[DottedVariableName, Any],
     start_time: Time,
     stop_time: Time,
-    time_step: TimeStep,
+    time_step: Time,
 ) -> TimeDependentBlockResult:
     assert not is_constant(expression)
 
@@ -274,7 +270,7 @@ def evaluate_time_dependent_expression(
         raise InvalidTypeError(
             f"{fmt.expression(expression)} does not evaluate to a series of values"
         )
-    length = number_time_steps_between(start_time, stop_time, time_step)
+    length = number_ticks(start_time, stop_time, time_step)
     if magnitudes.shape != (length + 2,):
         raise InvalidValueError(
             f"{fmt.expression(expression)} evaluates to an array of shape"
@@ -295,7 +291,7 @@ def _compile_ramp_cell(
     ramp_block: Block,
     expression_blocks: dict[Block, ConstantBlockResult | TimeDependentBlockResult],
     step_bounds: Sequence[Time],
-    time_step: TimeStep,
+    time_step: Time,
 ) -> RampBlockResult:
     previous_block = Block(ramp_block - 1)
     if previous_block < 0:
@@ -342,11 +338,11 @@ def is_constant(expression: Expression) -> bool:
 
 
 def get_time_array(
-    start: Time, stop: Time, time_step: TimeStep
+    start: Time, stop: Time, time_step: Time
 ) -> np.ndarray[Any, np.dtype[np.floating]]:
     times = np.arange(
-        start_time_step(start, time_step),
-        stop_time_step(stop, time_step),
+        start_tick(start, time_step),
+        stop_tick(stop, time_step),
         dtype=np.float64,
     ) * float(time_step * ns)
     return times
@@ -417,14 +413,14 @@ class RampBlockResult:
         v0: float,
         t1: Time,
         v1: float,
-        time_step: TimeStep,
+        time_step: Time,
         unit: Optional[UnitLike],
     ) -> RampBlockResult:
         def f(t: Time) -> float:
             return float((t - t0) / (t1 - t0)) * (v1 - v0) + v0
 
-        first_tick = start_time_step(t0, time_step)
-        last_tick = stop_time_step(t1, time_step)
+        first_tick = start_tick(t0, time_step)
+        last_tick = stop_tick(t1, time_step)
 
         first_tick_time = Time(first_tick * time_step * ns)
         last_tick_time = Time(last_tick * time_step * ns)

@@ -90,9 +90,9 @@ class LaneValues(ChannelOutput):
         elif isinstance(lane, AnalogTimeLane):
             result = compile_analog_lane(
                 lane,
-                shot_context.get_variables(),
+                shot_context.get_parameters(),
                 shot_context.get_step_start_times(),
-                required_time_step,
+                Time(required_time_step * ns),
             )
         else:
             raise InvalidTypeError(
