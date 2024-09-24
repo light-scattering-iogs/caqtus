@@ -308,8 +308,8 @@ def _has_only_finite_values[T: np.generic](array: Array1D[T]) -> bool:
 class Concatenated[T: np.generic](SequencerInstruction[T]):
     """Represents an immutable concatenation of instructions.
 
-    Use the `+` operator or the function :func:`concatenate` to concatenate instructions.
-    Do not use the class constructor directly.
+    Use the `+` operator or the function :func:`concatenate` to concatenate
+    instructions. Do not use the class constructor directly.
     """
 
     __slots__ = ("_instructions", "_instruction_bounds", "_length")

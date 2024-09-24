@@ -153,7 +153,7 @@ def stack_concatenation_left(
 
     results = []
     for (start, stop), instruction in zip(
-        pairwise(a._instruction_bounds), a.instructions
+        pairwise(a._instruction_bounds), a.instructions, strict=True
     ):
         results.append(stack(instruction, b[start:stop]))
     if not results:
@@ -169,7 +169,7 @@ def stack_concatenation_right(
 
     results = []
     for (start, stop), instruction in zip(
-        pairwise(b._instruction_bounds), b.instructions
+        pairwise(b._instruction_bounds), b.instructions, strict=True
     ):
         results.append(stack(a[start:stop], instruction))
     if not results:
