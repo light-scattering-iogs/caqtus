@@ -10,9 +10,6 @@ import numpy as np
 import numpy.typing as npt
 
 import caqtus.formatter as fmt
-from caqtus.device.sequencer.timing import (
-    ns,
-)
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import AnalogTimeLane, Ramp, Block
@@ -344,7 +341,7 @@ def get_time_array(
         start_tick(start, time_step),
         stop_tick(stop, time_step),
         dtype=np.float64,
-    ) * float(time_step * ns)
+    ) * float(time_step)
     return times
 
 
@@ -422,8 +419,8 @@ class RampBlockResult:
         first_tick = start_tick(t0, time_step)
         last_tick = stop_tick(t1, time_step)
 
-        first_tick_time = Time(first_tick * time_step * ns)
-        last_tick_time = Time(last_tick * time_step * ns)
+        first_tick_time = Time(first_tick * time_step)
+        last_tick_time = Time(last_tick * time_step)
 
         length = last_tick - first_tick
 
