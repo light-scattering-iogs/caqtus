@@ -17,7 +17,7 @@ def to_time(value: decimal.Decimal | float | str) -> Time:
     """Converts a value to a Time object.
 
     Args:
-        value: The value to convert to a Time object.
+        value: The value to convert to a Time object, in seconds.
 
     Returns:
         A Time object representing the value in seconds, rounded to the picosecond.
