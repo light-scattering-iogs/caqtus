@@ -1,11 +1,9 @@
 import pytest
 
-from caqtus.device.sequencer.channel_commands._channel_sources._compile_digital_lane import (
-    compile_digital_lane,
-)
 from caqtus.device.sequencer.instructions import Pattern
 from caqtus.device.sequencer.timing import to_time_step, number_time_steps
 from caqtus.shot_compilation import VariableNamespace, ShotContext, SequenceContext
+from caqtus.shot_compilation.lane_compilation import compile_digital_lane
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import RecoverableException
 from caqtus.types.timelane import DigitalTimeLane, TimeLanes
@@ -16,14 +14,14 @@ from caqtus.types.variable_name import DottedVariableName
 def test_0():
     shot_context = ShotContext(
         SequenceContext(
-            device_configurations={},
-            time_lanes=TimeLanes(
+            device_configurations={},  # type: ignore[reportCallIssue]
+            time_lanes=TimeLanes(  # type: ignore[reportCallIssue]
                 step_names=["a", "b"],
                 step_durations=[Expression("1 s"), Expression("1 s")],
             ),
         ),
-        variables={},
-        device_compilers={},
+        variables={},  # type: ignore[reportCallIssue]
+        device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True, False])
     result = compile_digital_lane(lane, to_time_step(1), shot_context)
@@ -33,14 +31,14 @@ def test_0():
 def test_1():
     shot_context = ShotContext(
         SequenceContext(
-            device_configurations={},
-            time_lanes=TimeLanes(
+            device_configurations={},  # type: ignore[reportCallIssue]
+            time_lanes=TimeLanes(  # type: ignore[reportCallIssue]
                 step_names=["a", "b"],
                 step_durations=[Expression("1 s"), Expression("1 s")],
             ),
         ),
-        variables={DottedVariableName("a"): True, DottedVariableName("b"): False},
-        device_compilers={},
+        variables={DottedVariableName("a"): True, DottedVariableName("b"): False},  # type: ignore[reportCallIssue]
+        device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([Expression("a"), Expression("b")])
     result = compile_digital_lane(lane, to_time_step(1), shot_context)
@@ -51,14 +49,14 @@ def test_1():
 def test_2():
     shot_context = ShotContext(
         SequenceContext(
-            device_configurations={},
-            time_lanes=TimeLanes(
+            device_configurations={},  # type: ignore[reportCallIssue]
+            time_lanes=TimeLanes(  # type: ignore[reportCallIssue]
                 step_names=["a", "b", "c"],
                 step_durations=[Expression("1 s")] * 3,
             ),
         ),
-        variables={},
-        device_compilers={},
+        variables={},  # type: ignore[reportCallIssue]
+        device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True] * 2 + [False])
     result = compile_digital_lane(lane, to_time_step(1), shot_context)
@@ -116,14 +114,14 @@ def test_3():
     )
     shot_context = ShotContext(
         SequenceContext(
-            device_configurations={},
-            time_lanes=TimeLanes(
+            device_configurations={},  # type: ignore[reportCallIssue]
+            time_lanes=TimeLanes(  # type: ignore[reportCallIssue]
                 step_names=lane_names,
                 step_durations=lane_durations,
             ),
         ),
-        variables=variables.dict(),
-        device_compilers={},
+        variables=variables.dict(),  # type: ignore[reportCallIssue]
+        device_compilers={},  # type: ignore[reportCallIssue]
     )
     time_step = to_time_step(1)
     result = compile_digital_lane(lane, time_step, shot_context)
@@ -134,14 +132,14 @@ def test_3():
 def test_invalid_expression_cell():
     shot_context = ShotContext(
         SequenceContext(
-            device_configurations={},
-            time_lanes=TimeLanes(
+            device_configurations={},  # type: ignore[reportCallIssue]
+            time_lanes=TimeLanes(  # type: ignore[reportCallIssue]
                 step_names=["a"],
                 step_durations=[Expression("1 s")],
             ),
         ),
-        variables={},
-        device_compilers={},
+        variables={},  # type: ignore[reportCallIssue]
+        device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([Expression("...")])
     with pytest.raises(RecoverableException):
@@ -151,14 +149,14 @@ def test_invalid_expression_cell():
 def test_non_integer_time_step():
     shot_context = ShotContext(
         SequenceContext(
-            device_configurations={},
-            time_lanes=TimeLanes(
+            device_configurations={},  # type: ignore[reportCallIssue]
+            time_lanes=TimeLanes(  # type: ignore[reportCallIssue]
                 step_names=["a", "b"],
                 step_durations=[Expression("1 s"), Expression("1 s")],
             ),
         ),
-        variables={},
-        device_compilers={},
+        variables={},  # type: ignore[reportCallIssue]
+        device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True, False])
     result = compile_digital_lane(lane, to_time_step(0.5), shot_context)
