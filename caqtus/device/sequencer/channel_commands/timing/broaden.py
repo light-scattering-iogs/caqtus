@@ -8,6 +8,7 @@ import numpy as np
 
 import caqtus.formatter as fmt
 from caqtus.shot_compilation import ShotContext
+from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Pattern,
@@ -20,7 +21,7 @@ from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError, InvalidValueError
 from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
-from ..channel_output import ChannelOutput, DimensionedSeries
+from ..channel_output import ChannelOutput
 from ...timing import TimeStep
 
 

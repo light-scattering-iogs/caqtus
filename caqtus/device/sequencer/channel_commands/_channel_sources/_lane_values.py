@@ -9,13 +9,14 @@ from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilation import (
     compile_digital_lane,
     compile_analog_lane,
+    DimensionedSeries,
 )
 from caqtus.shot_compilation.timed_instructions import Pattern
 from caqtus.shot_compilation.timing import Time
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane, AnalogTimeLane
 from caqtus.types.variable_name import DottedVariableName
-from ..channel_output import ChannelOutput, DimensionedSeries
+from ..channel_output import ChannelOutput
 from ...timing import TimeStep, ns
 
 

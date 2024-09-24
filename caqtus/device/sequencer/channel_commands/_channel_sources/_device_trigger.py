@@ -9,6 +9,7 @@ import numpy as np
 import caqtus.formatter as fmt
 from caqtus.device import DeviceName
 from caqtus.shot_compilation import ShotContext
+from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Pattern,
@@ -16,7 +17,7 @@ from caqtus.shot_compilation.timed_instructions import (
 from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableException
 from caqtus.types.variable_name import DottedVariableName
 from ._trigger_compiler import TriggerableDeviceCompiler
-from ..channel_output import ChannelOutput, DimensionedSeries
+from ..channel_output import ChannelOutput
 from ...timing import TimeStep, number_time_steps
 
 

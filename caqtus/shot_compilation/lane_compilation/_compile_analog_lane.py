@@ -10,7 +10,6 @@ import numpy as np
 import numpy.typing as npt
 
 import caqtus.formatter as fmt
-from caqtus.device.sequencer.channel_commands.channel_output import DimensionedSeries
 from caqtus.device.sequencer.timing import (
     TimeStep,
     ns,
@@ -36,9 +35,37 @@ from caqtus.types.units import (
     InvalidDimensionalityError,
     Unit,
 )
+from caqtus.types.units.base import is_in_base_units
 from caqtus.types.variable_name import VariableName, DottedVariableName
 
 TIME_VARIABLE = VariableName("t")
+
+
+@attrs.frozen
+class DimensionedSeries[T: (np.number, np.bool_)]:
+    """Represents a series of value to output on a channel with their units.
+
+    Parameters:
+        values: The sequence of values to output.
+        units: The units in which the values are expressed.
+            The units must be expressed in the base units of the registry.
+            If the values are dimensionless, the units must be `None`.
+    """
+
+    values: SequencerInstruction[T]
+    units: Optional[Unit] = attrs.field(
+        validator=attrs.validators.optional(attrs.validators.instance_of(Unit))
+    )
+
+    @units.validator  # type: ignore
+    def _validate_units(self, _, units: Optional[Unit]):
+        if units is not None:
+            if not is_in_base_units(units):
+                raise ValueError(
+                    f"Unit {units} is not expressed in the base units of the registry."
+                )
+            if units.is_compatible_with(dimensionless):
+                raise ValueError(f"Unit {units} is dimensionless and must be None.")
 
 
 def compile_analog_lane(

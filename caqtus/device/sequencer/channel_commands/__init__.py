@@ -18,10 +18,8 @@ from ._channel_sources import (
     DeviceTrigger,
     ValueSource,
     is_value_source,
-    compile_analog_lane,
 )
-from .channel_output import ChannelOutput, DimensionedSeries
-
+from .channel_output import ChannelOutput
 
 __all__ = [
     "ChannelOutput",
@@ -32,7 +30,5 @@ __all__ = [
     "is_value_source",
     "CalibratedAnalogMapping",
     "TimeIndependentMapping",
-    "compile_analog_lane",
     "timing",
-    "DimensionedSeries",
 ]

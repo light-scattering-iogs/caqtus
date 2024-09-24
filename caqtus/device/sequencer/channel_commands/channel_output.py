@@ -18,44 +18,15 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Mapping
-from typing import Optional, Any
+from typing import Any
 
 import attrs
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext
-from caqtus.shot_compilation.timed_instructions import SequencerInstruction
-from caqtus.types.units import Unit, dimensionless
-from caqtus.types.units.base import is_in_base_units
+from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.types.variable_name import DottedVariableName
 from ..timing import TimeStep
-
-
-@attrs.frozen
-class DimensionedSeries[T: (np.number, np.bool_)]:
-    """Represents a series of value to output on a channel with their units.
-
-    Parameters:
-        values: The sequence of values to output.
-        units: The units in which the values are expressed.
-            The units must be expressed in the base units of the registry.
-            If the values are dimensionless, the units must be `None`.
-    """
-
-    values: SequencerInstruction[T]
-    units: Optional[Unit] = attrs.field(
-        validator=attrs.validators.optional(attrs.validators.instance_of(Unit))
-    )
-
-    @units.validator  # type: ignore
-    def _validate_units(self, _, units: Optional[Unit]):
-        if units is not None:
-            if not is_in_base_units(units):
-                raise ValueError(
-                    f"Unit {units} is not expressed in the base units of the registry."
-                )
-            if units.is_compatible_with(dimensionless):
-                raise ValueError(f"Unit {units} is dimensionless and must be None.")
 
 
 @attrs.define

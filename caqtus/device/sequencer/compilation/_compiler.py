@@ -10,6 +10,7 @@ import tblib.pickling_support
 
 from caqtus.device import DeviceName
 from caqtus.shot_compilation import SequenceContext, ShotContext
+from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.shot_compilation.timed_instructions import (
     with_name,
     stack_instructions,
@@ -25,7 +26,6 @@ from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import is_in_base_units, base_units
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_commands import ChannelOutput
-from ..channel_commands import DimensionedSeries
 from ..channel_commands._channel_sources._trigger_compiler import (
     TriggerableDeviceCompiler,
 )

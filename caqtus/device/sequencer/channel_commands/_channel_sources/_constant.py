@@ -8,9 +8,9 @@ import attrs
 import caqtus.formatter as fmt
 from caqtus.device.sequencer.channel_commands.channel_output import (
     ChannelOutput,
-    DimensionedSeries,
 )
 from caqtus.shot_compilation import ShotContext
+from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.shot_compilation.timed_instructions import Pattern
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
