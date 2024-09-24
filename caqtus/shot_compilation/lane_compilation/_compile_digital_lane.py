@@ -29,7 +29,7 @@ def compile_digital_lane(
         step_start_times: The start times of each step.
             The length of this sequence must be equal to the number of steps in the
             lane plus one, with the last element being the total duration.
-        time_step: The time step for discretizing the time.
+        time_step: The time step for discretizing the time, in seconds.
         parameters: The parameters to use when evaluating expressions in the lane.
     """
 
