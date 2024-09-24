@@ -78,7 +78,10 @@ class LaneValues(ChannelOutput):
                 ) from None
         if isinstance(lane, DigitalTimeLane):
             lane_values = compile_digital_lane(
-                lane, Time(required_time_step * ns), shot_context
+                lane,
+                shot_context.get_step_start_times(),
+                Time(required_time_step * ns),
+                shot_context.get_parameters(),
             )
             result = DimensionedSeries(lane_values, units=None)
         elif isinstance(lane, AnalogTimeLane):

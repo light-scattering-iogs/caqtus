@@ -31,7 +31,12 @@ def test_0():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True, False])
-    result = compile_digital_lane(lane, into_time(1), shot_context)
+    result = compile_digital_lane(
+        lane,
+        shot_context.get_step_start_times(),
+        into_time(1),
+        shot_context.get_parameters(),
+    )
     assert result == Pattern([True]) * 1_000_000_000 + Pattern([False]) * 1_000_000_000
 
 
@@ -48,7 +53,12 @@ def test_1():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([Expression("a"), Expression("b")])
-    result = compile_digital_lane(lane, into_time(1), shot_context)
+    result = compile_digital_lane(
+        lane,
+        shot_context.get_step_start_times(),
+        into_time(1),
+        shot_context.get_parameters(),
+    )
 
     assert result == Pattern([True]) * 1_000_000_000 + Pattern([False]) * 1_000_000_000
 
@@ -66,7 +76,12 @@ def test_2():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True] * 2 + [False])
-    result = compile_digital_lane(lane, into_time(1), shot_context)
+    result = compile_digital_lane(
+        lane,
+        shot_context.get_step_start_times(),
+        into_time(1),
+        shot_context.get_parameters(),
+    )
     assert (
         result == Pattern([True]) * 2_000_000_000 + Pattern([False]) * 1_000_000_000
     ), str(result)
@@ -131,7 +146,12 @@ def test_3():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     time_step = into_time(1)
-    result = compile_digital_lane(lane, time_step, shot_context)
+    result = compile_digital_lane(
+        lane,
+        shot_context.get_step_start_times(),
+        time_step,
+        shot_context.get_parameters(),
+    )
     assert len(result) == number_ticks(
         Time(decimal.Decimal(0)), shot_context.get_shot_duration(), time_step
     )
@@ -152,7 +172,12 @@ def test_invalid_expression_cell():
     )
     lane = DigitalTimeLane([Expression("...")])
     with pytest.raises(RecoverableException):
-        compile_digital_lane(lane, into_time(1), shot_context)
+        compile_digital_lane(
+            lane,
+            shot_context.get_step_start_times(),
+            into_time(1),
+            shot_context.get_parameters(),
+        )
 
 
 def test_non_integer_time_step():
@@ -168,5 +193,10 @@ def test_non_integer_time_step():
         device_compilers={},  # type: ignore[reportCallIssue]
     )
     lane = DigitalTimeLane([True, False])
-    result = compile_digital_lane(lane, into_time(0.5), shot_context)
+    result = compile_digital_lane(
+        lane,
+        shot_context.get_step_start_times(),
+        into_time(0.5),
+        shot_context.get_parameters(),
+    )
     assert result == Pattern([True]) * 2_000_000_000 + Pattern([False]) * 2_000_000_000

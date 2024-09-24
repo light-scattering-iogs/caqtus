@@ -1,7 +1,9 @@
+from collections.abc import Mapping, Sequence
+from typing import Any
+
 import numpy as np
 
 import caqtus.formatter as fmt
-from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Pattern,
@@ -11,30 +13,43 @@ from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane
 from ..timing import Time, number_ticks
+from ...types.variable_name import DottedVariableName
 
 
 def compile_digital_lane(
     lane: DigitalTimeLane,
+    step_start_times: Sequence[Time],
     time_step: Time,
-    shot_context: ShotContext,
+    parameters: Mapping[DottedVariableName, Any],
 ) -> SequencerInstruction[np.bool_]:
-    step_names = shot_context.get_step_names()
-    if len(lane) != len(step_names):
+    """Compile a digital lane into a sequence of instructions.
+
+    Args:
+        lane: The digital lane to compile.
+        step_start_times: The start times of each step.
+            The length of this sequence must be equal to the number of steps in the
+            lane plus one, with the last element being the total duration.
+        time_step: The time step for discretizing the time.
+        parameters: The parameters to use when evaluating expressions in the lane.
+    """
+
+    if len(lane) != len(step_start_times) - 1:
         raise ValueError(
-            f"Number of steps in lane ({len(lane)}) does not match number of"
-            f" steps ({len(step_names)})"
+            f"Number of steps in lane ({len(lane)}) does not match number of step "
+            f"start times ({len(step_start_times) - 1})"
         )
 
-    step_bounds = shot_context.get_step_start_times()
     instructions = []
     for cell_value, (start, stop) in zip(
         lane.block_values(), lane.block_bounds(), strict=True
     ):
-        length = number_ticks(step_bounds[start], step_bounds[stop], time_step)
+        length = number_ticks(
+            step_start_times[start], step_start_times[stop], time_step
+        )
         if isinstance(cell_value, bool):
             instructions.append(get_constant_instruction(cell_value, length))
         elif isinstance(cell_value, Expression):
-            value = cell_value.evaluate(shot_context.get_parameters())
+            value = cell_value.evaluate(parameters)
             if not isinstance(value, bool):
                 raise InvalidTypeError(
                     f"{fmt.expression(cell_value)} does not evaluate to "
