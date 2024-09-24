@@ -3,15 +3,15 @@ from collections.abc import Iterable, Sequence
 import numpy as np
 from pytest import approx, raises
 
-from caqtus.device.sequencer.channel_commands import compile_analog_lane
-from caqtus.device.sequencer.channel_commands._channel_sources.compile_analog_lane import (
+from caqtus.device.sequencer.instructions import Pattern, create_ramp
+from caqtus.device.sequencer.timing import to_time_step
+from caqtus.shot_compilation.lane_compilation._compile_analog_lane import (
+    compile_analog_lane,
     evaluate_constant_expression,
     evaluate_time_dependent_expression,
     ConstantBlockResult,
     TimeDependentBlockResult,
 )
-from caqtus.device.sequencer.instructions import Pattern, create_ramp
-from caqtus.device.sequencer.timing import to_time_step
 from caqtus.shot_compilation.timing import to_time, get_step_bounds, Time
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError

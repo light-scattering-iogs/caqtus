@@ -10,6 +10,14 @@ import numpy as np
 import numpy.typing as npt
 
 import caqtus.formatter as fmt
+from caqtus.device.sequencer.channel_commands.channel_output import DimensionedSeries
+from caqtus.device.sequencer.timing import (
+    TimeStep,
+    ns,
+    start_time_step,
+    stop_time_step,
+    number_time_steps_between,
+)
 from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Pattern,
@@ -29,14 +37,6 @@ from caqtus.types.units import (
     Unit,
 )
 from caqtus.types.variable_name import VariableName, DottedVariableName
-from ..channel_output import DimensionedSeries
-from ...timing import (
-    TimeStep,
-    ns,
-    start_time_step,
-    stop_time_step,
-    number_time_steps_between,
-)
 
 TIME_VARIABLE = VariableName("t")
 
