@@ -2,7 +2,6 @@
 
 from . import channel_commands
 from . import compilation
-from . import instructions
 from . import trigger
 from ._controller import SequencerController
 from ._converter import converter
@@ -26,7 +25,6 @@ __all__ = [
     "SequencerProxy",
     "SequencerController",
     "channel_commands",
-    "instructions",
     "converter",
     "TimeStep",
     "trigger",
