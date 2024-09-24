@@ -8,11 +8,11 @@ import numpy as np
 
 import caqtus.formatter as fmt
 from caqtus.device import DeviceName
-from caqtus.device.sequencer.instructions import (
+from caqtus.shot_compilation import ShotContext
+from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Pattern,
 )
-from caqtus.shot_compilation import ShotContext
 from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableException
 from caqtus.types.variable_name import DottedVariableName
 from ._trigger_compiler import TriggerableDeviceCompiler
@@ -67,18 +67,18 @@ class DeviceTrigger(ChannelOutput):
                         f"Default value for trigger for {fmt.device(target_device)} "
                         f"must be dimensionless, got "
                         f"{fmt.unit(evaluated_default.units)}"
-                    )
+                    ) from None
                 default_dtype = evaluated_default.values.dtype
                 if default_dtype != np.bool_:
                     raise InvalidValueError(
                         f"Default value for trigger for {fmt.device(target_device)} "
                         f"must be boolean, got {default_dtype}"
-                    )
+                    ) from None
                 return evaluated_default
             else:
                 raise InvalidValueError(
                     f"There is no {fmt.device(target_device)} to generate trigger for"
-                )
+                ) from None
 
         if not isinstance(target_device_compiler, TriggerableDeviceCompiler):
             raise DeviceNotTriggerableError(

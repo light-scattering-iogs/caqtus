@@ -10,8 +10,8 @@ from caqtus.device.sequencer.channel_commands.channel_output import (
     ChannelOutput,
     DimensionedSeries,
 )
-from caqtus.device.sequencer.instructions import Pattern
 from caqtus.shot_compilation import ShotContext
+from caqtus.shot_compilation.timed_instructions import Pattern
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.units import Quantity, Unit, dimensionless

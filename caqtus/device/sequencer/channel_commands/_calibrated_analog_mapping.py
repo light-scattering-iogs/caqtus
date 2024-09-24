@@ -10,12 +10,7 @@ import attrs
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext
-from caqtus.types.units import Unit, InvalidDimensionalityError
-from caqtus.types.units.base import convert_to_base_units
-from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils.itertools import pairwise
-from .channel_output import ChannelOutput, DimensionedSeries
-from ..instructions import (
+from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Pattern,
     Concatenated,
@@ -24,6 +19,11 @@ from ..instructions import (
     Ramp,
     create_ramp,
 )
+from caqtus.types.units import Unit, InvalidDimensionalityError
+from caqtus.types.units.base import convert_to_base_units
+from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils.itertools import pairwise
+from .channel_output import ChannelOutput, DimensionedSeries
 from ..timing import TimeStep
 
 

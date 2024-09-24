@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 
 import caqtus.formatter as fmt
-from caqtus.device.sequencer.instructions import (
+from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Pattern,
     concatenate,

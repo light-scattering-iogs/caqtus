@@ -2,7 +2,7 @@ import contextlib
 from typing import TypeVar
 
 from caqtus.device.remote import DeviceProxy, AsyncConverter
-from .instructions import SequencerInstruction
+from caqtus.shot_compilation.timed_instructions import SequencerInstruction
 from .runtime import Sequencer
 from .trigger import Trigger
 from ..remote.rpc import Proxy

@@ -10,6 +10,16 @@ import tblib.pickling_support
 
 from caqtus.device import DeviceName
 from caqtus.shot_compilation import SequenceContext, ShotContext
+from caqtus.shot_compilation.timed_instructions import (
+    with_name,
+    stack_instructions,
+    SequencerInstruction,
+    Pattern,
+    Ramp,
+    Concatenated,
+    concatenate,
+    Repeated,
+)
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import is_in_base_units, base_units
@@ -22,16 +32,6 @@ from ..channel_commands._channel_sources._trigger_compiler import (
 from ..configuration import DigitalChannelConfiguration, AnalogChannelConfiguration
 from ..configuration import (
     SequencerConfiguration,
-)
-from ..instructions import (
-    with_name,
-    stack_instructions,
-    SequencerInstruction,
-    Pattern,
-    Ramp,
-    Concatenated,
-    concatenate,
-    Repeated,
 )
 from ..timing import TimeStep, number_time_steps
 from ..trigger import (

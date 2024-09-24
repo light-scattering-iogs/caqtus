@@ -1,12 +1,12 @@
 import numpy as np
 
 import caqtus.formatter as fmt
-from caqtus.device.sequencer.instructions import (
+from caqtus.shot_compilation.compilation_contexts import ShotContext
+from caqtus.shot_compilation.timed_instructions import (
     SequencerInstruction,
     Pattern,
     concatenate,
 )
-from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane

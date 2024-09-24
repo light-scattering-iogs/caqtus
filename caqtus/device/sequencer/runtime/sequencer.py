@@ -9,8 +9,8 @@ from typing import ClassVar, Protocol
 import attrs
 
 from caqtus.device.runtime import Device
+from caqtus.shot_compilation.timed_instructions import SequencerInstruction
 from ..timing import TimeStep
-from ..instructions import SequencerInstruction
 from ..trigger import Trigger, is_trigger
 
 

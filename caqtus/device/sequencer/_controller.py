@@ -1,5 +1,5 @@
+from caqtus.shot_compilation.timed_instructions import SequencerInstruction
 from ._proxy import SequencerProxy, SequenceStatusProxy
-from .instructions import SequencerInstruction
 from .trigger import SoftwareTrigger
 from .._controller import DeviceController
 

@@ -23,8 +23,8 @@ from typing import Optional, Any
 import attrs
 import numpy as np
 
-from caqtus.device.sequencer.instructions import SequencerInstruction
 from caqtus.shot_compilation import ShotContext
+from caqtus.shot_compilation.timed_instructions import SequencerInstruction
 from caqtus.types.units import Unit, dimensionless
 from caqtus.types.units.base import is_in_base_units
 from caqtus.types.variable_name import DottedVariableName

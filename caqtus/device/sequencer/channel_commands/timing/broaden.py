@@ -8,6 +8,13 @@ import numpy as np
 
 import caqtus.formatter as fmt
 from caqtus.shot_compilation import ShotContext
+from caqtus.shot_compilation.timed_instructions import (
+    SequencerInstruction,
+    Pattern,
+    Concatenated,
+    concatenate,
+    Repeated,
+)
 from caqtus.shot_compilation.timing import duration_to_ticks
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError, InvalidValueError
@@ -15,13 +22,6 @@ from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_output import ChannelOutput, DimensionedSeries
 from ...timing import TimeStep
-from ...instructions import (
-    SequencerInstruction,
-    Pattern,
-    Concatenated,
-    concatenate,
-    Repeated,
-)
 
 
 @attrs.define
@@ -59,8 +59,8 @@ class BroadenLeft(ChannelOutput):
             required_time_step, prepend, append, shot_context
         )
         if instruction.values.dtype != np.bool_:
-            raise InvalidTypeError(f"Can't broaden non boolean instruction")
-        width = self.width.evaluate(shot_context.get_variables())
+            raise InvalidTypeError("Can't broaden non boolean instruction")
+        width = self.width.evaluate(shot_context.get_parameters())
         if not isinstance(width, Quantity):
             raise InvalidTypeError(
                 f"Width {fmt.expression(self.width)} does not evaluate to a quantity, "
