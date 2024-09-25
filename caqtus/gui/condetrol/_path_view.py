@@ -186,7 +186,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                         app.applicationName(),
                         f"<p>Could not rename <i>{path.name}</i> to "
                         f"<i>{text}</i>:</p>"
-                        f"<p>{result.error}</p>",
+                        f"<p>{result}</p>",
                     )
             else:
                 QMessageBox.warning(
