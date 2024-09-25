@@ -19,6 +19,7 @@ from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._sequence_collection import PathIsNotSequenceError, PathNotFoundError
 from .._state import State
+from ...utils._result import is_failure_type, unwrap
 
 if TYPE_CHECKING:
     from .._experiment_session import ExperimentSession
@@ -50,21 +51,23 @@ class Sequence:
     session: ExperimentSession
 
     def __attrs_post_init__(self):
-        try:
-            is_sequence = self.session.sequences.is_sequence(self.path).unwrap()
-        except PathNotFoundError as e:
+        is_sequence_result = self.session.sequences.is_sequence(self.path)
+        if is_failure_type(is_sequence_result, PathNotFoundError):
             import difflib
 
-            sequences = self.session.sequences.get_contained_sequences(
+            contained_sequences_result = self.session.sequences.get_contained_sequences(
                 PureSequencePath.root()
-            ).unwrap()
+            )
+            assert not is_failure_type(contained_sequences_result, PathNotFoundError)
+            sequences = contained_sequences_result.result()
             paths = [str(sequence) for sequence in sequences]
             similar_paths = difflib.get_close_matches(str(self.path), paths)
+            e = PathNotFoundError(self.path)
             if similar_paths:
                 e.add_note(f'Perhaps you meant: "{similar_paths[0]}"')
             raise e
         else:
-            if not is_sequence:
+            if not is_sequence_result.result():
                 raise PathIsNotSequenceError(self.path)
 
     @classmethod
@@ -86,7 +89,7 @@ class Sequence:
                 The session must be active.
         """
 
-        session.sequences.create(path, iteration_configuration, time_lanes).unwrap()
+        unwrap(session.sequences.create(path, iteration_configuration, time_lanes))
         return cls(path, session)
 
     def __str__(self) -> str:
@@ -95,12 +98,12 @@ class Sequence:
     def __len__(self) -> int:
         """Return the number of shots that have been run for this sequence."""
 
-        return len(self.session.sequences.get_shots(self.path).unwrap())
+        return len(unwrap(self.session.sequences.get_shots(self.path)))
 
     def get_state(self) -> State:
         """Return the state of the sequence."""
 
-        return self.session.sequences.get_state(self.path).unwrap()
+        return unwrap(self.session.sequences.get_state(self.path))
 
     def get_global_parameters(self) -> ParameterNamespace:
         """Return a copy of the parameter tables set for this sequence.
@@ -133,7 +136,7 @@ class Sequence:
         The shots are returned sorted by index.
         """
 
-        pure_shots = self.session.sequences.get_shots(self.path).unwrap()
+        pure_shots = unwrap(self.session.sequences.get_shots(self.path))
         sorted_shots = sorted(pure_shots, key=lambda x: x.index)
         return (Shot(self, shot.index, self.session) for shot in sorted_shots)
 
@@ -143,7 +146,7 @@ class Sequence:
         If the sequence has not been started, return None.
         """
 
-        return self.session.sequences.get_stats(self.path).unwrap().start_time
+        return unwrap(self.session.sequences.get_stats(self.path)).start_time
 
     def get_end_time(self) -> Optional[datetime.datetime]:
         """Return the time the sequence was ended.
@@ -151,7 +154,7 @@ class Sequence:
         If the sequence has not been ended, return None.
         """
 
-        return self.session.sequences.get_stats(self.path).unwrap().stop_time
+        return unwrap(self.session.sequences.get_stats(self.path)).stop_time
 
     def get_expected_number_of_shots(self) -> int | Unknown:
         """Return the expected number of shots for the sequence.
@@ -159,9 +162,7 @@ class Sequence:
         If the sequence has not been started, return None.
         """
 
-        return (
-            self.session.sequences.get_stats(self.path).unwrap().expected_number_shots
-        )
+        return unwrap(self.session.sequences.get_stats(self.path)).expected_number_shots
 
     def duplicate(self, target_path: PureSequencePath | str) -> Sequence:
         """Duplicate the sequence to a new path.
@@ -239,7 +240,7 @@ class Sequence:
             SequenceNotCrashedError: If the sequence is not in the CRASHED state.
         """
 
-        return self.session.sequences.get_exception(self.path).unwrap()
+        return unwrap(self.session.sequences.get_exception(self.path))
 
     def load_shots_data(
         self,
