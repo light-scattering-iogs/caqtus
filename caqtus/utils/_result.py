@@ -31,6 +31,9 @@ class Success[T]:
     def __repr__(self) -> str:
         return f"Success({self.value!r})"
 
+    def result(self) -> T:
+        return self.value
+
 
 def is_success[T](result: Result[T, Any]) -> TypeIs[Success[T]]:
     return result.is_success()
