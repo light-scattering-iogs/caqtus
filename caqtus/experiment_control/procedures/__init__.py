@@ -1,5 +1,5 @@
 """Defines procedures to run on the setup."""
 
-from ._procedure import Procedure, ProcedureName, Error
+from ._procedure import Procedure, ProcedureName
 
-__all__ = ["Procedure", "ProcedureName", "Error"]
+__all__ = ["Procedure", "ProcedureName"]

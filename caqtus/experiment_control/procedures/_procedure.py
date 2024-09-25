@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import NewType, Protocol
 
-import attrs
-
-from caqtus.experiment_control._kernel import ExperimentKernel
 from caqtus.utils._result import Failure, Success
 from caqtus.utils.serialization import JSON
+from .._error import Error
+from .._kernel import ExperimentKernel
 
 ProcedureName = NewType("ProcedureName", str)
 
@@ -34,19 +33,3 @@ class Procedure(Protocol):
         """
 
         ...
-
-
-@attrs.frozen
-class Error:
-    """Represents an error that occurred during the execution of a procedure.
-
-    Attributes:
-        code: The error code.
-            Values between -32768 and -32000 are reserved for pre-defined errors.
-        message: The error message.
-        data: Additional data that can help to understand the error.
-    """
-
-    code: int = attrs.field()
-    message: str = attrs.field()
-    data: JSON = attrs.field(factory=dict)
