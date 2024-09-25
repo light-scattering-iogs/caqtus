@@ -122,9 +122,9 @@ class SQLSequenceCollection(SequenceCollection):
 
         running_sequences = set()
         if isinstance(path_model_result, Failure):
-            if isinstance(path_model_result.error, PathNotFoundError):
-                return Failure(path_model_result.error)
-            assert_type(path_model_result.error, PathIsRootError)
+            if is_failure_type(path_model_result, PathNotFoundError):
+                return path_model_result
+            assert_type(path_model_result, Failure[PathIsRootError])
             parent_id = None
         else:
             path_model = path_model_result.value
@@ -454,10 +454,10 @@ def _is_sequence(
 ) -> Result[bool, PathNotFoundError]:
     path_model_result = _query_path_model(session, path)
     if isinstance(path_model_result, Failure):
-        if isinstance(path_model_result.error, PathNotFoundError):
-            return Failure(path_model_result.error)
+        if is_failure_type(path_model_result, PathNotFoundError):
+            return path_model_result
         else:
-            assert_type(path_model_result.error, PathIsRootError)
+            assert_type(path_model_result, Failure[PathIsRootError])
             return Success(False)
     else:
         path_model = path_model_result.value
@@ -827,10 +827,10 @@ def _query_sequence_model(
         if isinstance(path_result, Success):
             return Failure(PathIsNotSequenceError(path))
         else:
-            if isinstance(path_result.error, PathNotFoundError):
-                return Failure(path_result.error)
+            if is_failure_type(path_result, PathNotFoundError):
+                return path_result
             else:
-                assert_type(path_result.error, PathIsRootError)
+                assert_type(path_result, Failure[PathIsRootError])
                 return Failure(PathIsNotSequenceError(path))
 
 
