@@ -134,6 +134,9 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
             the step (exclusive) at which the block ends.
         """
 
+        if not (0 <= block < self.number_blocks):
+            raise IndexError(f"Block index out of bounds: {block}")
+
         return self._bounds[block], self._bounds[block + 1]
 
     @deprecated("use block_bounds instead")
