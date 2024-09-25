@@ -29,6 +29,7 @@ from caqtus.session import (
     ExperimentSession,
     AsyncExperimentSession,
     PathIsRootError,
+    PathHasChildrenError,
 )
 from caqtus.session import (
     PathNotFoundError,
@@ -707,7 +708,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         name: str,
         iteration_config: IterationConfiguration,
         time_lanes: TimeLanes,
-    ) -> Result[None, Exception]:
+    ) -> Success[None] | Failure[PathIsSequenceError] | Failure[PathHasChildrenError]:
         parent_item = self._get_item(parent)
         parent_data = get_item_data(parent_item)
         if not isinstance(parent_data, FolderNode):
