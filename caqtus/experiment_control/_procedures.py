@@ -11,11 +11,17 @@ class Procedure(Protocol):
 
     A procedure is an async function that takes some arguments, run some sequences and
     analysis on the setup and
-
-    The first argument of the procedure is the experiment kernel that gives access to
-    the setup. The rest of the arguments are the parameters of the procedure.
     """
 
     async def __call__(
         self, kernel: ExperimentKernel, *args: JSON, **kwargs: JSON
-    ) -> None: ...
+    ) -> None:
+        """Run the procedure on the setup.
+
+        Args:
+            kernel: The experiment kernel that gives access to the setup.
+            *args: The parameters of the procedure. They must be JSON serializable.
+            **kwargs: The parameters of the procedure. They must be JSON serializable.
+        """
+
+        ...
