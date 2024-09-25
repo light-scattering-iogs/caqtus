@@ -1,7 +1,7 @@
 import abc
 import bisect
 import itertools
-from collections.abc import MutableSequence, Iterable, Sequence
+from collections.abc import MutableSequence, Iterable, Sequence, Iterator
 from typing import TypeVar, Self, NewType, overload, Never
 
 import attrs
@@ -114,7 +114,7 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
             raise IndexError(f"Index out of bounds: {step}")
         return self.get_block_bounds(find_containing_block(self._bounds, step))
 
-    def block_values(self) -> Iterable[T]:
+    def block_values(self) -> Iterator[T]:
         """Returns an iterator over the block values.
 
         The length of the iterator is the number of blocks in the lane, not the number
@@ -124,10 +124,10 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
         return (value for value, _ in self._spanned_values)
 
     @deprecated("use block_values instead")
-    def values(self) -> Iterable[T]:
+    def values(self) -> Iterator[T]:
         return self.block_values()
 
-    def block_bounds(self) -> Iterable[tuple[Step, Step]]:
+    def block_bounds(self) -> Iterator[tuple[Step, Step]]:
         """Iterates over the bounds of the blocks.
 
         Returns:
@@ -158,7 +158,7 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
         return self._bounds[block], self._bounds[block + 1]
 
     @deprecated("use block_bounds instead")
-    def bounds(self) -> Iterable[tuple[Step, Step]]:
+    def bounds(self) -> Iterator[tuple[Step, Step]]:
         return self.block_bounds()
 
     def _get_containing_block(self, index: Step) -> Block:
