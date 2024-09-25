@@ -18,10 +18,6 @@ class Success[T]:
     def is_success() -> Literal[True]:
         return True
 
-    @staticmethod
-    def is_failure() -> Literal[False]:
-        return False
-
     def __str__(self) -> str:
         return str(self.value)
 
@@ -33,11 +29,11 @@ class Success[T]:
 
 
 def is_success[T](result: Result[T, Any]) -> TypeIs[Success[T]]:
-    return result.is_success()
+    return isinstance(result, Success)
 
 
 def is_failure[E](result: Result[Any, E]) -> TypeIs[Failure[E]]:
-    return result.is_failure()
+    return isinstance(result, Failure)
 
 
 def is_failure_type[E](result: Result, error_type: type[E]) -> TypeIs[Failure[E]]:
@@ -54,10 +50,6 @@ class Failure[E]:
     @staticmethod
     def is_success() -> Literal[False]:
         return False
-
-    @staticmethod
-    def is_failure() -> Literal[True]:
-        return True
 
     def __str__(self) -> str:
         return str(self._error)

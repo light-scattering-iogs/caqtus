@@ -43,7 +43,14 @@ from caqtus.types.iteration import (
     IterationConfiguration,
 )
 from caqtus.types.timelane import TimeLanes
-from caqtus.utils._result import Result, is_failure, Failure, Success, is_failure_type
+from caqtus.utils._result import (
+    Result,
+    is_failure,
+    Failure,
+    Success,
+    is_failure_type,
+    is_success,
+)
 
 NODE_DATA_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -193,7 +200,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             dst = dst_parent / src.name
             with self.session_maker() as session, self._background_runner.suspend():
                 result = session.paths.move(src, dst)
-                return result.is_success()
+                return is_success(result)
         return False
 
     def removeRows(self, row, count, parent=...):  # noqa: N802
@@ -686,7 +693,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
         with self.session_maker() as session, self._background_runner.suspend():
             result = session.paths.move(data.path, new_path)
-            if result.is_success():
+            if is_success(result):
                 self._rename_recursively(index, new_path)
             return result
 
@@ -747,7 +754,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     result = session.paths.delete_path(path, delete_sequences=True)
                 else:
                     result = session.paths.delete_path(path, delete_sequences=False)
-            if result.is_success():
+            if is_success(result):
                 assert self.removeRows(index.row(), 1, self.parent(index))
                 return Success(None)
             else:
