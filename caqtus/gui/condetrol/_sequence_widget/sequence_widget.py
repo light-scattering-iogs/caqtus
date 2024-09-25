@@ -36,6 +36,7 @@ from caqtus.types.iteration import (
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils._result import is_failure_type
 from .sequence_widget_ui import Ui_SequenceWidget
 from .._icons import get_icon
 from .._parameter_tables_editor import ParameterNamespaceEditor
@@ -325,12 +326,10 @@ async def _query_state_async(
 ) -> _State:
     async with session_maker.async_session() as session:
         is_sequence_result = await session.sequences.is_sequence(path)
-        try:
-            is_sequence = is_sequence_result.unwrap()
-        except PathNotFoundError:
+        if is_failure_type(is_sequence_result, PathNotFoundError):
             return _SequenceNotSetState()
         else:
-            if is_sequence:
+            if is_sequence_result.result():
                 return await _query_sequence_state_async(path, session)
             else:
                 return _SequenceNotSetState()
