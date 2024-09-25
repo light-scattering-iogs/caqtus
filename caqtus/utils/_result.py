@@ -11,9 +11,6 @@ from typing_extensions import TypeIs
 class Success[T]:
     value: T
 
-    def unwrap(self) -> T:
-        return self.value
-
     def map[R](self, func: Callable[[T], R]) -> Success[R]:
         return Success(func(self.value))
 
@@ -50,11 +47,6 @@ def is_failure_type[E](result: Result, error_type: type[E]) -> TypeIs[Failure[E]
 @attrs.frozen(repr=False, str=False)
 class Failure[E]:
     _error: E
-
-    def unwrap(self) -> Never:
-        if not isinstance(self._error, Exception):
-            raise ValueError("Only exceptions can be unwrapped")
-        raise self._error
 
     def map(self, func: Callable) -> Failure[E]:
         return self
