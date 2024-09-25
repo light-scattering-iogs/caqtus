@@ -42,7 +42,7 @@ from caqtus.types.iteration import (
 )
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils._result import Failure, is_success, is_failure_type
+from caqtus.utils._result import Failure, is_success, is_failure_type, unwrap
 from ._icons import get_icon
 from .._common.waiting_widget import blocking_call
 
@@ -80,9 +80,9 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             color = self.palette().text().color()
 
             with self.session_maker() as session:
-                is_sequence = session.sequences.is_sequence(path).unwrap()
+                is_sequence = unwrap(session.sequences.is_sequence(path))
                 if is_sequence:
-                    state = session.sequences.get_state(path).unwrap()
+                    state = unwrap(session.sequences.get_state(path))
                 else:
                     state = None
 
@@ -186,7 +186,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                         app.applicationName(),
                         f"<p>Could not rename <i>{path.name}</i> to "
                         f"<i>{text}</i>:</p>"
-                        f"<p>{result.error}</p>",
+                        f"<p>{result}</p>",
                     )
             else:
                 QMessageBox.warning(
@@ -266,20 +266,23 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                 creation_result = self._model.create_new_sequence(
                     source.parent(), text, iterations, time_lanes
                 )
-            try:
-                creation_result.unwrap()
-            except PathIsSequenceError:
+            if is_success(creation_result):
+                return
+            elif is_failure_type(creation_result, PathIsSequenceError):
                 QMessageBox.warning(
                     self,
                     title,
                     f"Target <i>{text}</i> already exists and is a sequence.",
                 )
-            except PathHasChildrenError:
+                return
+            elif is_failure_type(creation_result, PathHasChildrenError):
                 QMessageBox.warning(
                     self,
                     title,
                     f"Target <i>{text}</i> already exists and has children.",
                 )
+                return
+            assert_never(creation_result)
 
     def create_new_folder(self, path: PureSequencePath):
         text, ok = QInputDialog().getText(

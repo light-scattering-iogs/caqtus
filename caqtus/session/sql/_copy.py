@@ -21,6 +21,7 @@ from caqtus.utils._result import (
     is_failure,
     is_failure_type,
     is_success,
+    unwrap,
 )
 
 
@@ -76,13 +77,15 @@ def copy_sequence(
             source, shot_index
         )
         shot_stop_time = source_session.sequences.get_shot_end_time(source, shot_index)
-        destination_session.sequences.create_shot(
-            ShotId(destination, shot_index),
-            shot_parameters,
-            shot_data,
-            shot_start_time,
-            shot_stop_time,
-        ).unwrap()
+        unwrap(
+            destination_session.sequences.create_shot(
+                ShotId(destination, shot_index),
+                shot_parameters,
+                shot_data,
+                shot_start_time,
+                shot_stop_time,
+            )
+        )
 
     if state == State.FINISHED:
         set_state(destination, State.FINISHED, destination_session)

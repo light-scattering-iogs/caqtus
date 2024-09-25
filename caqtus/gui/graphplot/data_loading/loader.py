@@ -20,6 +20,7 @@ from caqtus.session import (
     Shot,
 )
 from caqtus.session._shot_id import ShotId
+from caqtus.utils._result import unwrap, is_failure_type
 from caqtus.utils.itertools import batched
 from .loader_ui import Ui_Loader
 
@@ -43,7 +44,7 @@ class DataLoader(QWidget, Ui_Loader):
     def add_sequence_to_watchlist(self, sequence_path: PureSequencePath):
         if sequence_path not in self.watchlist:
             with self.session_maker() as session:
-                stats = session.sequences.get_stats(sequence_path).unwrap()
+                stats = unwrap(session.sequences.get_stats(sequence_path))
                 start_time = stats.start_time
                 number_completed_shots = stats.number_completed_shots
             self.watchlist[sequence_path] = SequenceLoadingInfo(
@@ -97,7 +98,7 @@ class DataLoader(QWidget, Ui_Loader):
             # the processed shots.
             stats_result = await session.sequences.get_stats(path)
             try:
-                stats = stats_result.unwrap()
+                stats = unwrap(stats_result)
             except (PathNotFoundError, PathIsNotSequenceError):
                 self.remove_sequence_from_watchlist(path)
                 return
@@ -114,11 +115,13 @@ class DataLoader(QWidget, Ui_Loader):
                 )
                 return
             result = await session.sequences.get_shots(path)
-            try:
-                shots: list[ShotId] = result.unwrap()
-            except (PathNotFoundError, PathIsNotSequenceError):
+            if is_failure_type(result, PathNotFoundError) or is_failure_type(
+                result, PathIsNotSequenceError
+            ):
                 self.remove_sequence_from_watchlist(path)
                 return
+
+            shots: list[ShotId] = result.result()
 
         try:
             processed_shots = self.watchlist[path].processed_shots

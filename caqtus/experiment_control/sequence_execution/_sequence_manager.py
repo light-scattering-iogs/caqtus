@@ -23,6 +23,7 @@ from caqtus.shot_compilation import (
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import split_recoverable
+from caqtus.utils._result import unwrap
 from ._shot_compiler import ShotCompilerFactory, create_shot_compiler
 from ._shot_runner import ShotRunnerFactory, create_shot_runner
 from .sequence_runner import execute_steps, evaluate_initial_context
@@ -189,9 +190,11 @@ class SequenceManager:
             self._set_sequence_state(State.CRASHED)
             traceback_summary = TracebackSummary.from_exception(e)
             with self._session_maker() as session:
-                session.sequences.set_exception(
-                    self._sequence_path, traceback_summary
-                ).unwrap()
+                unwrap(
+                    session.sequences.set_exception(
+                        self._sequence_path, traceback_summary
+                    )
+                )
             recoverable, non_recoverable = split_recoverable(e)
             if non_recoverable:
                 raise
@@ -206,7 +209,7 @@ class SequenceManager:
 
     def _prepare_sequence(self):
         with self._session_maker() as session:
-            session.sequences.set_state(self._sequence_path, State.PREPARING).unwrap()
+            unwrap(session.sequences.set_state(self._sequence_path, State.PREPARING))
             session.sequences.set_device_configurations(
                 self._sequence_path, self.device_configurations
             )
@@ -216,7 +219,7 @@ class SequenceManager:
 
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:
-            session.sequences.set_state(self._sequence_path, state).unwrap()
+            unwrap(session.sequences.set_state(self._sequence_path, state))
 
     async def _store_shots(
         self,
@@ -238,4 +241,4 @@ class SequenceManager:
                 shot_data.start_time,
                 shot_data.end_time,
             )
-            result.unwrap()
+            unwrap(result)

@@ -26,6 +26,7 @@ from caqtus.session import (
 )
 from caqtus.session._shot_id import ShotId
 from caqtus.utils import serialization
+from caqtus.utils._result import is_failure_type, unwrap
 from caqtus.utils.serialization import JSON
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace
@@ -290,14 +291,14 @@ async def get_state_async(
     if sequence_path is None:
         return NoSequenceSelected()
     shots_result = await session.sequences.get_shots(sequence_path)
-    try:
-        shots = shots_result.unwrap()
-    except (PathNotFoundError, PathIsNotSequenceError):
+    if is_failure_type(shots_result, PathNotFoundError) or is_failure_type(
+        shots_result, PathIsNotSequenceError
+    ):
         return NoSequenceSelected()
     else:
-        start_time = (
-            (await session.sequences.get_stats(sequence_path)).unwrap().start_time
-        )
+        start_time = unwrap(await session.sequences.get_stats(sequence_path)).start_time
     return SequenceSelected(
-        path=sequence_path, shots=frozenset(shots), start_time=start_time
+        path=sequence_path,
+        shots=frozenset(shots_result.result()),
+        start_time=start_time,
     )
