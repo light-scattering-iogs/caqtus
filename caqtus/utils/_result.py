@@ -43,15 +43,15 @@ def is_failure[T, E: Exception](result: Result[T, E]) -> TypeIs[Failure[E]]:
 def is_failure_type[
     E: Exception
 ](result: Result, error_type: type[E]) -> TypeIs[Failure[E]]:
-    return is_failure(result) and isinstance(result.error, error_type)
+    return is_failure(result) and isinstance(result._error, error_type)
 
 
 @attrs.frozen(repr=False, str=False)
 class Failure[E: Exception]:
-    error: E
+    _error: E
 
     def unwrap(self) -> Never:
-        raise self.error
+        raise self._error
 
     def map(self, func: Callable) -> Failure[E]:
         return self
@@ -65,7 +65,7 @@ class Failure[E: Exception]:
         return True
 
     def __str__(self) -> str:
-        return str(self.error)
+        return str(self._error)
 
 
 type Result[T, E: Exception] = Success[T] | Failure[E]
