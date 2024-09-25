@@ -11,11 +11,7 @@ ProcedureName = NewType("ProcedureName", str)
 
 
 class Procedure(Protocol):
-    """Represents a procedure that can be run on the setup.
-
-    A procedure is an async function that takes some arguments, run some sequences and
-    analysis on the setup and
-    """
+    """Represents a procedure that can be run on the setup."""
 
     async def __call__(
         self, kernel: ExperimentKernel, *args: JSON, **kwargs: JSON
