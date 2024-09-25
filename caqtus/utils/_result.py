@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Never, Literal, overload
+from typing import Never, Literal, overload, Any
 
 import attrs
 from typing_extensions import TypeIs
@@ -32,25 +32,25 @@ class Success[T]:
         return f"Success({self.value!r})"
 
 
-def is_success[T, E: Exception](result: Result[T, E]) -> TypeIs[Success[T]]:
+def is_success[T](result: Result[T, Any]) -> TypeIs[Success[T]]:
     return result.is_success()
 
 
-def is_failure[T, E: Exception](result: Result[T, E]) -> TypeIs[Failure[E]]:
+def is_failure[E](result: Result[Any, E]) -> TypeIs[Failure[E]]:
     return result.is_failure()
 
 
-def is_failure_type[
-    E: Exception
-](result: Result, error_type: type[E]) -> TypeIs[Failure[E]]:
+def is_failure_type[E](result: Result, error_type: type[E]) -> TypeIs[Failure[E]]:
     return is_failure(result) and isinstance(result._error, error_type)
 
 
 @attrs.frozen(repr=False, str=False)
-class Failure[E: Exception]:
+class Failure[E]:
     _error: E
 
     def unwrap(self) -> Never:
+        if not isinstance(self._error, Exception):
+            raise ValueError("Only exceptions can be unwrapped")
         raise self._error
 
     def map(self, func: Callable) -> Failure[E]:
@@ -68,7 +68,7 @@ class Failure[E: Exception]:
         return str(self._error)
 
 
-type Result[T, E: Exception] = Success[T] | Failure[E]
+type Result[T, E] = Success[T] | Failure[E]
 
 
 @overload
