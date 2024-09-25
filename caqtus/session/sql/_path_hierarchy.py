@@ -129,7 +129,9 @@ class SQLPathHierarchy(PathHierarchy):
 
     def _query_path_model(
         self, path: PureSequencePath
-    ) -> Result[SQLSequencePath, PathNotFoundError | PathIsRootError]:
+    ) -> (
+        Success[SQLSequencePath] | Failure[PathNotFoundError] | Failure[PathIsRootError]
+    ):
         return _query_path_model(self._get_sql_session(), path)
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
@@ -223,17 +225,6 @@ class SQLPathHierarchy(PathHierarchy):
             if child_path.parent != current_path:  # pragma: no cover
                 raise AssertionError("Invalid path hierarchy")
             self._check_valid(child)
-
-    def get_parent_id(
-        self, path: PureSequencePath
-    ) -> Result[int | None, PathNotFoundError]:
-        path_model_result = self._query_path_model(path)
-        if isinstance(path_model_result, Failure):
-            if isinstance(path_model_result.error, PathIsRootError):
-                return Success(None)
-            else:
-                return Failure(path_model_result.error)
-        return Success(path_model_result.value.parent_id)
 
     @staticmethod
     def descendants_query(
