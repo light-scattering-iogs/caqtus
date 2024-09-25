@@ -85,6 +85,21 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
         obj._bounds = compute_bounds(span for _, span in obj._spanned_values)
         return obj
 
+    def spanned_values(self) -> Sequence[tuple[T, Span]]:
+        """Returns the spanned values of the lane.
+
+        For each block in the lane, returns a tuple of two elements: the value of the
+        block and the number of steps spanned by the block.
+
+        Examples:
+            >>> from caqtus.types.timelane import DigitalTimeLane
+            >>> lane = DigitalTimeLane([True, True, False, True])
+            >>> lane.spanned_values()
+            [(True, 2), (False, 1), (True, 1)]
+        """
+
+        return tuple(self._spanned_values)
+
     @property
     def number_blocks(self) -> int:
         """Returns the number of blocks in the lane."""
@@ -132,6 +147,9 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
         Returns:
             A tuple of two elements: the step (inclusive) at which the block starts and
             the step (exclusive) at which the block ends.
+
+        Raises:
+            IndexError: If the block index is out of bounds.
         """
 
         if not (0 <= block < self.number_blocks):
