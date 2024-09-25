@@ -59,7 +59,7 @@ class SQLPathHierarchy(PathHierarchy):
             assert path_to_create.parent is not None
             parent_model_result = _query_path_model(session, path_to_create.parent)
             if isinstance(parent_model_result, Failure):
-                assert isinstance(parent_model_result.error, PathIsRootError)
+                assert is_failure_type(parent_model_result, PathIsRootError)
                 parent_model = None
             else:
                 parent_model = parent_model_result.value
@@ -160,8 +160,8 @@ class SQLPathHierarchy(PathHierarchy):
         if isinstance(source_path_result, Failure):
             # We can't have the PathIsRootError here because it is prevented by
             # ensuring that the destination can't be a descendant of the source.
-            assert isinstance(source_path_result.error, PathNotFoundError)
-            return Failure(source_path_result.error)
+            assert not is_failure_type(source_path_result, PathIsRootError)
+            return source_path_result
         source_model = source_path_result.unwrap()
 
         running_sequences = (
