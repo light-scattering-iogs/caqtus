@@ -7,7 +7,14 @@ from attr import frozen
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from caqtus.utils._result import Result, Success, Failure, is_failure, is_failure_type
+from caqtus.utils._result import (
+    Result,
+    Success,
+    Failure,
+    is_failure,
+    is_failure_type,
+    unwrap,
+)
 from ._path_table import SQLSequencePath
 from .._path import PureSequencePath
 from .._path_hierarchy import (
@@ -124,7 +131,7 @@ class SQLPathHierarchy(PathHierarchy):
         if path.is_root():
             raise PathIsRootError(path)
 
-        sql_path = self._query_path_model(path).unwrap()
+        sql_path = unwrap(self._query_path_model(path))
         sql_path.creation_date = date
 
     def _query_path_model(
@@ -162,12 +169,10 @@ class SQLPathHierarchy(PathHierarchy):
             # ensuring that the destination can't be a descendant of the source.
             assert not is_failure_type(source_path_result, PathIsRootError)
             return source_path_result
-        source_model = source_path_result.unwrap()
+        source_model = source_path_result.result()
 
-        running_sequences = (
-            self.parent_session.sequences.get_contained_running_sequences(
-                source
-            ).unwrap()
+        running_sequences = unwrap(
+            self.parent_session.sequences.get_contained_running_sequences(source)
         )
         if running_sequences:
             return Failure(
@@ -190,9 +195,9 @@ class SQLPathHierarchy(PathHierarchy):
         if destination.parent.is_root():
             destination_parent_model = None
         else:
-            destination_parent_model = _query_path_model(
-                session, destination.parent
-            ).unwrap()
+            destination_parent_model = unwrap(
+                _query_path_model(session, destination.parent)
+            )
         source_model.parent_id = (
             destination_parent_model.id_ if destination_parent_model else None
         )
@@ -215,8 +220,8 @@ class SQLPathHierarchy(PathHierarchy):
 
         # We check that the name of the paths are consistent with the links between
         # them.
-        for child in self.get_children(PureSequencePath.root()).unwrap():
-            self._check_valid(self._query_path_model(child).unwrap())
+        for child in unwrap(self.get_children(PureSequencePath.root())):
+            self._check_valid(unwrap(self._query_path_model(child)))
 
     def _check_valid(self, path: SQLSequencePath) -> None:
         current_path = PureSequencePath(str(path.path))
@@ -270,7 +275,7 @@ def _get_children(
 ):
     query_result = _query_path_model(session, path)
     if isinstance(query_result, Success):
-        path_sql = query_result.unwrap()
+        path_sql = unwrap(query_result)
         if path_sql.sequence:
             return Failure(PathIsSequenceError(str(path)))
         else:
