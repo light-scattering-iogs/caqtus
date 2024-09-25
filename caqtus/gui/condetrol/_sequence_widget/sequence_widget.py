@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QApplication,
 )
+from win32com.server.util import unwrap
 
 from caqtus.session import (
     ExperimentSessionMaker,
@@ -340,7 +341,7 @@ async def _query_sequence_state_async(
 ) -> _SequenceSetState:
     # These results can be unwrapped safely because we checked that the sequence
     # exists in the session.
-    state = (await session.sequences.get_state(path)).unwrap()
+    state = unwrap(await session.sequences.get_state(path))
     iterations = await session.sequences.get_iteration_configuration(path)
     time_lanes = await session.sequences.get_time_lanes(path)
 
@@ -351,7 +352,7 @@ async def _query_sequence_state_async(
     else:
         parameters = await session.sequences.get_global_parameters(path)
         if state == State.CRASHED:
-            tb_summary = (await session.sequences.get_traceback_summary(path)).unwrap()
+            tb_summary = unwrap(await session.sequences.get_traceback_summary(path))
             return _SequenceCrashedState(
                 path,
                 iterations=iterations,
@@ -375,12 +376,10 @@ def _query_state_sync(
 ) -> _State:
     with session_maker() as session:
         is_sequence_result = session.sequences.is_sequence(path)
-        try:
-            is_sequence = is_sequence_result.unwrap()
-        except PathNotFoundError:
+        if is_failure_type(is_sequence_result, PathNotFoundError):
             return _SequenceNotSetState()
         else:
-            if is_sequence:
+            if is_sequence_result.result():
                 return _query_sequence_state_sync(path, session)
             else:
                 return _SequenceNotSetState()
@@ -391,7 +390,7 @@ def _query_sequence_state_sync(
 ) -> _SequenceSetState:
     # These results can be unwrapped safely because we checked that the sequence
     # exists in the session.
-    state = session.sequences.get_state(path).unwrap()
+    state = unwrap(session.sequences.get_state(path))
     iterations = session.sequences.get_iteration_configuration(path)
     time_lanes = session.sequences.get_time_lanes(path)
 
@@ -402,7 +401,7 @@ def _query_sequence_state_sync(
     else:
         parameters = session.sequences.get_global_parameters(path)
         if state == State.CRASHED:
-            traceback_summary = session.sequences.get_exception(path).unwrap()
+            traceback_summary = unwrap(session.sequences.get_exception(path))
             return _SequenceCrashedState(
                 path,
                 iterations=iterations,
