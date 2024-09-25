@@ -15,7 +15,7 @@ class Procedure(Protocol):
 
     async def __call__(
         self, kernel: ExperimentKernel, *args: JSON, **kwargs: JSON
-    ) -> Success[None] | Failure[Error]:
+    ) -> Success[None] | Failure[ProcedureError]:
         """Run the procedure on the setup.
 
         Args:
@@ -29,3 +29,9 @@ class Procedure(Protocol):
         """
 
         ...
+
+
+class ProcedureError(Error):
+    """Represents an error that occurred during the execution of a procedure."""
+
+    pass
