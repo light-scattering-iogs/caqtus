@@ -183,11 +183,11 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            return self.get_value_at_step(Step(item))
+            return self._get_value_at_step(Step(item))
         else:
             raise TypeError(f"Invalid type for item: {type(item)}")
 
-    def get_value_at_step(self, step: Step) -> T:
+    def _get_value_at_step(self, step: Step) -> T:
         step = self._normalize_step(step)
         if not (0 <= step < len(self)):
             raise IndexError(f"Step out of bounds: {step}")
