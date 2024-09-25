@@ -285,15 +285,15 @@ def _get_children(
         else:
             children = path_sql.children
     elif isinstance(query_result, Failure):
-        if isinstance(query_result.error, PathIsRootError):
+        if is_failure_type(query_result, PathIsRootError):
             query_children = select(SQLSequencePath).where(
                 SQLSequencePath.parent_id.is_(None)
             )
             children = session.scalars(query_children)
-        elif isinstance(query_result.error, PathNotFoundError):
-            return Failure(query_result.error)
+        elif is_failure_type(query_result, PathNotFoundError):
+            return query_result
         else:
-            assert_never(query_result.error)
+            assert_never(query_result)
     else:
         assert_never(query_result)
 
