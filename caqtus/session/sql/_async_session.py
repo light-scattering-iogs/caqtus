@@ -229,7 +229,11 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
 
     async def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[ShotId], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[list[ShotId]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         return await self._run_sync(_get_shots, path)
 
     async def get_shot_parameters(

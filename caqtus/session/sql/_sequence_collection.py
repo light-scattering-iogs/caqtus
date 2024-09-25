@@ -347,7 +347,11 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[ShotId], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[list[ShotId]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         return _get_shots(self._get_sql_session(), path)
 
     def get_shot_parameters(
@@ -619,7 +623,9 @@ def _get_time_lanes(
 
 def _get_shots(
     session: Session, path: PureSequencePath
-) -> Result[list[ShotId], PathNotFoundError | PathIsNotSequenceError]:
+) -> (
+    Success[list[ShotId]] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]
+):
     sql_sequence = _query_sequence_model(session, path)
 
     def extract_shots(sql_sequence: SQLSequence) -> list[ShotId]:

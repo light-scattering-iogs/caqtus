@@ -76,7 +76,11 @@ class AsyncSequenceCollection(Protocol):
     @abc.abstractmethod
     async def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[ShotId], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[list[ShotId]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         raise NotImplementedError
 
     @abc.abstractmethod
