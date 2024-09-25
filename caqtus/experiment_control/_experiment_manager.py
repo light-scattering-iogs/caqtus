@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from ._procedures import Procedure, ProcedureName
+from .procedures import Procedure, ProcedureName
 
 
 class ExperimentManager:

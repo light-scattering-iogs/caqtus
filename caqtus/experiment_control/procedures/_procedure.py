@@ -4,9 +4,9 @@ from typing import NewType, Protocol
 
 import attrs
 
+from caqtus.experiment_control._kernel import ExperimentKernel
+from caqtus.utils._result import Failure, Success
 from caqtus.utils.serialization import JSON
-from ._kernel import ExperimentKernel
-from ..utils._result import Failure, Success
 
 ProcedureName = NewType("ProcedureName", str)
 
@@ -41,23 +41,12 @@ class Error:
     """Represents an error that occurred during the execution of a procedure.
 
     Attributes:
-        code: The error code. Values between -32768 and -32000 are reserved for
-            pre-defined errors.
+        code: The error code.
+            Values between -32768 and -32000 are reserved for pre-defined errors.
         message: The error message.
         data: Additional data that can help to understand the error.
     """
 
-    code: int
-    message: str
+    code: int = attrs.field()
+    message: str = attrs.field()
     data: JSON = attrs.field(factory=dict)
-
-
-async def run_sequence(kernel: ExperimentKernel, sequence_path: str) -> Success[None]:
-    """Run a sequence of instructions on the setup.
-
-    Args:
-        kernel: The experiment kernel that gives access to the setup.
-        sequence_path: The path to the sequence file.
-    """
-
-    raise NotImplementedError
