@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Never, Literal
+from typing import Never, Literal, overload
 
 import attrs
 from typing_extensions import TypeIs
@@ -69,3 +69,18 @@ class Failure[E: Exception]:
 
 
 type Result[T, E: Exception] = Success[T] | Failure[E]
+
+
+@overload
+def unwrap[T](value: Success[T]) -> T: ...
+
+
+@overload
+def unwrap(value: Failure[Exception]) -> Never: ...
+
+
+def unwrap(value):
+    if isinstance(value, Success):
+        return value.value
+    else:
+        raise value._error
