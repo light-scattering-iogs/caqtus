@@ -2,17 +2,13 @@ import abc
 import bisect
 import itertools
 from collections.abc import MutableSequence, Iterable, Sequence
-from typing import TypeVar, Generic, Self, NewType, overload, Never
+from typing import TypeVar, Self, NewType, overload, Never
 
 import attrs
 from typing_extensions import deprecated
 
 from caqtus.types.expression import Expression
 from caqtus.utils.asserts import assert_length_changed
-
-#: The type of the values in the time lane.
-T = TypeVar("T")
-
 
 #: Represents the index of a single step in a time lane.
 Step = NewType("Step", int)
@@ -25,7 +21,7 @@ Span = NewType("Span", int)
 
 
 @attrs.define(init=False, eq=False, repr=False)
-class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
+class TimeLane[T](MutableSequence[T], abc.ABC):
     """Represents a sequence of values covering some steps in time.
 
     A time lane is a sequence of values that are associated with some time steps.
