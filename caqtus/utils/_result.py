@@ -7,7 +7,7 @@ import attrs
 from typing_extensions import TypeIs
 
 
-@attrs.frozen
+@attrs.frozen(repr=False, str=False)
 class Success[T]:
     value: T
 
@@ -25,6 +25,12 @@ class Success[T]:
     def is_failure() -> Literal[False]:
         return False
 
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __repr__(self) -> str:
+        return f"Success({self.value!r})"
+
 
 def is_success[T, E: Exception](result: Result[T, E]) -> TypeIs[Success[T]]:
     return result.is_success()
@@ -40,7 +46,7 @@ def is_failure_type[
     return is_failure(result) and isinstance(result.error, error_type)
 
 
-@attrs.frozen
+@attrs.frozen(repr=False, str=False)
 class Failure[E: Exception]:
     error: E
 
@@ -57,6 +63,9 @@ class Failure[E: Exception]:
     @staticmethod
     def is_failure() -> Literal[True]:
         return True
+
+    def __str__(self) -> str:
+        return str(self.error)
 
 
 type Result[T, E: Exception] = Success[T] | Failure[E]
