@@ -3,6 +3,7 @@ import pytest
 from caqtus.session import PureSequencePath, PathIsSequenceError, State
 from caqtus.session._path_hierarchy import PathExistsError, RecursivePathMoveError
 from caqtus.session._sequence_collection import SequenceRunningError
+from caqtus.utils._result import unwrap
 
 
 def test_move_single_node(session_maker):
@@ -40,7 +41,7 @@ def test_move_inside_itself(session_maker):
 
         dst = src / "subpath"
         with pytest.raises(RecursivePathMoveError):
-            session.paths.move(src, dst).unwrap()
+            unwrap(session.paths.move(src, dst))
 
         session.paths.check_valid()
 
@@ -54,7 +55,7 @@ def test_move_on_itself(session_maker):
         session.paths.create_path(src)
 
         with pytest.raises(RecursivePathMoveError):
-            session.paths.move(src, src).unwrap()
+            unwrap(session.paths.move(src, src))
 
         session.paths.check_valid()
 
@@ -73,7 +74,7 @@ def test_move_sequence(session_maker, steps_configuration, time_lanes):
         session.paths.check_valid()
 
         assert not session.paths.does_path_exists(sequence_path)
-        assert session.sequences.is_sequence(dst).unwrap()
+        assert unwrap(session.sequences.is_sequence(dst))
         assert session.sequences.get_iteration_configuration(dst) == steps_configuration
         assert session.sequences.get_time_lanes(dst) == time_lanes
 
@@ -84,7 +85,7 @@ def test_cant_move_root(session_maker):
         dst = PureSequencePath.root() / "dst"
 
         with pytest.raises(RecursivePathMoveError):
-            session.paths.move(src, dst).unwrap()
+            unwrap(session.paths.move(src, dst))
 
         session.paths.check_valid()
 
@@ -96,7 +97,7 @@ def test_cant_move_on_root(session_maker):
         dst = PureSequencePath.root()
 
         with pytest.raises(PathExistsError):
-            session.paths.move(src, dst).unwrap()
+            unwrap(session.paths.move(src, dst))
 
         session.paths.check_valid()
 
@@ -109,7 +110,7 @@ def test_cant_move_to_existing_path(session_maker):
         session.paths.create_path(dst)
 
         with pytest.raises(PathExistsError):
-            session.paths.move(src, dst).unwrap()
+            unwrap(session.paths.move(src, dst))
 
         session.paths.check_valid()
 
@@ -127,7 +128,7 @@ def test_cant_move_with_sequence_in_dst_path(
 
         dst = sequence_path / "dst"
         with pytest.raises(PathIsSequenceError):
-            session.paths.move(src, dst).unwrap()
+            unwrap(session.paths.move(src, dst))
 
 
 def test_cant_move_running_sequence(session_maker, steps_configuration, time_lanes):
@@ -141,7 +142,7 @@ def test_cant_move_running_sequence(session_maker, steps_configuration, time_lan
 
         dst = PureSequencePath.root() / "dst"
         with pytest.raises(SequenceRunningError):
-            session.paths.move(src, dst).unwrap()
+            unwrap(session.paths.move(src, dst))
 
 
 def test_rename_folder(session_maker):
