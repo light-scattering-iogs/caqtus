@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QApplication,
 )
-from win32com.server.util import unwrap
 
 from caqtus.session import (
     ExperimentSessionMaker,
@@ -38,6 +37,7 @@ from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils._result import is_failure_type
+from caqtus.utils._result import unwrap
 from .sequence_widget_ui import Ui_SequenceWidget
 from .._icons import get_icon
 from .._parameter_tables_editor import ParameterNamespaceEditor
