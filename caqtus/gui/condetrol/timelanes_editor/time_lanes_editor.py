@@ -205,6 +205,11 @@ class OverlayStepsView(QTableView):
             )
         )
 
+    def parent(self) -> TimeLanesView:
+        p = super().parent()
+        assert isinstance(p, TimeLanesView)
+        return p
+
     def resize_columns(self, logical_index: int, old_size: int, new_size: int):
         self.setColumnWidth(logical_index, new_size)
         self.update_geometry()
@@ -359,12 +364,12 @@ class TimeLanesView(QTableView):
             previous_delegate = self.itemDelegateForRow(row)
             if previous_delegate:
                 previous_delegate.deleteLater()
-            self.setItemDelegateForRow(row, None)
+            self.setItemDelegateForRow(row, None)  # type: ignore[reportArgumentType]
         for row in range(2, self._model.rowCount()):
             lane = self._model.get_lane(row - 2)
             name = self._model.get_lane_name(row - 2)
             delegate = self._construct_delegate(lane, name)
-            self.setItemDelegateForRow(row, delegate)
+            self.setItemDelegateForRow(row, delegate)  # type: ignore[reportArgumentType]
             if delegate:
                 delegate.setParent(self)
 
@@ -494,7 +499,7 @@ class TimeLanesView(QTableView):
     def add_lane(self, lane_name: str, lane: TimeLane):
         self._model.insert_time_lane(lane_name, lane)
 
-    def visualRect(self, index):
+    def visualRect(self, index):  # noqa: N802
         rect = super().visualRect(index)
         if not isinstance(rect, QRect):
             # Not sure this case can actually happen, maybe rect can be None?
