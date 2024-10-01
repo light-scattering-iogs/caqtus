@@ -2,7 +2,7 @@ from PySide6.QtCore import QRect, QPoint, QSize
 from PySide6.QtWidgets import QAbstractScrollArea
 
 from caqtus.extension import Experiment
-from caqtus.gui.condetrol.timelanes_editor.time_lanes_editor import TimeLanesView
+from caqtus.gui.condetrol.timelanes_editor._time_lanes_editor import TimeLanesView
 from caqtus.types.timelane import TimeLanes
 
 
