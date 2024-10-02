@@ -81,6 +81,16 @@ def test_creation_date_is_copied(
     )
 
 
+def test_copy_not_existing_file(
+    source_session: ExperimentSession,
+    destination_session: ExperimentSession,
+):
+    path = PureSequencePath.root() / "path"
+    destination_session.paths.create_path(path)
+    result = copy_path(path, source_session, destination_session)
+    assert is_failure_type(result, PathNotFoundError)
+
+
 def test_children_are_copied(
     source_session: ExperimentSession,
     destination_session: ExperimentSession,
