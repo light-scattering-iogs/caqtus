@@ -1,9 +1,9 @@
 """Defines the result type and its variants: success and failure.
 
-The Result type is a union type of Success and Failure, where Success contains a
-successful value and Failure contains an error code.
+The result type is a union type of :class:`Success` and :class:`Failure` respectively
+containing a successful value or an error code.
 
-It is mostly meant to be used as a return type for functions that can fail, but were
+It is mostly meant to be used as a return type for functions that can fail, but where
 we want to be sure to handle all cases in the calling code and not raise unhandled
 exceptions.
 
@@ -15,11 +15,11 @@ Example:
 
         from typing import assert_never
 
-        from caqtus.utils._result import Success, Failure
+        from caqtus.utils.result import Success, Failure, is_success, is_failure_type
 
-        def read_file(file_path: str) -> Success[str] | Failure[FileNotFoundError]:
+        def read_file(path) -> Success[str] | Failure[FileNotFoundError]:
             try:
-                with open(file_path) as file:
+                with open(path) as file:
                     return Success(file.read())
             except FileNotFoundError as error:
                 return Failure(error)
