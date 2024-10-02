@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wrong returned value for `TimeLane.get_block_bounds()` when using out-of-bounds block
   index
 
+### Changed
+
+- Module `caqtus.utils.result` is now public
+
 ## [6.10.0] - 2024-09-24
 
 ### Changed
