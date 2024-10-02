@@ -1,6 +1,6 @@
 """Contains the copy function to transfer data between two sessions."""
 
-from typing import assert_never, reveal_type
+from typing import assert_never
 
 from caqtus.experiment_control.sequence_execution._sequence_manager import (
     _prepare_sequence,
