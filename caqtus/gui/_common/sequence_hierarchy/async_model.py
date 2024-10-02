@@ -43,7 +43,7 @@ from caqtus.types.iteration import (
     IterationConfiguration,
 )
 from caqtus.types.timelane import TimeLanes
-from caqtus.utils._result import (
+from caqtus.utils.result import (
     Result,
     is_failure,
     Failure,

@@ -1,5 +1,5 @@
 from caqtus.session import PureSequencePath
-from caqtus.utils._result import unwrap
+from caqtus.utils.result import unwrap
 
 
 def test_get_contained_single_sequence(session_maker, steps_configuration, time_lanes):

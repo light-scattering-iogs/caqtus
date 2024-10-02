@@ -7,7 +7,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QTreeView, QMenu, QWidget
 
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, PathNotFoundError
-from caqtus.utils._result import is_failure_type
+from caqtus.utils.result import is_failure_type
 from .async_model import AsyncPathHierarchyModel
 from .delegate import ProgressDelegate
 

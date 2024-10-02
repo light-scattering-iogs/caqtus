@@ -2,7 +2,7 @@ import pytest
 
 from caqtus.session import SequenceNotCrashedError, TracebackSummary, State
 from caqtus.types.parameter import ParameterNamespace
-from caqtus.utils._result import unwrap
+from caqtus.utils.result import unwrap
 
 
 def test_get_exception_not_crashed(session_maker, draft_sequence):

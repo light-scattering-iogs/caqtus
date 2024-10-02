@@ -24,7 +24,7 @@ from caqtus.session import (
 from caqtus.types.parameter import ParameterNamespace
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_execution import ShotRetryConfig, run_sequence
-from ...utils._result import is_failure_type, Success
+from ...utils.result import is_failure_type, Success
 
 logger = logging.getLogger(__name__)
 

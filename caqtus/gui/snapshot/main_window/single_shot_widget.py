@@ -26,7 +26,7 @@ from caqtus.session import (
 )
 from caqtus.session._shot_id import ShotId
 from caqtus.utils import serialization
-from caqtus.utils._result import is_failure_type, unwrap
+from caqtus.utils.result import is_failure_type, unwrap
 from caqtus.utils.serialization import JSON
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace

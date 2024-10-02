@@ -7,7 +7,7 @@ from caqtus.experiment_control.sequence_execution._sequence_manager import (
     _finish_sequence,
     _interrupt_sequence,
 )
-from caqtus.utils._result import (
+from caqtus.utils.result import (
     Success,
     Failure,
     is_failure,

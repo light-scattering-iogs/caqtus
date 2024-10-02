@@ -20,7 +20,7 @@ from caqtus.types.iteration import (
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName, VariableName
-from caqtus.utils._result import unwrap
+from caqtus.utils.result import unwrap
 from .device_configuration import DummyConfiguration
 from ..generate_path import path
 

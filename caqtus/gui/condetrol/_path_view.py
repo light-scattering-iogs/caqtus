@@ -42,7 +42,7 @@ from caqtus.types.iteration import (
 )
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils._result import Failure, is_success, is_failure_type, unwrap
+from caqtus.utils.result import Failure, is_success, is_failure_type, unwrap
 from ._icons import get_icon
 from .._common.waiting_widget import blocking_call
 

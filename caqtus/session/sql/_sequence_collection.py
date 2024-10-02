@@ -27,7 +27,7 @@ from caqtus.types.timelane import TimeLanes
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-from caqtus.utils._result import (
+from caqtus.utils.result import (
     Result,
     Success,
     Failure,

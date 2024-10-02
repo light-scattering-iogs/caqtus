@@ -4,7 +4,7 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
-from caqtus.utils._result import Result, Success, Failure
+from caqtus.utils.result import Result, Success, Failure
 from ._path import PureSequencePath
 
 if TYPE_CHECKING:

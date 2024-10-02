@@ -13,7 +13,7 @@ from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils._result import Result, Success, Failure, is_failure, is_failure_type
+from caqtus.utils.result import Result, Success, Failure, is_failure, is_failure_type
 from ._data_id import DataId
 from ._exception_summary import TracebackSummary
 from ._path import PureSequencePath

@@ -24,7 +24,7 @@ from caqtus.shot_compilation import (
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import split_recoverable
-from caqtus.utils._result import unwrap
+from caqtus.utils.result import unwrap
 from ._shot_compiler import ShotCompilerFactory, create_shot_compiler
 from ._shot_runner import ShotRunnerFactory, create_shot_runner
 from .sequence_runner import execute_steps, evaluate_initial_context

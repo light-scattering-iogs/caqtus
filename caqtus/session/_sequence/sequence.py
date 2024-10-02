@@ -19,7 +19,7 @@ from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._sequence_collection import PathIsNotSequenceError, PathNotFoundError
 from .._state import State
-from ...utils._result import is_failure_type, unwrap
+from ...utils.result import is_failure_type, unwrap
 
 if TYPE_CHECKING:
     from .._experiment_session import ExperimentSession

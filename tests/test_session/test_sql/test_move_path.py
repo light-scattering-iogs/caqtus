@@ -3,7 +3,7 @@ import pytest
 from caqtus.session import PureSequencePath, PathIsSequenceError, State
 from caqtus.session._path_hierarchy import PathExistsError, RecursivePathMoveError
 from caqtus.session._sequence_collection import SequenceRunningError
-from caqtus.utils._result import unwrap
+from caqtus.utils.result import unwrap
 
 
 def test_move_single_node(session_maker):

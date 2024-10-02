@@ -20,7 +20,7 @@ from caqtus.session import (
     Shot,
 )
 from caqtus.session._shot_id import ShotId
-from caqtus.utils._result import unwrap, is_failure_type
+from caqtus.utils.result import unwrap, is_failure_type
 from caqtus.utils.itertools import batched
 from .loader_ui import Ui_Loader
 

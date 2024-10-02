@@ -7,7 +7,7 @@ from attr import frozen
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from caqtus.utils._result import (
+from caqtus.utils.result import (
     Result,
     Success,
     Failure,
