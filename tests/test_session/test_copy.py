@@ -79,3 +79,16 @@ def test_creation_date_is_copied(
     assert unwrap(source_session.paths.get_path_creation_date(path)) == unwrap(
         destination_session.paths.get_path_creation_date(path)
     )
+
+
+def test_children_are_copied(
+    source_session: ExperimentSession,
+    destination_session: ExperimentSession,
+):
+    parent = PureSequencePath.root() / "parent"
+    unwrap(source_session.paths.create_path(parent))
+    child_path = parent / "child"
+    unwrap(source_session.paths.create_path(child_path))
+    result = copy_path(parent, source_session, destination_session)
+    assert is_success(result)
+    assert destination_session.paths.does_path_exists(child_path)
