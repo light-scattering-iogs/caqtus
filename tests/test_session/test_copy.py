@@ -12,6 +12,7 @@ from caqtus.session import (
     PathNotFoundError,
     SequenceStateError,
     State,
+    PathHasChildrenError,
 )
 from caqtus.session._copy import copy_path
 from caqtus.types.parameter import ParameterNamespace
@@ -135,3 +136,17 @@ def test_copy_draft_sequence(
         == steps_configuration
     )
     assert destination_session.sequences.get_time_lanes(path) == time_lanes
+
+
+def test_cant_copy_sequence_on_path_with_children(
+    source_session: ExperimentSession,
+    destination_session: ExperimentSession,
+    steps_configuration,
+    time_lanes,
+):
+    parent = PureSequencePath.root() / "parent"
+    unwrap(source_session.sequences.create(parent, steps_configuration, time_lanes))
+    child_path = parent / "child"
+    unwrap(destination_session.paths.create_path(child_path))
+    result = copy_path(parent, source_session, destination_session)
+    assert is_failure_type(result, PathHasChildrenError)
