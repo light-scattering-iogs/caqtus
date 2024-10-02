@@ -274,6 +274,13 @@ class SequenceCollection(Protocol):
     def set_state(
         self, path: PureSequencePath, state: State
     ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        """
+
+        Args:
+            state: If state is RUNNING, this will set the sequence start time to the
+                current time.
+        """
+
         raise NotImplementedError
 
     @abc.abstractmethod

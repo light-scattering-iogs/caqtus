@@ -177,7 +177,8 @@ class SequenceManager:
                     data_stream_cm,
                 ),
             ):
-                self._set_sequence_state(State.RUNNING)
+                with self._session_maker() as session:
+                    _start_sequence(self._sequence_path, session)
                 async with (
                     anyio.create_task_group() as tg,
                     scheduler_cm as scheduler,
@@ -263,3 +264,7 @@ def _prepare_sequence(
     unwrap(session.sequences.set_state(path, State.PREPARING))
     session.sequences.set_device_configurations(path, device_configurations)
     session.sequences.set_global_parameters(path, global_parameters)
+
+
+def _start_sequence(path: PureSequencePath, session: ExperimentSession):
+    session.sequences.set_state(path, State.RUNNING)
