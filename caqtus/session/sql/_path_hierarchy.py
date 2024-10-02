@@ -132,7 +132,7 @@ class SQLPathHierarchy(PathHierarchy):
             raise PathIsRootError(path)
 
         sql_path = unwrap(self._query_path_model(path))
-        sql_path.creation_date = date
+        sql_path.creation_date = date.astimezone(timezone.utc).replace(tzinfo=None)
 
     def _query_path_model(
         self, path: PureSequencePath
