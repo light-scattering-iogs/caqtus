@@ -175,14 +175,12 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
 
     def __getstate__(self):
         return {
-            "config": self.config,
             "serializer": self._serializer,
+            "config": self.config,
         }
 
     def __setstate__(self, state):
-        config = state.pop("config")
-        serializer = state.pop("serializer")
-        self.__init__(config, serializer)
+        self.__init__(**state)
 
     def create_tables(self) -> None:
         """Create the tables in the database.
