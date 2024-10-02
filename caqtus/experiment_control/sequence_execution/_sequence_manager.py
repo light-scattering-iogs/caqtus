@@ -215,10 +215,6 @@ class SequenceManager:
                 self.sequence_parameters,
             )
 
-    def _set_sequence_state(self, state: State):
-        with self._session_maker() as session:
-            unwrap(session.sequences.set_state(self._sequence_path, state))
-
     async def _store_shots(
         self,
         data_stream_cm: contextlib.AbstractAsyncContextManager[AsyncIterable[ShotData]],
