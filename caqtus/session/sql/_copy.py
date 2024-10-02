@@ -1,9 +1,8 @@
 """Contains the copy function to transfer data between two sessions."""
 
-from typing import assert_never
+from typing import assert_never, assert_type
 
 from caqtus.experiment_control.sequence_execution._sequence_manager import (
-    _prepare_sequence,
     _start_sequence,
     _finish_sequence,
     _interrupt_sequence,
@@ -95,7 +94,13 @@ def _copy_sequence(
         return Success(None)
     device_configs = source_session.sequences.get_device_configurations(path)
     global_parameters = source_session.sequences.get_global_parameters(path)
-    _prepare_sequence(path, destination_session, device_configs, global_parameters)
+    preparing_result = destination_session.sequences.set_preparing(
+        path, device_configs, global_parameters
+    )
+    assert not is_failure_type(preparing_result, PathNotFoundError)
+    assert not is_failure_type(preparing_result, PathIsNotSequenceError)
+    assert_type(preparing_result, Success[None])
+
     _start_sequence(path, destination_session)
 
     for shot_index in range(stats.number_completed_shots):
@@ -128,6 +133,7 @@ def _copy_sequence(
         crashed_result = destination_session.sequences.set_crashed(path, exception)
         assert not is_failure_type(crashed_result, PathNotFoundError)
         assert not is_failure_type(crashed_result, PathIsNotSequenceError)
+        assert_type(crashed_result, Success[None])
     else:
         assert_never(state)  # type: ignore[reportArgumentType]
 

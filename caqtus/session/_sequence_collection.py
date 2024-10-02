@@ -304,6 +304,28 @@ class SequenceCollection(Protocol):
         assert_type(set_exception_result, Success[None])
         return Success(None)
 
+    def set_preparing(
+        self,
+        path: PureSequencePath,
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
+        global_parameters: ParameterNamespace,
+    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        """Set a sequence to the PREPARING state.
+
+        Args:
+            path: The path to the sequence to prepare.
+            device_configurations: The configurations of the devices that were used to
+                run this sequence.
+            global_parameters: The parameters used to run the sequence.
+        """
+
+        state_result = self.set_state(path, State.PREPARING)
+        if is_failure(state_result):
+            return state_result
+        self.set_device_configurations(path, device_configurations)
+        self.set_global_parameters(path, global_parameters)
+        return Success(None)
+
     @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath

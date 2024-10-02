@@ -154,7 +154,12 @@ class SequenceManager:
             occurred or INTERRUPTED if the sequence was interrupted by the user.
         """
 
-        self._prepare_sequence()
+        with self._session_maker() as session:
+            session.sequences.set_preparing(
+                self._sequence_path,
+                self.device_configurations,
+                self.sequence_parameters,
+            )
         try:
             sequence_context = SequenceContext(
                 device_configurations=self.device_configurations,  # pyright: ignore[reportCallIssue]
@@ -205,15 +210,6 @@ class SequenceManager:
         else:
             with self._session_maker() as session:
                 _finish_sequence(self._sequence_path, session)
-
-    def _prepare_sequence(self):
-        with self._session_maker() as session:
-            _prepare_sequence(
-                self._sequence_path,
-                session,
-                self.device_configurations,
-                self.sequence_parameters,
-            )
 
     async def _store_shots(
         self,
