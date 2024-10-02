@@ -68,12 +68,7 @@ def _copy_sequence(
     path: PureSequencePath,
     source_session: ExperimentSession,
     destination_session: ExperimentSession,
-) -> (
-    Success[None]
-    | Failure[SequenceStateError]
-    | Failure[PathIsSequenceError]
-    | Failure[PathHasChildrenError]
-):
+) -> Success[None] | Failure[SequenceStateError] | Failure[PathHasChildrenError]:
     sequence_stats_result = source_session.sequences.get_stats(path)
     assert not is_failure_type(sequence_stats_result, PathNotFoundError)
     assert not is_failure_type(sequence_stats_result, PathIsNotSequenceError)
@@ -85,6 +80,7 @@ def _copy_sequence(
     time_lanes = source_session.sequences.get_time_lanes(path)
 
     creation_result = destination_session.sequences.create(path, iterations, time_lanes)
+    assert not is_failure_type(creation_result, PathIsSequenceError)
     if is_failure(creation_result):
         return creation_result
 
