@@ -14,6 +14,7 @@ from caqtus.session import (
     PureSequencePath,
     State,
     TracebackSummary,
+    ExperimentSession,
 )
 from caqtus.session._shot_id import ShotId
 from caqtus.shot_compilation import (
@@ -209,12 +210,11 @@ class SequenceManager:
 
     def _prepare_sequence(self):
         with self._session_maker() as session:
-            unwrap(session.sequences.set_state(self._sequence_path, State.PREPARING))
-            session.sequences.set_device_configurations(
-                self._sequence_path, self.device_configurations
-            )
-            session.sequences.set_global_parameters(
-                self._sequence_path, self.sequence_parameters
+            _prepare_sequence(
+                self._sequence_path,
+                session,
+                self.device_configurations,
+                self.sequence_parameters,
             )
 
     def _set_sequence_state(self, state: State):
@@ -242,3 +242,24 @@ class SequenceManager:
                 shot_data.end_time,
             )
             unwrap(result)
+
+
+def _prepare_sequence(
+    path: PureSequencePath,
+    session: ExperimentSession,
+    device_configurations: Mapping[DeviceName, DeviceConfiguration],
+    global_parameters: ParameterNamespace,
+):
+    """Transition a sequence to the preparing state.
+
+    Args:
+        path: The path to the sequence to prepare.
+        session: The link to the storage in which to find the sequence.
+        device_configurations: The configurations of the devices that were used to run
+            this sequence.
+        global_parameters: The parameters used to run the sequence.
+    """
+
+    unwrap(session.sequences.set_state(path, State.PREPARING))
+    session.sequences.set_device_configurations(path, device_configurations)
+    session.sequences.set_global_parameters(path, global_parameters)
