@@ -10,8 +10,11 @@ from caqtus.session import (
     ExperimentSessionMaker,
     PathIsSequenceError,
     PathNotFoundError,
+    SequenceStateError,
+    State,
 )
 from caqtus.session._copy import copy_path
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils.result import unwrap, is_failure_type, is_success
 from tests.conftest import initialize, to_postgresql_config
 from tests.test_session.test_sql.device_configuration import DummyConfiguration
@@ -102,3 +105,33 @@ def test_children_are_copied(
     result = copy_path(parent, source_session, destination_session)
     assert is_success(result)
     assert destination_session.paths.does_path_exists(child_path)
+
+
+def test_cant_copy_running_sequence(
+    source_session: ExperimentSession,
+    destination_session: ExperimentSession,
+    steps_configuration,
+    time_lanes,
+):
+    path = PureSequencePath.root() / "path"
+    unwrap(source_session.sequences.create(path, steps_configuration, time_lanes))
+    unwrap(source_session.sequences.set_preparing(path, {}, ParameterNamespace.empty()))
+    result = copy_path(path, source_session, destination_session)
+    assert is_failure_type(result, SequenceStateError)
+
+
+def test_copy_draft_sequence(
+    source_session: ExperimentSession,
+    destination_session: ExperimentSession,
+    steps_configuration,
+    time_lanes,
+):
+    path = PureSequencePath.root() / "path"
+    unwrap(source_session.sequences.create(path, steps_configuration, time_lanes))
+    unwrap(copy_path(path, source_session, destination_session))
+    assert unwrap(destination_session.sequences.get_state(path)) == State.DRAFT
+    assert (
+        destination_session.sequences.get_iteration_configuration(path)
+        == steps_configuration
+    )
+    assert destination_session.sequences.get_time_lanes(path) == time_lanes
