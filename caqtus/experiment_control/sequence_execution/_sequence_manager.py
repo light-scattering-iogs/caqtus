@@ -192,7 +192,7 @@ class SequenceManager:
         except* BaseException as e:
             tb_summary = TracebackSummary.from_exception(e)
             with self._session_maker() as session:
-                _crash_sequence(self._sequence_path, session, tb_summary)
+                unwrap(session.sequences.set_crashed(self._sequence_path, tb_summary))
             recoverable, non_recoverable = split_recoverable(e)
             if non_recoverable:
                 raise
@@ -269,13 +269,3 @@ def _finish_sequence(path: PureSequencePath, session: ExperimentSession) -> None
 
 def _interrupt_sequence(path: PureSequencePath, session: ExperimentSession) -> None:
     unwrap(session.sequences.set_state(path, State.INTERRUPTED))
-
-
-def _crash_sequence(
-    path: PureSequencePath,
-    session: ExperimentSession,
-    tb_summary: Optional[TracebackSummary],
-) -> None:
-    unwrap(session.sequences.set_state(path, State.CRASHED))
-    if tb_summary is not None:
-        unwrap(session.sequences.set_exception(path, tb_summary))

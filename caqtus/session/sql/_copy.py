@@ -7,7 +7,6 @@ from caqtus.experiment_control.sequence_execution._sequence_manager import (
     _start_sequence,
     _finish_sequence,
     _interrupt_sequence,
-    _crash_sequence,
 )
 from caqtus.session import (
     PureSequencePath,
@@ -20,6 +19,7 @@ from caqtus.session import (
     SequenceStateError,
     SequenceNotCrashedError,
     PathHasChildrenError,
+    TracebackSummary,
 )
 from caqtus.session._shot_id import ShotId
 from caqtus.utils._result import (
@@ -123,11 +123,11 @@ def _copy_sequence(
         assert not is_failure_type(exception_result, PathIsNotSequenceError)
         assert not is_failure_type(exception_result, SequenceNotCrashedError)
         exception = exception_result.value
-        _crash_sequence(
-            path,
-            destination_session,
-            exception,
-        )
+        if exception is None:
+            exception = TracebackSummary.from_exception(RuntimeError("Unknown error"))
+        crashed_result = destination_session.sequences.set_crashed(path, exception)
+        assert not is_failure_type(crashed_result, PathNotFoundError)
+        assert not is_failure_type(crashed_result, PathIsNotSequenceError)
     else:
         assert_never(state)  # type: ignore[reportArgumentType]
 
