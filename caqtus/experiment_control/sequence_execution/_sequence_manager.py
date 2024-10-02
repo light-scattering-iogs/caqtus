@@ -186,17 +186,12 @@ class SequenceManager:
                     tg.start_soon(self._store_shots, data_stream_cm)
                     yield scheduler
         except* anyio.get_cancelled_exc_class():
-            self._set_sequence_state(State.INTERRUPTED)
+            with self._session_maker() as session:
+                _interrupt_sequence(self._sequence_path, session)
             raise
         except* BaseException as e:
-            self._set_sequence_state(State.CRASHED)
-            traceback_summary = TracebackSummary.from_exception(e)
             with self._session_maker() as session:
-                unwrap(
-                    session.sequences.set_exception(
-                        self._sequence_path, traceback_summary
-                    )
-                )
+                _crash_sequence(self._sequence_path, session, e)
             recoverable, non_recoverable = split_recoverable(e)
             if non_recoverable:
                 raise
@@ -207,7 +202,8 @@ class SequenceManager:
                 )
 
         else:
-            self._set_sequence_state(State.FINISHED)
+            with self._session_maker() as session:
+                _finish_sequence(self._sequence_path, session)
 
     def _prepare_sequence(self):
         with self._session_maker() as session:
@@ -267,4 +263,23 @@ def _prepare_sequence(
 
 
 def _start_sequence(path: PureSequencePath, session: ExperimentSession):
-    session.sequences.set_state(path, State.RUNNING)
+    unwrap(session.sequences.set_state(path, State.RUNNING))
+
+
+def _finish_sequence(path: PureSequencePath, session: ExperimentSession) -> None:
+    unwrap(session.sequences.set_state(path, State.FINISHED))
+
+
+def _interrupt_sequence(path: PureSequencePath, session: ExperimentSession) -> None:
+    unwrap(session.sequences.set_state(path, State.INTERRUPTED))
+
+
+def _crash_sequence(
+    path: PureSequencePath,
+    session: ExperimentSession,
+    exception: Optional[BaseException],
+) -> None:
+    unwrap(session.sequences.set_state(path, State.CRASHED))
+    if exception is not None:
+        traceback_summary = TracebackSummary.from_exception(exception)
+        unwrap(session.sequences.set_exception(path, traceback_summary))
