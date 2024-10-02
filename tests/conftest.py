@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Generator
+
 import pytest
 from pytest_postgresql import factories
 
 from caqtus.extension import Experiment
 from caqtus.extension import upgrade_database
-from caqtus.session import PureSequencePath, State
+from caqtus.session import PureSequencePath, State, ExperimentSessionMaker
 from caqtus.session.sql import PostgreSQLConfig
-from caqtus.session.sql import PostgreSQLExperimentSessionMaker
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
@@ -73,7 +74,7 @@ def initialized_database_config(postgresql_initialized) -> PostgreSQLConfig:
 
 
 @pytest.fixture
-def session_maker(initialized_database_config) -> PostgreSQLExperimentSessionMaker:
+def session_maker(initialized_database_config) -> ExperimentSessionMaker:
     exp = Experiment()
     exp.configure_storage(initialized_database_config)
     exp._extension.device_configurations_serializer.register_device_configuration(
@@ -123,7 +124,9 @@ def time_lanes() -> TimeLanes:
 
 
 @pytest.fixture
-def draft_sequence(session_maker, steps_configuration, time_lanes) -> PureSequencePath:
+def draft_sequence(
+    session_maker, steps_configuration, time_lanes
+) -> Generator[PureSequencePath, None, None]:
     path = PureSequencePath(r"\test")
     with session_maker.session() as session:
         session.sequences.create(path, steps_configuration, time_lanes)
