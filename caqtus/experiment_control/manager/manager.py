@@ -19,6 +19,7 @@ from caqtus.session import (
     State,
     PathNotFoundError,
     PathIsNotSequenceError,
+    TracebackSummary,
 )
 from caqtus.types.parameter import ParameterNamespace
 from ..device_manager_extension import DeviceManagerExtensionProtocol
@@ -377,13 +378,18 @@ class BoundProcedure(Procedure):
 
 
 def _crash_running_sequences(session: ExperimentSession) -> None:
+    tb_summary = TracebackSummary.from_exception(
+        RuntimeError(
+            "Sequence was already running when the experiment manager started."
+        )
+    )
     for path in session.sequences.get_sequences_in_state(State.RUNNING):
-        result = session.sequences.set_state(path, State.CRASHED)
+        result = session.sequences.set_crashed(path, tb_summary)
         assert not is_failure_type(result, PathNotFoundError)
         assert not is_failure_type(result, PathIsNotSequenceError)
         assert_type(result, Success[None])
     for path in session.sequences.get_sequences_in_state(State.PREPARING):
-        result = session.sequences.set_state(path, State.CRASHED)
+        result = session.sequences.set_crashed(path, tb_summary)
         assert not is_failure_type(result, PathNotFoundError)
         assert not is_failure_type(result, PathIsNotSequenceError)
         assert_type(result, Success[None])
