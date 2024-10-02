@@ -571,6 +571,7 @@ def _set_state(
         sequence.parameters.content = None
         if sequence.exception_traceback:
             session.delete(sequence.exception_traceback)
+            sequence.exception_traceback = None
         delete_device_configurations = sqlalchemy.delete(SQLDeviceConfiguration).where(
             SQLDeviceConfiguration.sequence == sequence
         )
