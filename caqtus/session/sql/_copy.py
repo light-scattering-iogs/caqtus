@@ -25,6 +25,33 @@ from caqtus.utils._result import (
 )
 
 
+def copy_path(
+    path: PureSequencePath,
+    source_session: ExperimentSession,
+    destination_session: ExperimentSession,
+) -> Success[None] | Failure[PathIsSequenceError] | Failure[PathNotFoundError]:
+    path_creation_result = destination_session.paths.create_path(path)
+    if is_failure(path_creation_result):
+        return path_creation_result
+    created_paths = path_creation_result.value
+    for created_path in created_paths:
+        creation_date_result = source_session.paths.get_path_creation_date(created_path)
+        assert not is_failure_type(creation_date_result, PathIsRootError)
+        if is_failure(creation_date_result):
+            return creation_date_result
+        creation_date = creation_date_result.value
+        destination_session.paths.update_creation_date(created_path, creation_date)
+    children_result = source_session.paths.get_children(path)
+    if is_failure_type(children_result, PathNotFoundError):
+        return children_result
+    elif is_failure_type(children_result, PathIsSequenceError):
+        pass
+    else:
+        children = children_result.value
+        for child in children:
+            copy_path(child, source_session, destination_session)
+
+
 def copy_sequence(
     source: PureSequencePath,
     source_session: ExperimentSession,
