@@ -234,27 +234,6 @@ class SequenceManager:
             unwrap(result)
 
 
-def _prepare_sequence(
-    path: PureSequencePath,
-    session: ExperimentSession,
-    device_configurations: Mapping[DeviceName, DeviceConfiguration],
-    global_parameters: ParameterNamespace,
-):
-    """Transition a sequence to the preparing state.
-
-    Args:
-        path: The path to the sequence to prepare.
-        session: The link to the storage in which to find the sequence.
-        device_configurations: The configurations of the devices that were used to run
-            this sequence.
-        global_parameters: The parameters used to run the sequence.
-    """
-
-    unwrap(session.sequences.set_state(path, State.PREPARING))
-    session.sequences.set_device_configurations(path, device_configurations)
-    session.sequences.set_global_parameters(path, global_parameters)
-
-
 def _start_sequence(path: PureSequencePath, session: ExperimentSession):
     unwrap(session.sequences.set_state(path, State.RUNNING))
 
