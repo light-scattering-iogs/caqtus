@@ -1,22 +1,19 @@
-from typing import TypeVar, Optional
+from typing import Optional
 
 import numpy as np
 from hypothesis.strategies import SearchStrategy, recursive
-from numpy.typing import DTypeLike
 
-from caqtus.device.sequencer.instructions import SequencerInstruction
+from caqtus.shot_compilation.timed_instructions import TimedInstruction, InstrType
 from .generate_concatenate import concatenation
 from .generate_pattern import pattern
 from .generate_repeat import repeated
 
-T = TypeVar("T", bound=DTypeLike)
-
 
 def instruction(
-    leaf_strategy: SearchStrategy[SequencerInstruction[T]],
+    leaf_strategy: SearchStrategy[TimedInstruction[InstrType]],
     max_leaves: int,
     max_length: Optional[int] = None,
-) -> SearchStrategy[SequencerInstruction[T]]:
+) -> SearchStrategy[TimedInstruction[InstrType]]:
     strategy = recursive(
         leaf_strategy,
         lambda s: concatenation(s) | repeated(s),
@@ -29,7 +26,7 @@ def instruction(
 
 def digital_instruction(
     max_leaves: int = 30, max_length: Optional[int] = None
-) -> SearchStrategy[SequencerInstruction[np.bool_]]:
+) -> SearchStrategy[TimedInstruction[np.bool_]]:
     return instruction(
         pattern(dtype=np.bool_, min_length=1, max_length=10), max_leaves, max_length
     )
@@ -37,7 +34,7 @@ def digital_instruction(
 
 def analog_instruction(
     max_leaves: int = 20, max_length: Optional[int] = None
-) -> SearchStrategy[SequencerInstruction[np.floating]]:
+) -> SearchStrategy[TimedInstruction[np.floating]]:
     return instruction(
         pattern(dtype=np.float64, min_length=1, max_length=100), max_leaves, max_length
     )

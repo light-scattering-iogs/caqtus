@@ -10,7 +10,7 @@ def generate_pattern(length: int, offset: int = 0) -> Pattern[np.int64]:
 
 
 def pattern(
-    dtype: InstrType, min_length: int = 0, max_length=1000
+    dtype: type[InstrType], min_length: int = 0, max_length=1000
 ) -> SearchStrategy[Pattern[InstrType]]:
     return arrays(
         dtype=dtype,
