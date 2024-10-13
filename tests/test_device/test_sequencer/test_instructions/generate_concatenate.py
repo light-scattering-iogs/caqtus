@@ -1,18 +1,18 @@
-from typing import TypeVar
-
+import numpy as np
 from hypothesis.strategies import composite, integers, SearchStrategy, lists
-from numpy.typing import DTypeLike
 
-from caqtus.device.sequencer.instructions import (
-    Concatenated,
-    SequencerInstruction,
+from caqtus.shot_compilation.timed_instructions import (
+    TimedInstruction,
     concatenate,
+    InstrType,
 )
 from .generate_pattern import generate_pattern
 
 
 @composite
-def generate_concatenate(draw, length: int, offset: int = 0) -> Concatenated:
+def generate_concatenate(
+    draw, length: int, offset: int = 0
+) -> TimedInstruction[np.int64]:
     if length <= 1:
         raise ValueError("Length must be strictly greater than 1.")
     else:
@@ -29,14 +29,11 @@ def generate_concatenate(draw, length: int, offset: int = 0) -> Concatenated:
         return left + right
 
 
-T = TypeVar("T", bound=DTypeLike)
-
-
 def concatenation(
-    children: SearchStrategy[SequencerInstruction[T]],
+    children: SearchStrategy[TimedInstruction[InstrType]],
     min_size: int = 2,
     max_size: int = 50,
-) -> SearchStrategy[SequencerInstruction[T]]:
+) -> SearchStrategy[TimedInstruction[InstrType]]:
     # We can't guarantee that the generated instructions will be a concatenation
     # because concatenate might normalize the instruction.
     return lists(children, min_size=min_size, max_size=max_size).map(
