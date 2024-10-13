@@ -6,6 +6,7 @@ from typing import Optional, Any
 
 import numpy
 import token_utils
+from token_utils import Token
 
 import caqtus.formatter as fmt
 from caqtus.utils import serialization
@@ -206,12 +207,12 @@ def add_implicit_multiplication(source: str) -> str:
     which is a function call - and thus valid Python syntax.
     """
 
-    tokens = token_utils.tokenize(source)
+    tokens: list[Token] = token_utils.tokenize(source)
     if not tokens:
-        return tokens
+        return source
 
     prev_token = tokens[0]
-    new_tokens = [prev_token]
+    new_tokens: list[str | Token] = [prev_token]
 
     for token in tokens[1:]:
         if (
