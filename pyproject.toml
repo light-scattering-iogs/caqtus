@@ -111,6 +111,14 @@ matrix.numpy.dependencies = [
 [tool.hatch.envs.test.scripts]
 pytest = "python -m pytest {args:tests}"
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error::DeprecationWarning",
+    "error::PendingDeprecationWarning",
+    "error::FutureWarning",
+    "ignore: distutils Version classes are deprecated. Use packaging.version instead.:DeprecationWarning",
+]
+
 
 [tool.hatch.envs.docs]
 dependencies = [
