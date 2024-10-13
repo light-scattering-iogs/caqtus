@@ -1,23 +1,17 @@
-from typing import TypeVar
-
 import numpy as np
 from hypothesis.extra.numpy import arrays, from_dtype
 from hypothesis.strategies import integers, SearchStrategy
-from numpy.typing import DTypeLike
 
-from caqtus.device.sequencer.instructions import Pattern
+from caqtus.shot_compilation.timed_instructions import Pattern, InstrType
 
 
-def generate_pattern(length: int, offset: int = 0) -> Pattern:
+def generate_pattern(length: int, offset: int = 0) -> Pattern[np.int64]:
     return Pattern(np.arange(offset, offset + length))
 
 
-T = TypeVar("T", bound=DTypeLike)
-
-
 def pattern(
-    dtype: T, min_length: int = 0, max_length=1000
-) -> SearchStrategy[Pattern[T]]:
+    dtype: InstrType, min_length: int = 0, max_length=1000
+) -> SearchStrategy[Pattern[InstrType]]:
     return arrays(
         dtype=dtype,
         shape=integers(min_value=min_length, max_value=max_length),
