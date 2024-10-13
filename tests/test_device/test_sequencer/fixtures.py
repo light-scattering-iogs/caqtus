@@ -1,8 +1,8 @@
-import decimal
 from typing import Type
 
 import pytest
 
+from caqtus.device.configuration import DeviceServerName
 from caqtus.device.sequencer import (
     DigitalChannelConfiguration,
     AnalogChannelConfiguration,
@@ -16,6 +16,7 @@ from caqtus.device.sequencer.channel_commands import (
     CalibratedAnalogMapping,
 )
 from caqtus.device.sequencer.channel_commands.timing import BroadenLeft, Advance
+from caqtus.device.sequencer.timing import to_time_step
 from caqtus.device.sequencer.trigger import (
     SoftwareTrigger,
     ExternalClockOnChange,
@@ -23,7 +24,9 @@ from caqtus.device.sequencer.trigger import (
     ExternalTriggerStart,
 )
 from caqtus.shot_compilation import VariableNamespace
+from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
+from caqtus.types.image import ImageLabel
 from caqtus.types.timelane import (
     TimeLanes,
     DigitalTimeLane,
@@ -275,13 +278,13 @@ def time_lanes():
             ),
             "Orca Quest": CameraTimeLane(
                 [None] * 12
-                + [TakePicture(picture_name="picture 0")]
+                + [TakePicture(picture_name=ImageLabel(DataLabel("picture 0")))]
                 + [None] * 3
-                + [TakePicture(picture_name="picture 1")]
+                + [TakePicture(picture_name=ImageLabel(DataLabel("picture 1")))]
                 + [None] * 18
-                + [TakePicture(picture_name="picture 2")]
+                + [TakePicture(picture_name=ImageLabel(DataLabel("picture 2")))]
                 + [None] * 3
-                + [TakePicture(picture_name="picture 3")]
+                + [TakePicture(picture_name=ImageLabel(DataLabel("picture 3")))]
                 + [None] * 2
             ),
             "626 imaging \\ AOM": DigitalTimeLane(
@@ -337,7 +340,9 @@ def time_lanes():
                 [False] * 27 + [True] + [False] * 14
             ),
             "Fringe stabilizer": CameraTimeLane(
-                [None] * 37 + [TakePicture(picture_name="picture")] + [None] * 4
+                [None] * 37
+                + [TakePicture(picture_name=ImageLabel(DataLabel("picture")))]
+                + [None] * 4
             ),
         },
     )
@@ -471,7 +476,7 @@ def spincore_config():
                 description="", output=Constant(value=Expression("Disabled"))
             ),
         ),
-        time_step=decimal.Decimal(50),
+        time_step=to_time_step(50),
     )
 
 
@@ -800,7 +805,7 @@ def ni6738_configuration():
                 output_unit="V",
             ),
         ),
-        time_step=decimal.Decimal(3000),
+        time_step=to_time_step(3000),
     )
 
 
@@ -813,8 +818,8 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
 @pytest.fixture
 def swabian_configuration():
     return SwabianPulseStreamerConfiguration(
-        remote_server="James",
-        time_step=decimal.Decimal(1),
+        remote_server=DeviceServerName("James"),
+        time_step=to_time_step(1),
         trigger=ExternalTriggerStart(edge=TriggerEdge.RISING),
         channels=(
             DigitalChannelConfiguration(

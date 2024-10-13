@@ -1,8 +1,9 @@
 from caqtus.device import DeviceName
 from caqtus.device.sequencer import SequencerCompiler
 from caqtus.device.sequencer.timing import number_time_steps
-from caqtus.experiment_control._shot_compiler import ShotCompiler
+
 from caqtus.experiment_control.sequence_execution import walk_steps
+from caqtus.experiment_control.sequence_execution._shot_compiler import ShotCompiler
 from caqtus.experiment_control.sequence_execution.sequence_runner import (
     evaluate_initial_context,
 )
