@@ -8,7 +8,7 @@ import polars
 
 from caqtus.session import Shot
 from caqtus.types.image import ImageLabel, is_image
-from caqtus.utils.roi import ROI, RectangularROI
+from caqtus.types.image.roi import ROI, RectangularROI
 from ._combinable_importers import CombinableLoader
 from ...types.data import DataLabel
 from ...types.recoverable_exceptions import InvalidTypeError
