@@ -46,7 +46,7 @@ dependencies = [
     "psycopg[binary]>=3.1.18",
     "alembic>=1.13",
     # GUI dependencies
-    "pyside6>=6.6",
+    "pyside6>=6.6, <6.8", # TODO: Remove cap once this issue has been solved https://bugreports.qt.io/browse/PYSIDE-2888
     "qtawesome>=1.3.0",
     "pyqtgraph>=0.13.4",
     "matplotlib>=3.8.3",
