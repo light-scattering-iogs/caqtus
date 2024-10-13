@@ -1,7 +1,7 @@
 import numpy as np
 from hypothesis.strategies import SearchStrategy, integers, floats, builds
 
-from caqtus.device.sequencer.instructions import Ramp
+from caqtus.shot_compilation.timed_instructions import Ramp
 
 
 def ramp_strategy() -> SearchStrategy[Ramp]:
