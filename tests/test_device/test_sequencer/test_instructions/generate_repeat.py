@@ -1,5 +1,3 @@
-from typing import TypeVar
-
 import numpy as np
 from hypothesis.strategies import (
     composite,
@@ -8,10 +6,13 @@ from hypothesis.strategies import (
     SearchStrategy,
     builds,
 )
-from numpy.typing import DTypeLike
 from sympy import factorint
 
-from caqtus.device.sequencer.instructions import Repeated, SequencerInstruction
+from caqtus.shot_compilation.timed_instructions import (
+    Repeated,
+    TimedInstruction,
+    InstrType,
+)
 from .generate_pattern import generate_pattern
 
 
@@ -50,12 +51,9 @@ def factorize(draw, number: int) -> tuple[int, int]:
         return min(a, b), max(a, b)
 
 
-T = TypeVar("T", bound=DTypeLike)
-
-
 def repeated(
-    child: SearchStrategy[SequencerInstruction[T]],
-) -> SearchStrategy[SequencerInstruction[T]]:
+    child: SearchStrategy[TimedInstruction[InstrType]],
+) -> SearchStrategy[TimedInstruction[InstrType]]:
     return builds(
         to_repeat,
         repetitions=integers(min_value=2, max_value=100),
@@ -64,6 +62,6 @@ def repeated(
 
 
 def to_repeat(
-    repetitions: int, instruction: SequencerInstruction
-) -> SequencerInstruction:
+    repetitions: int, instruction: TimedInstruction[InstrType]
+) -> TimedInstruction[InstrType]:
     return repetitions * instruction
