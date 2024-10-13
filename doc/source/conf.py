@@ -6,6 +6,12 @@
 import os
 import sys
 
+# Tell Jinja2 templates the build is running on Read the Docs
+if os.environ.get("READTHEDOCS", "") == "True":
+    if "html_context" not in globals():
+        html_context = {}
+    html_context["READTHEDOCS"] = True  # type: ignore[reportPossiblyUnboundVariable]
+
 sys.path.insert(0, os.path.abspath("./caqtus"))
 
 # -- Project information -----------------------------------------------------
