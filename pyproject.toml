@@ -71,9 +71,6 @@ exclude = ["*.ui", "/tests", "/doc", "/manual", "/.github"]
 include = ["caqtus/"]
 exclude = ["*.ui"]
 
-[[tool.hatch.envs.all.matrix]]
-python = ["3.12"]
-
 [tool.hatch.envs.default]
 dependencies = [
     "black>=24.3.0",
@@ -100,6 +97,7 @@ extra-dependencies = [
 ]
 
 [[tool.hatch.envs.test.matrix]]
+python = ["3.12", "3.13"]
 numpy = ["2", "1.26"]
 
 [tool.hatch.envs.test.overrides]
