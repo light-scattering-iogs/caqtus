@@ -26,6 +26,10 @@ Depth = NewType("Depth", int)
 
 _S = TypeVar("_S", covariant=True, bound=DTypeLike)
 
+InstrType = TypeVar("InstrType", bound=np.generic, covariant=True)
+"""Represents the data type of the instruction."""
+
+
 type Array1D[T: np.generic] = npt.NDArray[T]
 
 

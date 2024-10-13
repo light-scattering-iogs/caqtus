@@ -6,6 +6,7 @@ from ._instructions import (
     Repeated,
     Pattern,
     concatenate,
+    InstrType,
 )
 from ._plot import plot_instruction
 from ._ramp import create_ramp, Ramp
@@ -28,4 +29,5 @@ __all__ = [
     "Ramp",
     "plot_instruction",
     "to_graph",
+    "InstrType",
 ]
