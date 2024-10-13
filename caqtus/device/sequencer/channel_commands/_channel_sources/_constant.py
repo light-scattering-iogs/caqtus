@@ -49,7 +49,7 @@ class Constant(ChannelOutput):
             + number_time_steps(shot_context.get_shot_duration(), required_time_step)
             + append
         )
-        value = self.value.evaluate(shot_context.get_variables())
+        value = self.value.evaluate(shot_context.get_parameters())
         magnitude, units = split_magnitude_units(value)
         return DimensionedSeries(Pattern([magnitude]) * length, units)
 

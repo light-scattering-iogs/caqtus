@@ -165,7 +165,7 @@ class ShotContext:
 
         return self._variables
 
-    @deprecated("Use get_parameters instead")
+    @deprecated("Use get_parameters instead", stacklevel=2)
     def get_variables(self) -> Mapping[DottedVariableName, Any]:
         """Returns the variables for the shot."""
 

@@ -220,7 +220,7 @@ def compile_parallel_instructions(
     max_advance, max_delay = _find_max_advance_and_delays(
         [instruction.output for instruction in instructions.values()],
         time_step,
-        shot_context.get_variables(),
+        shot_context.get_parameters(),
     )
 
     channel_instructions = []

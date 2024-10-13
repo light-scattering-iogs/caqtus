@@ -38,7 +38,7 @@ class Advance(ChannelOutput):
         shot_context: ShotContext,
     ):
         evaluated_advance = _evaluate_expression_in_unit(
-            self.advance, Unit("ns"), shot_context.get_variables()
+            self.advance, Unit("ns"), shot_context.get_parameters()
         )
         number_ticks_to_advance = round(evaluated_advance / float(required_time_step))
         if number_ticks_to_advance < 0:
@@ -65,7 +65,7 @@ class Advance(ChannelOutput):
     ) -> tuple[int, int]:
         advance = _evaluate_expression_in_unit(self.advance, Unit("ns"), variables)
         if advance < 0:
-            raise InvalidValueError(f"Advance must be a positive number.")
+            raise InvalidValueError("Advance must be a positive number.")
         advance_ticks = round(advance / float(time_step))
         input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
             time_step, variables
@@ -122,7 +122,7 @@ class Delay(ChannelOutput):
     ) -> tuple[int, int]:
         delay = _evaluate_expression_in_unit(self.delay, Unit("ns"), variables)
         if delay < 0:
-            raise ValueError(f"Delay must be a positive number.")
+            raise ValueError("Delay must be a positive number.")
         delay_ticks = round(delay / float(time_step))
         input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
             time_step, variables
