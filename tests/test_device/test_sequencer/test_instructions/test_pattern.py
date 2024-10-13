@@ -3,7 +3,7 @@ import pytest
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from caqtus.device.sequencer.instructions import Pattern, merge_instructions
+from caqtus.shot_compilation.timed_instructions import Pattern, merge_instructions
 from .generate_concatenate import generate_concatenate
 from .generate_pattern import generate_pattern
 

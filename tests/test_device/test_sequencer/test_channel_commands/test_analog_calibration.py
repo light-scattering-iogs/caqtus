@@ -7,8 +7,8 @@ from hypothesis.strategies import floats, tuples, lists
 from caqtus.device.sequencer.channel_commands._calibrated_analog_mapping import (
     DimensionlessCalibration,
 )
-from caqtus.device.sequencer.instructions import (
-    SequencerInstruction,
+from caqtus.shot_compilation.timed_instructions import (
+    TimedInstruction,
     Ramp,
     create_ramp,
     Pattern,
@@ -74,7 +74,7 @@ calibration = (
     p=Pattern([0.0]),
 )
 def test_calibration_pattern(
-    cal: DimensionlessCalibration, p: SequencerInstruction[np.floating]
+    cal: DimensionlessCalibration, p: TimedInstruction[np.floating]
 ):
     try:
         computed = cal.apply(p).to_pattern().array
@@ -105,7 +105,7 @@ def test_calibration_ramp(cal, instr: Ramp):
 
 
 def validate_calibration(
-    cal: DimensionlessCalibration, instr: SequencerInstruction[np.floating]
+    cal: DimensionlessCalibration, instr: TimedInstruction[np.floating]
 ):
     try:
         computed = cal.apply(instr).to_pattern().array
@@ -144,6 +144,6 @@ def test_calibration_on_ramp(cal: DimensionlessCalibration, instr: Ramp):
 
 @given(calibration, analog_instruction(max_length=1000))
 def test_calibration_apply(
-    cal: DimensionlessCalibration, instr: SequencerInstruction[np.floating]
+    cal: DimensionlessCalibration, instr: TimedInstruction[np.floating]
 ):
     validate_calibration(cal, instr)

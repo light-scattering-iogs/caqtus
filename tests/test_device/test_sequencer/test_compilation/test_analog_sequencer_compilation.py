@@ -10,10 +10,10 @@ from caqtus.device.sequencer import (
     AnalogChannelConfiguration,
 )
 from caqtus.device.sequencer.channel_commands import LaneValues, CalibratedAnalogMapping
-from caqtus.device.sequencer.instructions import Pattern, create_ramp
 from caqtus.device.sequencer.timing import to_time_step
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.shot_compilation.compilation_contexts import SequenceContext, ShotContext
+from caqtus.shot_compilation.timed_instructions import Pattern, create_ramp
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import TimeLanes, AnalogTimeLane, Ramp
 

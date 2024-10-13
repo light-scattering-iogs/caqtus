@@ -1,6 +1,6 @@
 import pytest
 
-from caqtus.device.sequencer.instructions import (
+from caqtus.shot_compilation.timed_instructions import (
     Pattern,
     with_name,
     create_ramp,

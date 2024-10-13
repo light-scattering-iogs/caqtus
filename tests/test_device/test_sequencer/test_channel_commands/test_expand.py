@@ -1,10 +1,9 @@
 import numpy as np
 from hypothesis import given
 from hypothesis.strategies import integers
-from numpy.typing import NDArray
 
 from caqtus.device.sequencer.channel_commands.timing.broaden import _broaden_left
-from caqtus.device.sequencer.instructions import Concatenated, Pattern
+from caqtus.shot_compilation.timed_instructions import Concatenated, Pattern
 from ..test_instructions import (
     concatenation,
     pattern,
@@ -12,15 +11,13 @@ from ..test_instructions import (
     digital_instruction,
 )
 
-np.typing.NDArray = np.ndarray
-
 
 @given(pattern(dtype=np.bool_, min_length=1), integers(min_value=0))
 def test_pattern(p, n):
     expanded, excess = _broaden_left(p, n)
     assert len(expanded) == len(p)
     for i in range(len(expanded)):
-        assert expanded.array[i] == any(p.array[i : i + n + 1])
+        assert expanded.to_pattern().array[i] == any(p.array[i : i + n + 1])
 
 
 def test_pattern_0():
