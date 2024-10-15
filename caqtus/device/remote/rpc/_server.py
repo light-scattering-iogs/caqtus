@@ -74,8 +74,23 @@ T = TypeVar("T")
 
 
 class RPCServer:
-    def __init__(self, port: int):
+    def __init__(
+        self,
+        port: int,
+        dumper: Callable[[Any], bytes] = pickle.dumps,
+        loader: Callable[[bytes], Any] = pickle.loads,
+    ):
+        """
+
+        Args:
+            port: The port to listen on.
+            dumper: A function that serializes an object to bytes.
+            loader: A function that deserializes an object from bytes.
+        """
+
         self._port = port
+        self._dump = dumper
+        self._load = loader
 
     def __enter__(self):
         return self
@@ -91,22 +106,23 @@ class RPCServer:
         async with contextlib.aclosing(listener):
             await listener.serve(self.handle)
 
-    @staticmethod
-    async def handle(client: anyio.abc.ByteStream) -> None:
-        handler = Handler()
+    async def handle(self, client: anyio.abc.ByteStream) -> None:
+        handler = Handler(self._dump, self._load)
         await handler.handle(client)
 
 
 class Handler:
-    def __init__(self):
+    def __init__(self, dumper: Callable[[Any], bytes], loader: Callable[[bytes], Any]):
         self._objects: dict[int, ObjectReference] = {}
+        self._dump = dumper
+        self._load = loader
 
     async def handle(self, client: anyio.abc.ByteStream) -> None:
         async with client:
             receive_stream = BufferedByteReceiveStream(client)
             for _ in itertools.count():
                 request_bytes = await receive_with_size_prefix(receive_stream)
-                request = pickle.loads(request_bytes)
+                request = self._load(request_bytes)
                 if isinstance(request, CallRequest):
                     await self.handle_call_request(client, request)
                 elif isinstance(request, DeleteProxyRequest):
@@ -120,7 +136,8 @@ class Handler:
         if self._objects:
             warnings.warn(
                 f"Not all objects were properly deleted: {self._objects}.\n"
-                f"If you acquired any proxies, make sure to close them."
+                f"If you acquired any proxies, make sure to close them.",
+                stacklevel=2,
             )
 
     async def handle_call_request(self, client, request: CallRequest) -> None:
@@ -140,7 +157,7 @@ class Handler:
             elif request.return_value == ReturnValue.PROXY:
                 result = self.create_proxy(value)
             else:
-                assert False, f"Unknown return value: {request.return_value}"
+                raise AssertionError(f"Unknown return value: {request.return_value}")
         except _StopIteration:
             # Don't log this exception, as it can occur during normal operation if we're
             # calling __next__ on an iterator.
@@ -162,23 +179,21 @@ class Handler:
         if self._objects[proxy._obj_id].number_proxies <= 0:
             del self._objects[proxy._obj_id]
 
-    @staticmethod
     async def send_failure_response(
-        client: anyio.abc.ByteStream, request: CallRequest, e: Exception
+        self, client: anyio.abc.ByteStream, request: CallRequest, e: Exception
     ) -> None:
         try:
             raise RemoteCallError(f"Error during call to {request.function}") from e
         except RemoteCallError as error:
             response = CallResponseFailure(error=error, id_=request.id_)
-        pickled_response = pickle.dumps(response)
+        pickled_response = self._dump(response)
         await send_with_size_prefix(client, pickled_response)
 
-    @staticmethod
     async def send_success_response(
-        client: anyio.abc.ByteStream, request: CallRequest, result: Any
+        self, client: anyio.abc.ByteStream, request: CallRequest, result: Any
     ) -> None:
         response = CallResponseSuccess(result=result, id_=request.id_)
-        pickled_response = pickle.dumps(response)
+        pickled_response = self._dump(response)
         await send_with_size_prefix(client, pickled_response)
 
     def create_proxy(self, obj: T) -> Proxy[T]:
