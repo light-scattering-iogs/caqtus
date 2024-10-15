@@ -25,8 +25,12 @@ class DeviceMock(Device):
         raise ValueError("test")
 
     def __exit__(self, exc_type, exc_value, traceback):
-        print("exit")
-        return False
+        if exc_type is not None:
+            print("exit with exception")
+            return
+        else:
+            print("exit")
+            return False
 
 
 @pytest.fixture()
@@ -60,7 +64,7 @@ async def test_0(anyio_backend, capsys):
     assert captured.out == "enter\nexit\n"
 
 
-async def test_exception_inside_sequence_reraised(anyio_backend):
+async def test_exception_inside_sequence_reraised(anyio_backend, capsys):
     async with run_server() as server:
         with pytest.raises(ValueError):
             async with (
@@ -68,6 +72,10 @@ async def test_exception_inside_sequence_reraised(anyio_backend):
                 DeviceProxy(client, DeviceMock, "test"),
             ):
                 raise ValueError("test")
+
+    captured = capsys.readouterr()
+
+    assert captured.out == "enter\nexit with exception\n"
 
 
 class MockCamera(Camera):
