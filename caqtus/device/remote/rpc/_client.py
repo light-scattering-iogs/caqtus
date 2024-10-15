@@ -63,13 +63,30 @@ class MethodCaller:
 
 
 class RPCClient(AsyncConverter):
-    def __init__(self, host: str, port: int):
+    """
+
+    Args:
+        host: The host to connect to.
+        port: The port to connect to.
+        dumper: A function that serializes an object to bytes.
+        loader: A function that deserializes bytes to the original object.
+    """
+
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        dumper: Callable[[Any], bytes] = pickle.dumps,
+        loader: Callable[[bytes], Any] = pickle.loads,
+    ):
         self._host = host
         self._port = port
 
         self._exit_stack = contextlib.AsyncExitStack()
 
         self._request_id = 0
+        self._load = loader
+        self._dump = dumper
 
     async def __aenter__(self):
         await self._exit_stack.__aenter__()
@@ -94,7 +111,7 @@ class RPCClient(AsyncConverter):
         **kwargs: Any,
     ) -> T:
         request = self._build_request(fun, args, kwargs, "copy")
-        pickled = pickle.dumps(request)
+        pickled = self._dump(request)
         await send_with_size_prefix(self._stream, pickled)
 
         # We shield the reception from cancellation, otherwise if a cancellation
@@ -102,7 +119,7 @@ class RPCClient(AsyncConverter):
         # in the buffer as the next answer to read.
         with anyio.CancelScope(shield=True):
             bytes_response = await receive_with_size_prefix(self._receive_stream)
-        response = pickle.loads(bytes_response)
+        response = self._load(bytes_response)
         _ensure_response_match_request(response, request)
         return self._build_result(response)
 
@@ -128,7 +145,7 @@ class RPCClient(AsyncConverter):
 
     async def terminate(self):
         request = TerminateRequest()
-        pickled_request = pickle.dumps(request)
+        pickled_request = self._dump(request)
         await send_with_size_prefix(self._stream, pickled_request)
 
     @contextlib.asynccontextmanager
@@ -150,12 +167,12 @@ class RPCClient(AsyncConverter):
     @contextlib.asynccontextmanager
     async def call_proxy_result(self, fun: Callable[..., T], *args: Any, **kwargs: Any):
         request = self._build_request(fun, args, kwargs, "proxy")
-        pickled_request = pickle.dumps(request)
+        pickled_request = self._dump(request)
 
         await send_with_size_prefix(self._stream, pickled_request)
         with anyio.CancelScope(shield=True):
             pickled_response = await receive_with_size_prefix(self._receive_stream)
-        response = pickle.loads(pickled_response)
+        response = self._load(pickled_response)
         _ensure_response_match_request(response, request)
 
         with unwrap_remote_error_cm():
@@ -171,12 +188,12 @@ class RPCClient(AsyncConverter):
         self, fun: Callable[..., T], *args: Any, **kwargs: Any
     ):
         request = self._build_request(fun, args, kwargs, "proxy")
-        pickled_request = pickle.dumps(request)
+        pickled_request = self._dump(request)
 
         await send_with_size_prefix(self._stream, pickled_request)
         with anyio.CancelScope(shield=True):
             pickled_response = await receive_with_size_prefix(self._receive_stream)
-        response = pickle.loads(pickled_response)
+        response = self._load(pickled_response)
         _ensure_response_match_request(response, request)
 
         proxy = self._build_result(response)
@@ -228,7 +245,7 @@ class RPCClient(AsyncConverter):
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
         request = DeleteProxyRequest(id_=self._request_id, proxy=proxy)
         self._request_id += 1
-        pickled_request = pickle.dumps(request)
+        pickled_request = self._dump(request)
         with anyio.CancelScope(shield=True):
             await send_with_size_prefix(self._stream, pickled_request)
 
