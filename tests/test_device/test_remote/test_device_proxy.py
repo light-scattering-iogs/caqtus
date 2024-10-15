@@ -1,4 +1,5 @@
 import contextlib
+import copyreg
 from collections.abc import AsyncGenerator
 
 import anyio
@@ -14,6 +15,12 @@ from caqtus.device.remote.rpc import RPCServer, RPCClient
 from caqtus.types.image import Image
 
 
+class CustomError(Exception):
+    def __init__(self, msg: str, error_code: int):
+        super().__init__(msg)
+        self.error_code = error_code
+
+
 class DeviceMock(Device):
     def __init__(self, name: str):
         self.name = name
@@ -24,6 +31,9 @@ class DeviceMock(Device):
 
     def will_raise(self):
         raise ValueError("test")
+
+    def raise_custom_exception(self):
+        raise CustomError("test", 42)
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
@@ -89,6 +99,25 @@ async def test_cancelled_exception_handled(anyio_backend, capsys):
                 scope.cancel()
                 await anyio.lowlevel.checkpoint()
         assert scope.cancel_called
+
+
+def pickle_custom_exception(obj):
+    return CustomError, (obj.args, obj.error_code)
+
+
+async def test_custom_exception(anyio_backend):
+    copyreg.pickle(CustomError, pickle_custom_exception)
+    async with run_server() as server:
+        async with (
+            RPCClient("localhost", server.port) as client,
+            DeviceProxy(client, DeviceMock, "test") as device,
+        ):
+            try:
+                await device.call_method("raise_custom_exception")
+            except CustomError as e:
+                assert e.error_code == 42
+            else:
+                raise AssertionError("CustomException not raised")
 
 
 class MockCamera(Camera):
