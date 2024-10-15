@@ -1,4 +1,5 @@
 import contextlib
+from collections.abc import AsyncGenerator
 
 import anyio
 import anyio.to_thread
@@ -33,32 +34,40 @@ def anyio_backend():
     return "trio"
 
 
-async def run_server(scope: anyio.CancelScope, task_status):
-    with RPCServer(12345) as server, scope:
-        task_status.started()
-        await server.run_async()
+@contextlib.asynccontextmanager
+async def run_server() -> AsyncGenerator[RPCServer, None]:
+    with RPCServer(12345) as server, anyio.CancelScope() as scope:
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(server.run_async)
+            try:
+                yield server
+            finally:
+                scope.cancel()
 
 
 async def test_0(anyio_backend, capsys):
-    server_scope = anyio.CancelScope()
-
-    async def run_client():
+    async with run_server() as server:
         async with (
-            RPCClient("localhost", 12345) as client,
+            RPCClient("localhost", server.port) as client,
             DeviceProxy(client, DeviceMock, "test") as device,
         ):
             assert await device.get_attribute("name") == "test"
             with pytest.raises(ValueError):
                 await device.call_method("will_raise")
-        server_scope.cancel()
-
-    async with anyio.create_task_group() as tg:
-        await tg.start(run_server, server_scope)
-        tg.start_soon(run_client)
 
     captured = capsys.readouterr()
 
     assert captured.out == "enter\nexit\n"
+
+
+async def test_exception_inside_sequence_reraised(anyio_backend):
+    async with run_server() as server:
+        with pytest.raises(ValueError):
+            async with (
+                RPCClient("localhost", server.port) as client,
+                DeviceProxy(client, DeviceMock, "test"),
+            ):
+                raise ValueError("test")
 
 
 class MockCamera(Camera):
@@ -93,24 +102,15 @@ class MockCamera(Camera):
 
 
 async def test_camera(anyio_backend, capsys):
-    server_scope = anyio.CancelScope()
-
     images = []
-
-    async def run_client():
+    async with run_server() as server:
         async with (
-            RPCClient("localhost", 12345) as client,
+            RPCClient("localhost", server.port) as client,
             CameraProxy(client, MockCamera, "test") as camera,
         ):
             async with camera.acquire([1, 2]) as image_stream:
                 async for image in image_stream:
                     images.append(image)
-
-        server_scope.cancel()
-
-    async with anyio.create_task_group() as tg:
-        await tg.start(run_server, server_scope)
-        tg.start_soon(run_client)
 
     captured = capsys.readouterr()
 
