@@ -1,4 +1,5 @@
 import contextlib
+import copyreg
 import io
 import operator
 import pickle
@@ -34,6 +35,19 @@ from .._proxy import Proxy
 T = TypeVar("T")
 
 ReturnedType: TypeAlias = Literal["copy", "proxy"]
+
+
+# Trio cancelled exception cannot be pickled, so we register custom pickling functions
+# for it in order to send it over the network.
+def unpickle_trio_cancelled_exception():
+    return trio.Cancelled._create()
+
+
+def pickle_trio_cancelled_exception(exception):
+    return unpickle_trio_cancelled_exception, ()
+
+
+copyreg.pickle(trio.Cancelled, pickle_trio_cancelled_exception)
 
 
 @contextlib.contextmanager
@@ -86,13 +100,24 @@ class RPCClient(AsyncConverter):
         self._exception_dispatch_table = get_dispatch_table(BaseException)
 
     def _dump(self, obj: Any) -> bytes:
-        with io.BytesIO() as file:
-            pickler = pickle.Pickler(file)
-            pickler.dispatch_table = self._exception_dispatch_table
-            pickler.dump(obj)
-            return file.getvalue()
+        """Serialize an object to bytes.
 
-    def _load(self, bytes_data: bytes) -> Any:
+        This method uses the :func:`pickle.dumps` function to serialize the object, so
+        it is possible to customize the pickling behavior by using the function
+        :func:`copyreg.pickle`.
+
+        It treats exceptions as special cases, and adds the exception cause, context
+        and traceback to the pickled data.
+        """
+
+        buffer = io.BytesIO()
+        pickler = pickle.Pickler(buffer)
+        pickler.dispatch_table = self._exception_dispatch_table
+        pickler.dump(obj)
+        return buffer.getvalue()
+
+    @staticmethod
+    def _load(bytes_data: bytes) -> Any:
         return pickle.loads(bytes_data)
 
     async def __aenter__(self):
@@ -223,10 +248,8 @@ class RPCClient(AsyncConverter):
         if exception is None:
             exc_type = exc_value = exc_tb = None
         else:
-            # We can't pickle trio cancelled error, so we replace it with our own
-            reraised = replace_trio_cancelled(exception)
-            exc_type = type(reraised)
-            exc_value = reraised
+            exc_type = type(exception)
+            exc_value = exception
             exc_tb = exception.__traceback__
 
         with anyio.CancelScope(shield=True):
@@ -286,10 +309,6 @@ class RPCClient(AsyncConverter):
                 raise error
 
 
-class Cancelled(BaseException):
-    pass
-
-
 def _ensure_response_match_request(response, request: CallRequest):
     if not isinstance(response, CallResponse):
         raise ValueError(f"Unexpected response: {response}")
@@ -297,25 +316,3 @@ def _ensure_response_match_request(response, request: CallRequest):
         raise ValueError(
             f"Unexpected response id: {response.id_} instead of {request.id_}"
         )
-
-
-def replace_trio_cancelled(exception) -> BaseException:
-    if exception.__cause__:
-        cause = replace_trio_cancelled(exception.__cause__)
-    else:
-        cause = None
-    if exception.__context__:
-        context = replace_trio_cancelled(exception.__context__)
-    else:
-        context = None
-    if isinstance(exception, trio.Cancelled):
-        new_exception = Cancelled()
-    elif isinstance(exception, BaseExceptionGroup):
-        new_exception = type(exception)(
-            str(exception), [replace_trio_cancelled(e) for e in exception.exceptions]
-        )
-    else:
-        new_exception = type(exception)(str(exception))
-    new_exception.__cause__ = cause
-    new_exception.__context__ = context
-    return new_exception
