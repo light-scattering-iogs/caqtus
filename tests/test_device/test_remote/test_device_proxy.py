@@ -35,6 +35,12 @@ class DeviceMock(Device):
     def raise_custom_exception(self):
         raise CustomError("test", 42)
 
+    def raise_exception_with_cause(self):
+        try:
+            raise ValueError("test")
+        except ValueError as e:
+            raise RuntimeError("test") from e
+
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
             print(f"exit with exception {exc_value}")
@@ -118,6 +124,21 @@ async def test_custom_exception(anyio_backend):
                 assert e.error_code == 42
             else:
                 raise AssertionError("CustomException not raised")
+
+
+async def test_exception_with_cause(anyio_backend):
+    async with run_server() as server:
+        async with (
+            RPCClient("localhost", server.port) as client,
+            DeviceProxy(client, DeviceMock, "test") as device,
+        ):
+            try:
+                await device.call_method("raise_exception_with_cause")
+            except RuntimeError as e:
+                assert isinstance(e.__cause__, ValueError)
+                assert str(e.__cause__) == "test"
+            else:
+                raise AssertionError("RuntimeError not raised")
 
 
 class MockCamera(Camera):

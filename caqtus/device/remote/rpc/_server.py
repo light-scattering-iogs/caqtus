@@ -3,7 +3,6 @@ import functools
 import itertools
 import logging
 import os
-import pickle
 import warnings
 from collections.abc import Callable
 from enum import Enum, auto
@@ -16,6 +15,7 @@ import attrs
 import tblib.pickling_support
 from anyio.streams.buffered import BufferedByteReceiveStream
 
+from caqtus.utils._tblib import ExceptionPickler
 from ._configuration import RPCConfiguration
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from .._proxy import Proxy
@@ -77,20 +77,21 @@ class RPCServer:
     def __init__(
         self,
         port: int,
-        dumper: Callable[[Any], bytes] = pickle.dumps,
-        loader: Callable[[bytes], Any] = pickle.loads,
     ):
         """
 
         Args:
             port: The port to listen on.
-            dumper: A function that serializes an object to bytes.
-            loader: A function that deserializes an object from bytes.
         """
 
         self._port = port
-        self._dump = dumper
-        self._load = loader
+        self._pickler = ExceptionPickler()
+
+    def _dump(self, obj: Any) -> bytes:
+        return self._pickler.dumps(obj)
+
+    def _load(self, bytes_data: bytes) -> Any:
+        return self._pickler.loads(bytes_data)
 
     def __enter__(self):
         return self

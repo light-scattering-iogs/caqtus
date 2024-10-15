@@ -57,10 +57,11 @@ def unwrap_remote_error_cm():
             # Here we need to break the circle of exceptions.
             # Indeed, original.__context__ is now remote, and remote.__cause__ is
             # original.
-            # If not handled, this would cause recursion issues when anything tries
+            # If not handled, this could cause recursion issues when anything tries
             # to handle the exception down the line.
+            # Maybe fine to no do this if we never try to pickle the exception latter?
             remote.__cause__ = None
-            raise original from None
+            raise original from original.__cause__
         else:
             raise
 
