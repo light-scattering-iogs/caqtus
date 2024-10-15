@@ -2,6 +2,7 @@ import contextlib
 from collections.abc import AsyncGenerator
 
 import anyio
+import anyio.lowlevel
 import anyio.to_thread
 import numpy as np
 import pytest
@@ -26,7 +27,7 @@ class DeviceMock(Device):
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
-            print("exit with exception")
+            print(f"exit with exception {exc_value}")
             return
         else:
             print("exit")
@@ -75,7 +76,19 @@ async def test_exception_inside_sequence_reraised(anyio_backend, capsys):
 
     captured = capsys.readouterr()
 
-    assert captured.out == "enter\nexit with exception\n"
+    assert captured.out == "enter\nexit with exception test\n"
+
+
+async def test_cancelled_exception_handled(anyio_backend, capsys):
+    async with run_server() as server:
+        with anyio.CancelScope() as scope:
+            async with (
+                RPCClient("localhost", server.port) as client,
+                DeviceProxy(client, DeviceMock, "test"),
+            ):
+                scope.cancel()
+                await anyio.lowlevel.checkpoint()
+        assert scope.cancel_called
 
 
 class MockCamera(Camera):
