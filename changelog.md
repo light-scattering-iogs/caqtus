@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Support for `copyreg.pickle` in rpc device protocol to allow pickling objects for
+  which a custom reduce method can't be easily implemented.
+
 ## [6.11.0] - 2024-10-13
 
 ### Added
