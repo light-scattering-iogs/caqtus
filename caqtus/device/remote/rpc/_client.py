@@ -1,4 +1,5 @@
 import contextlib
+import io
 import operator
 import pickle
 from collections.abc import Callable, Iterator
@@ -14,6 +15,7 @@ import attrs
 import trio
 from anyio.streams.buffered import BufferedByteReceiveStream
 
+from caqtus.utils._tblib import get_dispatch_table
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from ._server import (
     CallRequest,
@@ -68,16 +70,12 @@ class RPCClient(AsyncConverter):
     Args:
         host: The host to connect to.
         port: The port to connect to.
-        dumper: A function that serializes an object to bytes.
-        loader: A function that deserializes bytes to the original object.
     """
 
     def __init__(
         self,
         host: str,
         port: int,
-        dumper: Callable[[Any], bytes] = pickle.dumps,
-        loader: Callable[[bytes], Any] = pickle.loads,
     ):
         self._host = host
         self._port = port
@@ -85,8 +83,17 @@ class RPCClient(AsyncConverter):
         self._exit_stack = contextlib.AsyncExitStack()
 
         self._request_id = 0
-        self._load = loader
-        self._dump = dumper
+        self._exception_dispatch_table = get_dispatch_table(BaseException)
+
+    def _dump(self, obj: Any) -> bytes:
+        with io.BytesIO() as file:
+            pickler = pickle.Pickler(file)
+            pickler.dispatch_table = self._exception_dispatch_table
+            pickler.dump(obj)
+            return file.getvalue()
+
+    def _load(self, bytes_data: bytes) -> Any:
+        return pickle.loads(bytes_data)
 
     async def __aenter__(self):
         await self._exit_stack.__aenter__()

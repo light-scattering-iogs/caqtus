@@ -8,6 +8,7 @@ This allows to customize the pickling behavior by using `copyreg.pickle`.
 import functools
 import pickle
 import types
+from collections.abc import Callable
 from typing import Optional
 
 import tblib
@@ -66,6 +67,16 @@ def _get_subclasses(cls):
         this = to_visit.pop()
         yield this
         to_visit += list(this.__subclasses__())
+
+
+def get_dispatch_table(exc_type: type[BaseException]) -> dict[type, Callable]:
+    result: dict[type, Callable] = {
+        exception_cls: pickle_exception for exception_cls in _get_subclasses(exc_type)
+    }
+    result.update(
+        {types.TracebackType: functools.partial(pickle_traceback, get_locals=None)}
+    )
+    return result
 
 
 class ExceptionPickler(pickle.Pickler):
