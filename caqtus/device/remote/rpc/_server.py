@@ -110,6 +110,10 @@ class RPCServer:
         handler = Handler(self._dump, self._load)
         await handler.handle(client)
 
+    @property
+    def port(self) -> int:
+        return self._port
+
 
 class Handler:
     def __init__(self, dumper: Callable[[Any], bytes], loader: Callable[[bytes], Any]):
