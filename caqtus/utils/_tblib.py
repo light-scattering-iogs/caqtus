@@ -6,6 +6,7 @@ This allows to customize the pickling behavior by using `copyreg.pickle`.
 """
 
 import functools
+import io
 import pickle
 import types
 from collections.abc import Callable
@@ -79,19 +80,18 @@ def get_dispatch_table(exc_type: type[BaseException]) -> dict[type, Callable]:
     return result
 
 
-class ExceptionPickler(pickle.Pickler):
+class ExceptionPickler:
     """A pickler that can pickle exceptions with their attributes and traceback.
 
     To pickle the exception object, the pickler uses :func:`pickle.dumps`, so it is
     possible to customize the pickling behavior by using :func:`copyreg.pickle`.
     """
 
-    def __init__(self, file):
-        super().__init__(file)
-
-        self.dispatch_table = {
+    def __init__(self):
+        self.dispatch_table: dict[type, Callable] = {
             types.TracebackType: functools.partial(pickle_traceback, get_locals=None)
         }
+        self.install()
 
     def install(self) -> None:
         """Configure the pickler to be able to dump all currently defined exceptions."""
@@ -100,4 +100,14 @@ class ExceptionPickler(pickle.Pickler):
             self.register(exception_cls)
 
     def register(self, exc_type: type[BaseException]) -> None:
-        self.dispatch_table = {**self.dispatch_table, exc_type: pickle_exception}
+        self.dispatch_table.update({exc_type: pickle_exception})
+
+    def dumps(self, obj) -> bytes:
+        buffer = io.BytesIO()
+        pickler = pickle.Pickler(buffer)
+        pickler.dispatch_table = self.dispatch_table
+        pickler.dump(obj)
+        return buffer.getvalue()
+
+    def loads(self, data: bytes):
+        return pickle.loads(data)

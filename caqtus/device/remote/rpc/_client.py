@@ -1,8 +1,6 @@
 import contextlib
 import copyreg
-import io
 import operator
-import pickle
 from collections.abc import Callable, Iterator
 from typing import TypeAlias, Literal
 from typing import (
@@ -16,7 +14,7 @@ import attrs
 import trio
 from anyio.streams.buffered import BufferedByteReceiveStream
 
-from caqtus.utils._tblib import get_dispatch_table
+from caqtus.utils._tblib import ExceptionPickler
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from ._server import (
     CallRequest,
@@ -97,28 +95,13 @@ class RPCClient(AsyncConverter):
         self._exit_stack = contextlib.AsyncExitStack()
 
         self._request_id = 0
-        self._exception_dispatch_table = get_dispatch_table(BaseException)
+        self._pickler = ExceptionPickler()
 
     def _dump(self, obj: Any) -> bytes:
-        """Serialize an object to bytes.
+        return self._pickler.dumps(obj)
 
-        This method uses the :func:`pickle.dumps` function to serialize the object, so
-        it is possible to customize the pickling behavior by using the function
-        :func:`copyreg.pickle`.
-
-        It treats exceptions as special cases, and adds the exception cause, context
-        and traceback to the pickled data.
-        """
-
-        buffer = io.BytesIO()
-        pickler = pickle.Pickler(buffer)
-        pickler.dispatch_table = self._exception_dispatch_table
-        pickler.dump(obj)
-        return buffer.getvalue()
-
-    @staticmethod
-    def _load(bytes_data: bytes) -> Any:
-        return pickle.loads(bytes_data)
+    def _load(self, bytes_data: bytes) -> Any:
+        return self._pickler.loads(bytes_data)
 
     async def __aenter__(self):
         await self._exit_stack.__aenter__()
