@@ -21,7 +21,7 @@ from caqtus.experiment_control.sequence_execution.shots_manager import (
     ShotScheduler,
     ShotData,
 )
-from caqtus.shot_compilation import VariableNamespace
+from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.data import DataLabel, Data
 from caqtus.utils.logging import caqtus_logger
 

@@ -3,10 +3,11 @@ import decimal
 import pytest
 
 from caqtus.device.sequencer.timing import to_time_step, ns
-from caqtus.shot_compilation import VariableNamespace, ShotContext, SequenceContext
+from caqtus.shot_compilation import ShotContext, SequenceContext
 from caqtus.shot_compilation.lane_compilation import compile_digital_lane
 from caqtus.shot_compilation.timed_instructions import Pattern
 from caqtus.shot_compilation.timing import Time, number_ticks
+from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import RecoverableException
 from caqtus.types.timelane import DigitalTimeLane, TimeLanes

@@ -23,7 +23,7 @@ from caqtus.device.sequencer.trigger import (
     TriggerEdge,
     ExternalTriggerStart,
 )
-from caqtus.shot_compilation import VariableNamespace
+from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.image import ImageLabel

@@ -1,9 +1,9 @@
 import caqtus.formatter as fmt
 from caqtus.types.iteration import StepsConfiguration
+from caqtus.types.iteration._step_context import StepContext
 from caqtus.types.parameter import is_parameter, Parameter, ParameterNamespace
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from .shots_manager import ShotScheduler
-from .step_context import StepContext
 
 
 async def execute_steps(

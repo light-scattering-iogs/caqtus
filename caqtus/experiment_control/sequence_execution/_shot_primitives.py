@@ -6,7 +6,7 @@ from typing import Mapping, Any
 import attrs
 
 from caqtus.device import DeviceName
-from caqtus.shot_compilation import VariableNamespace
+from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.data import DataLabel, Data
 
 

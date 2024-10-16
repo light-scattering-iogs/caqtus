@@ -8,7 +8,7 @@ from caqtus.experiment_control.sequence_execution.shots_manager import (
     _run_shot_with_retry,
     retry_condition,
 )
-from caqtus.shot_compilation import VariableNamespace
+from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
 
 

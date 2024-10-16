@@ -1,4 +1,3 @@
-from caqtus.experiment_control.sequence_execution.step_context import StepContext
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     ArangeLoop,
@@ -6,6 +5,7 @@ from caqtus.types.iteration import (
     VariableDeclaration,
     StepsConfiguration,
 )
+from caqtus.types.iteration._step_context import StepContext
 from caqtus.types.variable_name import DottedVariableName, VariableName
 
 

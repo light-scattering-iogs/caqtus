@@ -14,7 +14,7 @@ from caqtus.shot_compilation import (
     DeviceNotUsedException,
 )
 from caqtus.shot_compilation.compilation_contexts import ShotContext
-from caqtus.shot_compilation.variable_namespace import VariableNamespace
+from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import TimeLanes
 from ._shot_primitives import ShotParameters

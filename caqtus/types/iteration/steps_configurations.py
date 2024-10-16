@@ -10,7 +10,6 @@ import attrs
 import numpy
 
 import caqtus.formatter as fmt
-from caqtus.experiment_control.sequence_execution.step_context import StepContext
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
     NotAnalogValueError,
@@ -21,6 +20,7 @@ from caqtus.types.parameter import (
 from caqtus.types.parameter import is_parameter
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.utils import serialization
+from ._step_context import StepContext
 from .iteration_configuration import IterationConfiguration, Unknown
 from ..parameter._analog_value import is_scalar_analog_value, ScalarAnalogValue
 from ..recoverable_exceptions import EvaluationError
