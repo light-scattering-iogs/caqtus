@@ -6,6 +6,7 @@ from ._session_maker import (
     PostgreSQLConfig,
     SQLiteStorageManager,
     SQLiteConfig,
+    SQLStorageManager,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "SQLiteConfig",
     "SQLiteStorageManager",
     "PostgreSQLStorageManager",
+    "SQLStorageManager",
 ]

@@ -17,7 +17,13 @@ from caqtus.experiment_control.manager import (
 
 # noinspection PyProtectedMember
 from caqtus.gui.condetrol._condetrol import Condetrol
-from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
+from caqtus.session.sql import (
+    PostgreSQLConfig,
+    PostgreSQLStorageManager,
+    SQLiteConfig,
+    SQLiteStorageManager,
+    SQLStorageManager,
+)
 from ._caqtus_extension import CaqtusExtension
 from .device_extension import DeviceExtension
 from .time_lane_extension import TimeLaneExtension
@@ -32,11 +38,6 @@ from ..experiment_control.manager import (
 from ..experiment_control.sequence_execution import ShotRetryConfig
 from ..session import ExperimentSession, StorageManager
 from ..session.sql._serializer import SerializerProtocol
-from ..session.sql._session_maker import (
-    SQLiteConfig,
-    SQLiteExperimentSessionMaker,
-    SQLExperimentSessionMaker,
-)
 
 
 class Experiment:
@@ -233,7 +234,7 @@ class Experiment:
             *args,
             **kwargs,
         )
-        if isinstance(storage_backend_manager, SQLExperimentSessionMaker):
+        if isinstance(storage_backend_manager, SQLStorageManager):
             storage_backend_manager.check()
 
         return storage_backend_manager
@@ -261,12 +262,12 @@ class Experiment:
             raise error
         if isinstance(self._storage_config, SQLiteConfig):
             storage_manager = self._build_storage_manager(
-                SQLiteExperimentSessionMaker,
+                SQLiteStorageManager,
                 config=self._storage_config,
             )
         elif isinstance(self._storage_config, PostgreSQLConfig):
             storage_manager = self._build_storage_manager(
-                PostgreSQLExperimentSessionMaker,
+                PostgreSQLStorageManager,
                 config=self._storage_config,
             )
         else:
@@ -428,10 +429,10 @@ def upgrade_database(experiment: Experiment) -> None:
     """
 
     storage_manager = experiment._get_storage_manager(check_schema=False)
-    if not isinstance(storage_manager, SQLExperimentSessionMaker):
-        error = RuntimeError("The session maker is not a SQL session maker.")
+    if not isinstance(storage_manager, SQLStorageManager):
+        error = RuntimeError("The storage manager is not a SQL storage manager.")
         error.add_note(
-            "The upgrade_database method is only available for SQL session makers."
+            "The upgrade_database method is only available for SQL storage managers."
         )
         raise error
     storage_manager.upgrade()
@@ -446,8 +447,8 @@ def stamp_database(experiment: Experiment) -> None:
     from alembic.command import stamp
 
     storage_manager = experiment._get_storage_manager(check_schema=False)
-    if not isinstance(storage_manager, PostgreSQLExperimentSessionMaker):
-        raise RuntimeError("The session maker is not a PostgreSQL session maker.")
+    if not isinstance(storage_manager, PostgreSQLStorageManager):
+        raise RuntimeError("The storage manager is not a PostgreSQL storage manager.")
     config = storage_manager._get_alembic_config()
 
     stamp(config, "038164d73465")
