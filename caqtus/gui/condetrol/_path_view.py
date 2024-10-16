@@ -207,7 +207,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
 
         async def clear():
             async with self.session_maker.async_session() as session:
-                await session.sequences.set_state(path, State.DRAFT)
+                await session.sequences.reset_to_draft(path)
                 await anyio.lowlevel.checkpoint()
 
         if self._task_group is None:

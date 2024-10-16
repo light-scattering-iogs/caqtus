@@ -18,6 +18,7 @@ from .._sequence_collection import (
     SequenceStats,
     SequenceNotCrashedError,
     SequenceNotRunningError,
+    InvalidStateTransitionError,
 )
 from .._shot_id import ShotId
 from .._state import State
@@ -47,9 +48,14 @@ class AsyncSequenceCollection(Protocol):
         return (await self.get_stats(path)).map(lambda stats: stats.state)
 
     @abc.abstractmethod
-    async def set_state(
-        self, path: PureSequencePath, state: State
-    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+    async def reset_to_draft(
+        self, path: PureSequencePath
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
         raise NotImplementedError
 
     @abc.abstractmethod

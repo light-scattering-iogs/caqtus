@@ -692,45 +692,6 @@ def _get_stats(
     return result.map(extract_stats)
 
 
-def _set_state(
-    session: Session, path: PureSequencePath, state: State
-) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
-    sequence_result = _query_sequence_model(session, path)
-    if is_failure(sequence_result):
-        return sequence_result
-    sequence = sequence_result.value
-    if not State.is_transition_allowed(sequence.state, state):
-        raise InvalidStateTransitionError(
-            f"Sequence at {path} can't transition from {sequence.state} to {state}"
-        )
-    sequence.state = state
-    if state == State.DRAFT:
-        sequence.start_time = None
-        sequence.stop_time = None
-        sequence.parameters.content = None
-        if sequence.exception_traceback:
-            session.delete(sequence.exception_traceback)
-            sequence.exception_traceback = None
-        delete_device_configurations = sqlalchemy.delete(SQLDeviceConfiguration).where(
-            SQLDeviceConfiguration.sequence == sequence
-        )
-        session.execute(delete_device_configurations)
-
-        delete_shots = sqlalchemy.delete(SQLShot).where(SQLShot.sequence == sequence)
-        session.execute(delete_shots)
-    elif state == State.RUNNING:
-        sequence.start_time = datetime.datetime.now(tz=datetime.timezone.utc).replace(
-            tzinfo=None
-        )
-    elif state in (State.INTERRUPTED, State.CRASHED, State.FINISHED):
-        sequence.stop_time = datetime.datetime.now(tz=datetime.timezone.utc).replace(
-            tzinfo=None
-        )
-
-    assert sequence.state == state
-    return Success(None)
-
-
 def _get_sequence_global_parameters(
     session: Session, path: PureSequencePath
 ) -> ParameterNamespace:
