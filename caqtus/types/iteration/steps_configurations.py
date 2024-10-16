@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Iterable, Callable, Generator
 from collections.abc import Mapping, Iterator
-from typing import TypeAlias, TypeGuard, assert_never, Any
+from typing import TypeAlias, TypeGuard, Any
+from typing import assert_never
 
 import attrs
 import numpy
 
 import caqtus.formatter as fmt
+from caqtus.experiment_control.sequence_execution.step_context import StepContext
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
     NotAnalogValueError,
@@ -15,6 +18,8 @@ from caqtus.types.parameter import (
     add_unit,
     magnitude_in_unit,
 )
+from caqtus.types.parameter import is_parameter
+from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.utils import serialization
 from .iteration_configuration import IterationConfiguration, Unknown
 from ..parameter._analog_value import is_scalar_analog_value, ScalarAnalogValue
@@ -312,6 +317,9 @@ class StepsConfiguration(IterationConfiguration):
     def load(cls, data: serialization.JSON) -> StepsConfiguration:
         return serialization.structure(data, StepsConfiguration)
 
+    def walk(self, initial_context: StepContext) -> Iterator[StepContext]:
+        return walk_steps(self.steps, initial_context)
+
 
 @functools.singledispatch
 def expected_number_shots(step: Step) -> int | Unknown:
@@ -367,3 +375,154 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             )
         case _:
             assert_never(step)
+
+
+def wrap_error[
+    S: Step
+](
+    function: Callable[[S, StepContext], Generator[StepContext, None, StepContext]]
+) -> Callable[[S, StepContext], Generator[StepContext, None, StepContext]]:
+    """Wrap a function that evaluates a step to raise nicer errors for the user."""
+
+    @functools.wraps(function)
+    def wrapper(step: S, context: StepContext):
+        try:
+            return function(step, context)
+        except Exception as e:
+            raise StepEvaluationError(f"Error while evaluating step <{step}>") from e
+
+    return wrapper
+
+
+def walk_steps(
+    steps: Iterable[Step], initial_context: StepContext
+) -> Iterator[StepContext]:
+    """Yields the context for each shot defined by the steps.
+
+    This function will recursively evaluate each step in the sequence passed as
+    argument.
+    Before executing the sequence, an empty context is initialized.
+    The context holds the value of the parameters at a given point in the sequence.
+    Each step has the possibility to update the context with new values.
+    """
+
+    context = initial_context
+
+    for step in steps:
+        context = yield from walk_step(step, context)
+
+
+@functools.singledispatch
+@wrap_error
+def walk_step(
+    step: Step, context: StepContext
+) -> Generator[StepContext, None, StepContext]:
+    """Iterates over the steps of a sequence.
+
+    Args:
+        step: the step of the sequence currently executed
+        context: Contains the values of the variables before this step.
+
+    Yields:
+        The context for every shot encountered while walking the steps.
+
+    Returns:
+        The context after the step passed in argument has been executed.
+    """
+
+    raise NotImplementedError(f"Cannot walk step {step}")
+
+
+# noinspection PyUnreachableCode
+@walk_step.register
+@wrap_error
+def _(
+    declaration: VariableDeclaration,
+    context: StepContext,
+) -> Generator[StepContext, None, StepContext]:
+    """Execute a VariableDeclaration step.
+
+    This step updates the context passed with the value of the variable declared.
+    """
+
+    value = declaration.value.evaluate(context.variables.dict())
+    if not is_parameter(value):
+        raise InvalidTypeError(
+            f"{fmt.expression(declaration.value)}> does not evaluate to a parameter, "
+            f"but to {fmt.type_(type(value))}.",
+        )
+    return context.update_variable(declaration.variable, value)
+
+    # This code is unreachable, but it is kept here to make the function a generator.
+    if False:
+        yield context
+
+
+@walk_step.register
+@wrap_error
+def _(
+    arange_loop: ArangeLoop,
+    context: StepContext,
+) -> Generator[StepContext, None, StepContext]:
+    """Loop over a variable in a numpy arange like loop.
+
+    This function will loop over the variable defined in the arange loop and execute
+    the sub steps for each value of the variable.
+
+    Returns:
+        A new context object containing the value of the arange loop variable after
+        the last iteration, plus the values of the variables defined in the sub
+        steps.
+    """
+
+    for value in arange_loop.loop_values(context.variables.dict()):
+        context = context.update_variable(arange_loop.variable, value)
+        for step in arange_loop.sub_steps:
+            context = yield from walk_step(step, context)
+    return context
+
+
+@walk_step.register
+@wrap_error
+def _(
+    linspace_loop: LinspaceLoop,
+    context: StepContext,
+) -> Generator[StepContext, None, StepContext]:
+    """Loop over a variable in a numpy linspace like loop.
+
+    This function will loop over the variable defined in the linspace loop and
+    execute the sub steps for each value of the variable.
+
+    Returns:
+        A new context object containing the value of the linspace loop variable
+        after the last iteration, plus the values of the variables defined in the
+        sub steps.
+    """
+
+    for value in linspace_loop.loop_values(context.variables.dict()):
+        context = context.update_variable(linspace_loop.variable, value)
+        for step in linspace_loop.sub_steps:
+            context = yield from walk_step(step, context)
+    return context
+
+
+@walk_step.register
+@wrap_error
+def _(
+    shot: ExecuteShot, context: StepContext
+) -> Generator[StepContext, None, StepContext]:
+    """Schedule a shot to be run.
+
+    This function schedule to run a shot on the experiment with the parameters
+    defined in the context at this point.
+
+    Returns:
+        The context passed as argument unchanged.
+    """
+
+    yield context
+    return context
+
+
+class StepEvaluationError(Exception):
+    pass

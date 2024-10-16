@@ -97,7 +97,7 @@ async def run_sequence(
     )
     initial_context = evaluate_initial_context(sequence_manager.sequence_parameters)
     async with sequence_manager.run_sequence() as shot_scheduler:
-        await execute_steps(iteration.steps, initial_context, shot_scheduler)
+        await execute_steps(iteration, initial_context, shot_scheduler)
 
 
 class SequenceManager:
