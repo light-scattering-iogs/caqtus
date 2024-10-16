@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Never, overload, Any
+from typing import Never, overload, Any, TypeVar, Generic
 
 import attrs
 from typing_extensions import TypeIs
 
+T = TypeVar("T", covariant=True)
+R = TypeVar("R", covariant=True)
+E = TypeVar("E", covariant=True)
+
 
 @attrs.frozen(repr=False, str=False)
-class Success[T]:
+class Success(Generic[T]):
     """A successful result containing a value of type T."""
 
     value: T
 
-    def map[R](self, func: Callable[[T], R]) -> Success[R]:
+    def map(self, func: Callable[[T], R]) -> Success[R]:
         return Success(func(self.value))
 
     def __str__(self) -> str:
@@ -31,26 +35,26 @@ class Success[T]:
         return self.value
 
 
-def is_success[T](result: Result[T, Any]) -> TypeIs[Success[T]]:
+def is_success(result: Result[T, Any]) -> TypeIs[Success[T]]:
     """Check if a result is a success."""
 
     return isinstance(result, Success)
 
 
-def is_failure[E](result: Result[Any, E]) -> TypeIs[Failure[E]]:
+def is_failure(result: Result[Any, E]) -> TypeIs[Failure[E]]:
     """Check if a result is a failure."""
 
     return isinstance(result, Failure)
 
 
-def is_failure_type[E](result: Result, error_type: type[E]) -> TypeIs[Failure[E]]:
+def is_failure_type(result: Result, error_type: type[E]) -> TypeIs[Failure[E]]:
     """Check if a result is a failure and contains a specific error type."""
 
     return is_failure(result) and isinstance(result._error, error_type)
 
 
 @attrs.frozen(repr=False, str=False)
-class Failure[E]:
+class Failure(Generic[E]):
     """A failed result containing an error code of type E."""
 
     _error: E
@@ -66,7 +70,7 @@ type Result[T, E] = Success[T] | Failure[E]
 
 
 @overload
-def unwrap[T](value: Success[T]) -> T: ...
+def unwrap(value: Success[T]) -> T: ...
 
 
 @overload
