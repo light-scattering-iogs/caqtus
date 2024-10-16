@@ -14,7 +14,7 @@ from caqtus.session import (
     State,
     PathHasChildrenError,
 )
-from caqtus.session._copy import copy_path
+from caqtus.session.copy._copy import _copy_path
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils.result import unwrap, is_failure_type, is_success
 from tests.conftest import initialize, to_postgresql_config
@@ -59,7 +59,7 @@ def test_destination_path_is_sequence(
 ):
     path = PureSequencePath.root() / "path"
     unwrap(destination_session.sequences.create(path, steps_configuration, time_lanes))
-    result = copy_path(path, source_session, destination_session)
+    result = _copy_path(path, source_session, destination_session)
     assert is_failure_type(result, PathIsSequenceError)
 
 
@@ -68,7 +68,7 @@ def test_copy_not_existing_path(
     destination_session: ExperimentSession,
 ):
     path = PureSequencePath.root() / "path"
-    result = copy_path(path, source_session, destination_session)
+    result = _copy_path(path, source_session, destination_session)
     assert is_failure_type(result, PathNotFoundError)
 
 
@@ -78,7 +78,7 @@ def test_creation_date_is_copied(
 ):
     path = PureSequencePath.root() / "path"
     unwrap(source_session.paths.create_path(path))
-    result = copy_path(path, source_session, destination_session)
+    result = _copy_path(path, source_session, destination_session)
     assert is_success(result)
     assert unwrap(source_session.paths.get_path_creation_date(path)) == unwrap(
         destination_session.paths.get_path_creation_date(path)
@@ -91,7 +91,7 @@ def test_copy_not_existing_file(
 ):
     path = PureSequencePath.root() / "path"
     destination_session.paths.create_path(path)
-    result = copy_path(path, source_session, destination_session)
+    result = _copy_path(path, source_session, destination_session)
     assert is_failure_type(result, PathNotFoundError)
 
 
@@ -103,7 +103,7 @@ def test_children_are_copied(
     unwrap(source_session.paths.create_path(parent))
     child_path = parent / "child"
     unwrap(source_session.paths.create_path(child_path))
-    result = copy_path(parent, source_session, destination_session)
+    result = _copy_path(parent, source_session, destination_session)
     assert is_success(result)
     assert destination_session.paths.does_path_exists(child_path)
 
@@ -117,7 +117,7 @@ def test_cant_copy_running_sequence(
     path = PureSequencePath.root() / "path"
     unwrap(source_session.sequences.create(path, steps_configuration, time_lanes))
     unwrap(source_session.sequences.set_preparing(path, {}, ParameterNamespace.empty()))
-    result = copy_path(path, source_session, destination_session)
+    result = _copy_path(path, source_session, destination_session)
     assert is_failure_type(result, SequenceStateError)
 
 
@@ -129,7 +129,7 @@ def test_copy_draft_sequence(
 ):
     path = PureSequencePath.root() / "path"
     unwrap(source_session.sequences.create(path, steps_configuration, time_lanes))
-    unwrap(copy_path(path, source_session, destination_session))
+    unwrap(_copy_path(path, source_session, destination_session))
     assert unwrap(destination_session.sequences.get_state(path)) == State.DRAFT
     assert (
         destination_session.sequences.get_iteration_configuration(path)
@@ -148,5 +148,5 @@ def test_cant_copy_sequence_on_path_with_children(
     unwrap(source_session.sequences.create(parent, steps_configuration, time_lanes))
     child_path = parent / "child"
     unwrap(destination_session.paths.create_path(child_path))
-    result = copy_path(parent, source_session, destination_session)
+    result = _copy_path(parent, source_session, destination_session)
     assert is_failure_type(result, PathHasChildrenError)
