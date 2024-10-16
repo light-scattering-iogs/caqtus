@@ -11,7 +11,6 @@ from caqtus.utils.result import (
     is_failure_type,
     unwrap,
 )
-from .. import ExperimentSessionMaker
 from .._exception_summary import TracebackSummary
 from .._experiment_session import ExperimentSession
 from .._path import PureSequencePath
@@ -23,6 +22,7 @@ from .._sequence_collection import (
     SequenceStateError,
     SequenceNotCrashedError,
 )
+from .._session_maker import ExperimentSessionMaker
 from .._shot_id import ShotId
 from .._state import State
 
