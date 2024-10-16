@@ -431,6 +431,44 @@ class SQLSequenceCollection(SequenceCollection):
         assert_type(set_exception_result, Success[None])
         return Success(None)
 
+    def reset_to_draft(
+        self, path: PureSequencePath
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        session = self._get_sql_session()
+        sequence_result = _query_sequence_model(session, path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.value
+        if not State.is_transition_allowed(sequence.state, State.DRAFT):
+            return Failure(
+                InvalidStateTransitionError(
+                    f"Sequence at {path} can't transition from {sequence.state} to "
+                    f"{State.DRAFT}"
+                )
+            )
+        sequence.state = State.DRAFT
+        sequence.start_time = None
+        sequence.stop_time = None
+        sequence.parameters.content = None
+        if sequence.exception_traceback:
+            session.delete(sequence.exception_traceback)
+            sequence.exception_traceback = None
+            delete_device_configurations = sqlalchemy.delete(
+                SQLDeviceConfiguration
+            ).where(SQLDeviceConfiguration.sequence == sequence)
+            session.execute(delete_device_configurations)
+
+            delete_shots = sqlalchemy.delete(SQLShot).where(
+                SQLShot.sequence == sequence
+            )
+            session.execute(delete_shots)
+        return Success(None)
+
     def set_device_configurations(
         self,
         path: PureSequencePath,

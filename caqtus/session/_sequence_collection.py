@@ -388,6 +388,23 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def reset_to_draft(
+        self, path: PureSequencePath
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        """Reset the sequence to the DRAFT state.
+
+        Warning:
+            This method removes all data associated to the sequence.
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath
     ) -> (
