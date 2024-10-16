@@ -1014,13 +1014,13 @@ def _reset_to_draft(
     if sequence.exception_traceback:
         session.delete(sequence.exception_traceback)
         sequence.exception_traceback = None
-        delete_device_configurations = sqlalchemy.delete(SQLDeviceConfiguration).where(
-            SQLDeviceConfiguration.sequence == sequence
-        )
-        session.execute(delete_device_configurations)
+    delete_device_configurations = sqlalchemy.delete(SQLDeviceConfiguration).where(
+        SQLDeviceConfiguration.sequence == sequence
+    )
+    session.execute(delete_device_configurations)
 
-        delete_shots = sqlalchemy.delete(SQLShot).where(SQLShot.sequence == sequence)
-        session.execute(delete_shots)
+    delete_shots = sqlalchemy.delete(SQLShot).where(SQLShot.sequence == sequence)
+    session.execute(delete_shots)
     return Success(None)
 
 
