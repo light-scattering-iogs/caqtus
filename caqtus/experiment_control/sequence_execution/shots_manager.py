@@ -410,9 +410,8 @@ async def send_fast(
         except TimeoutError:
             raise RuntimeError(f"Could not push value to {stream_name}") from None
         message = (
-            f"Could not push value to {stream_name} instantly. "
-            "The data consumer can't keep up, which might cause a slowdown of the "
-            "experiment."
+            "The experiment produces data faster than it is consumed."
+            "This might cause a slowdown of the experiment."
         )
         warnings.warn(message, stacklevel=2)
         logger.warning(message)
