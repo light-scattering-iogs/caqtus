@@ -114,7 +114,7 @@ def _copy_sequence(
         )
 
     if state == State.FINISHED:
-        _finish_sequence(path, destination_session)
+        destination_session.sequences.set_finished(path)
     elif state == State.INTERRUPTED:
         _interrupt_sequence(path, destination_session)
     elif state == State.CRASHED:

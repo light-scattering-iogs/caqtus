@@ -209,7 +209,7 @@ class SequenceManager:
 
         else:
             with self._session_maker() as session:
-                _finish_sequence(self._sequence_path, session)
+                session.sequences.set_finished(self._sequence_path)
 
     async def _store_shots(
         self,
@@ -232,10 +232,6 @@ class SequenceManager:
                 shot_data.end_time,
             )
             unwrap(result)
-
-
-def _finish_sequence(path: PureSequencePath, session: ExperimentSession) -> None:
-    unwrap(session.sequences.set_state(path, State.FINISHED))
 
 
 def _interrupt_sequence(path: PureSequencePath, session: ExperimentSession) -> None:

@@ -333,6 +333,13 @@ class SequenceCollection(Protocol):
 
         return self.set_state(path, State.RUNNING)
 
+    def set_finished(
+        self, path: PureSequencePath
+    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        """Set a sequence to the FINISHED state."""
+
+        return self.set_state(path, State.FINISHED)
+
     @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath
