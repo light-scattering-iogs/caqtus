@@ -54,7 +54,14 @@ class TimeLaneSerializer(TimeLaneSerializerProtocol):
             raise ValueError("Invalid type tag.")
         else:
             tag = Tag(tag)
-        loader = self.loaders[tag]
+        try:
+            loader = self.loaders[tag]
+        except KeyError:
+            error = ValueError(f"Don't know how to load lane stored with tag `{tag}`.")
+            error.add_note(
+                "Make sure that the corresponding lane extension is registered."
+            )
+            raise error from None
         return loader(data)
 
     def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JsonDict:
