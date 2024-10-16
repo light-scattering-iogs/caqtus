@@ -117,18 +117,6 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_global_parameters(
-        self, path: PureSequencePath, parameters: ParameterNamespace
-    ) -> None:
-        """Set the global parameters that should be used by this sequence.
-
-        Raises:
-            SequenceNotEditable: If the sequence is not in the PREPARING state.
-        """
-
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
         """Get the global parameters that were used by this sequence.
 

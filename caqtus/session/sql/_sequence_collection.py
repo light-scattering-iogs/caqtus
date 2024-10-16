@@ -147,7 +147,7 @@ class SQLSequenceCollection(SequenceCollection):
         running_sequences.update(PureSequencePath(row.path.path) for row in result)
         return Success(running_sequences)
 
-    def set_global_parameters(
+    def _set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace
     ) -> None:
         sequence = unwrap(self._query_sequence_model(path))
@@ -304,7 +304,7 @@ class SQLSequenceCollection(SequenceCollection):
             )
         sequence.state = State.PREPARING
         self._set_device_configurations(path, device_configurations)
-        self.set_global_parameters(path, global_parameters)
+        self._set_global_parameters(path, global_parameters)
         return Success(None)
 
     def set_running(
