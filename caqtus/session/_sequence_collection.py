@@ -13,7 +13,7 @@ from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils.result import Result, Success, Failure
+from caqtus.utils.result import Success, Failure
 from ._data_id import DataId
 from ._exception_summary import TracebackSummary
 from ._path import PureSequencePath
@@ -102,13 +102,15 @@ class SequenceCollection(Protocol):
     """
 
     @abc.abstractmethod
-    def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
+    def is_sequence(
+        self, path: PureSequencePath
+    ) -> Success[bool] | Failure[PathNotFoundError]:
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_contained_sequences(
         self, path: PureSequencePath
-    ) -> Result[Set[PureSequencePath], PathNotFoundError]:
+    ) -> Success[Set[PureSequencePath]] | Failure[PathNotFoundError]:
         """Return the descendants of this path that are sequences.
 
         The current path is included in the result if it is a sequence.
@@ -377,7 +379,11 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[ShotId], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[list[ShotId]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         """Return the shots that belong to this sequence."""
 
         raise NotImplementedError

@@ -78,12 +78,14 @@ class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
     serializer: SerializerProtocol
 
-    def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
+    def is_sequence(
+        self, path: PureSequencePath
+    ) -> Success[bool] | Failure[PathNotFoundError]:
         return _is_sequence(self._get_sql_session(), path)
 
     def get_contained_sequences(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError]:
+    ) -> Success[set[PureSequencePath]] | Failure[PathNotFoundError]:
         path_result = _query_path_model(self._get_sql_session(), path)
         if is_failure_type(path_result, PathNotFoundError):
             return path_result
