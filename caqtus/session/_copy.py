@@ -128,9 +128,13 @@ def _copy_sequence(
         exception = exception_result.value
         if exception is None:
             exception = TracebackSummary.from_exception(RuntimeError("Unknown error"))
-        crashed_result = destination_session.sequences.set_crashed(path, exception)
+        assert stats.stop_time is not None
+        crashed_result = destination_session.sequences.set_crashed(
+            path, exception, stop_time=stats.stop_time
+        )
         assert not is_failure_type(crashed_result, PathNotFoundError)
         assert not is_failure_type(crashed_result, PathIsNotSequenceError)
+        assert not is_failure_type(crashed_result, InvalidStateTransitionError)
         assert_type(crashed_result, Success[None])
     else:
         assert_never(state)  # type: ignore[reportArgumentType]

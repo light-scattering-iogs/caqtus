@@ -394,6 +394,43 @@ class SQLSequenceCollection(SequenceCollection):
         )
         return Success(None)
 
+    def set_crashed(
+        self,
+        path: PureSequencePath,
+        tb_summary: TracebackSummary,
+        stop_time: datetime.datetime | Literal["now"],
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        sequence_result = _query_sequence_model(self._get_sql_session(), path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.value
+        if not State.is_transition_allowed(sequence.state, State.CRASHED):
+            return Failure(
+                InvalidStateTransitionError(
+                    f"Sequence at {path} can't transition from {sequence.state} to "
+                    f"{State.CRASHED}"
+                )
+            )
+        sequence.state = State.CRASHED
+        if stop_time == "now":
+            stop_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        if not is_tz_aware(stop_time):
+            raise ValueError("Stop time must be timezone aware")
+        sequence.stop_time = stop_time.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        )
+        set_exception_result = self.set_exception(path, tb_summary)
+        assert not is_failure_type(set_exception_result, PathNotFoundError)
+        assert not is_failure_type(set_exception_result, PathIsNotSequenceError)
+        assert not is_failure_type(set_exception_result, SequenceNotCrashedError)
+        assert_type(set_exception_result, Success[None])
+        return Success(None)
+
     def set_device_configurations(
         self,
         path: PureSequencePath,

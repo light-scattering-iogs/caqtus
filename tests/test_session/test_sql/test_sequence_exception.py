@@ -42,5 +42,5 @@ def test_set_exception_after_reset(session_maker, crashed_sequence):
         )
         unwrap(session.sequences.set_state(crashed_sequence, State.RUNNING))
         tb_1 = TracebackSummary.from_exception(ValueError("error 1"))
-        unwrap(session.sequences.set_crashed(crashed_sequence, tb_1))
+        unwrap(session.sequences.set_crashed(crashed_sequence, tb_1, stop_time="now"))
         assert unwrap(session.sequences.get_exception(crashed_sequence)) == tb_1

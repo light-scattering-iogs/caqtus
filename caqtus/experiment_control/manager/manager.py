@@ -20,6 +20,7 @@ from caqtus.session import (
     PathNotFoundError,
     PathIsNotSequenceError,
     TracebackSummary,
+    InvalidStateTransitionError,
 )
 from caqtus.types.parameter import ParameterNamespace
 from ..device_manager_extension import DeviceManagerExtensionProtocol
@@ -384,14 +385,16 @@ def _crash_running_sequences(session: ExperimentSession) -> None:
         )
     )
     for path in session.sequences.get_sequences_in_state(State.RUNNING):
-        result = session.sequences.set_crashed(path, tb_summary)
+        result = session.sequences.set_crashed(path, tb_summary, stop_time="now")
         assert not is_failure_type(result, PathNotFoundError)
         assert not is_failure_type(result, PathIsNotSequenceError)
+        assert not is_failure_type(result, InvalidStateTransitionError)
         assert_type(result, Success[None])
     for path in session.sequences.get_sequences_in_state(State.PREPARING):
-        result = session.sequences.set_crashed(path, tb_summary)
+        result = session.sequences.set_crashed(path, tb_summary, stop_time="now")
         assert not is_failure_type(result, PathNotFoundError)
         assert not is_failure_type(result, PathIsNotSequenceError)
+        assert not is_failure_type(result, InvalidStateTransitionError)
         assert_type(result, Success[None])
 
 

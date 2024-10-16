@@ -195,7 +195,11 @@ class SequenceManager:
         except* BaseException as e:
             tb_summary = TracebackSummary.from_exception(e)
             with self._session_maker() as session:
-                unwrap(session.sequences.set_crashed(self._sequence_path, tb_summary))
+                unwrap(
+                    session.sequences.set_crashed(
+                        self._sequence_path, tb_summary, stop_time="now"
+                    )
+                )
             recoverable, non_recoverable = split_recoverable(e)
             if non_recoverable:
                 raise

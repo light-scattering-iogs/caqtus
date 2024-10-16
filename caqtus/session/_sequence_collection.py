@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import datetime
 from collections.abc import Mapping, Set, Iterable
-from typing import Protocol, Optional, assert_type, Literal
+from typing import Protocol, Optional, Literal
 
 import attrs
 
@@ -13,7 +13,7 @@ from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils.result import Result, Success, Failure, is_failure, is_failure_type
+from caqtus.utils.result import Result, Success, Failure
 from ._data_id import DataId
 from ._exception_summary import TracebackSummary
 from ._path import PureSequencePath
@@ -283,27 +283,6 @@ class SequenceCollection(Protocol):
 
         raise NotImplementedError
 
-    def set_crashed(
-        self, path: PureSequencePath, tb_summary: TracebackSummary
-    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
-        """Set the sequence to the CRASHED state.
-
-        Args:
-            path: The path of the sequence to set to the CRASHED state.
-            tb_summary: A summary of the error that caused the sequence to crash.
-                This summary will be saved with the sequence.
-        """
-
-        state_result = self.set_state(path, State.CRASHED)
-        if is_failure(state_result):
-            return state_result
-        set_exception_result = self.set_exception(path, tb_summary)
-        assert not is_failure_type(set_exception_result, PathNotFoundError)
-        assert not is_failure_type(set_exception_result, PathIsNotSequenceError)
-        assert not is_failure_type(set_exception_result, SequenceNotCrashedError)
-        assert_type(set_exception_result, Success[None])
-        return Success(None)
-
     @abc.abstractmethod
     def set_preparing(
         self,
@@ -379,6 +358,30 @@ class SequenceCollection(Protocol):
         Args:
             path: The path to the sequence.
             stop_time: The time at which the sequence was interrupted.
+                Must be a timezone-aware datetime object.
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_crashed(
+        self,
+        path: PureSequencePath,
+        tb_summary: TracebackSummary,
+        stop_time: datetime.datetime | Literal["now"],
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        """Set the sequence to the CRASHED state.
+
+        Args:
+            path: The path of the sequence to set to the CRASHED state.
+            tb_summary: A summary of the error that caused the sequence to crash.
+                This summary will be saved with the sequence.
+            stop_time: The time at which the sequence crashed.
                 Must be a timezone-aware datetime object.
         """
 
