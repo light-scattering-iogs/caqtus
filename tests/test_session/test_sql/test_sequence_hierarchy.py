@@ -10,7 +10,7 @@ from caqtus.session import (
     DataNotFoundError,
     PathNotFoundError,
 )
-from caqtus.session import PureSequencePath, Sequence, State
+from caqtus.session import PureSequencePath, Sequence
 from caqtus.session._shot_id import ShotId
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
@@ -175,8 +175,8 @@ def test_start_date(session_maker, steps_configuration: StepsConfiguration, time
     with session_maker() as session:
         p = PureSequencePath(r"\test\test")
         unwrap(session.sequences.create(p, steps_configuration, time_lanes))
-        session.sequences.set_state(p, State.PREPARING)
-        session.sequences.set_state(p, State.RUNNING)
+        unwrap(session.sequences.set_preparing(p, {}, ParameterNamespace.empty()))
+        unwrap(session.sequences.set_running(p, start_time="now"))
     with session_maker() as session:
         stats = unwrap(session.sequences.get_stats(p))
         d = stats.start_time
@@ -195,8 +195,8 @@ def test_shot_creation(
     with session_maker() as session:
         p = PureSequencePath(r"\test")
         sequence = Sequence.create(p, steps_configuration, time_lanes, session)
-        session.sequences.set_state(p, State.PREPARING)
-        session.sequences.set_state(p, State.RUNNING)
+        session.sequences.set_preparing(p, {}, ParameterNamespace.empty())
+        session.sequences.set_running(p, start_time="now")
         parameters = {
             DottedVariableName("test"): 1.0,
             DottedVariableName("test2"): 2.0 * ureg.MHz,
@@ -237,8 +237,8 @@ def test_data_not_existing(
     with session_maker() as session:
         p = PureSequencePath(r"\test")
         sequence = Sequence.create(p, steps_configuration, time_lanes, session)
-        session.sequences.set_state(p, State.PREPARING)
-        session.sequences.set_state(p, State.RUNNING)
+        session.sequences.set_preparing(p, {}, ParameterNamespace.empty())
+        session.sequences.set_running(p, start_time="now")
         parameters = {}
         data = {
             DataLabel("a"): [1, 2, 3],
@@ -269,9 +269,7 @@ def test_0(session_maker, steps_configuration: StepsConfiguration, time_lanes):
         p = PureSequencePath(r"\a\b\c")
         Sequence.create(p, steps_configuration, time_lanes, session)
 
-        session.sequences.set_state(p, State.PREPARING)
-        session.sequences.set_global_parameters(p, parameters)
-        session.sequences.set_device_configurations(p, device_configurations)
+        unwrap(session.sequences.set_preparing(p, device_configurations, parameters))
 
     with session_maker() as session:
         sequence = Sequence(p, session)
@@ -288,8 +286,11 @@ def test_1(session_maker, steps_configuration: StepsConfiguration, time_lanes):
         }
         p = PureSequencePath(r"\a\b\c")
         Sequence.create(p, steps_configuration, time_lanes, session)
-        session.sequences.set_state(p, State.PREPARING)
-        session.sequences.set_device_configurations(p, configurations)
+        unwrap(
+            session.sequences.set_preparing(
+                p, configurations, ParameterNamespace.empty()
+            )
+        )
 
     with session_maker() as session:
         sequence = Sequence(p, session)
