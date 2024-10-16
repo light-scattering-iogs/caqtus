@@ -181,7 +181,7 @@ class SequenceManager:
                 ),
             ):
                 with self._session_maker() as session:
-                    session.sequences.set_running(self._sequence_path)
+                    session.sequences.set_running(self._sequence_path, start_time="now")
                 async with (
                     anyio.create_task_group() as tg,
                     scheduler_cm as scheduler,

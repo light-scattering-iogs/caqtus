@@ -7,6 +7,7 @@ from typing import (
     Optional,
     assert_never,
     assert_type,
+    Literal,
 )
 
 import attrs
@@ -278,6 +279,35 @@ class SQLSequenceCollection(SequenceCollection):
         self, path: PureSequencePath, state: State
     ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
         return _set_state(self._get_sql_session(), path, state)
+
+    def set_running(
+        self, path: PureSequencePath, start_time: datetime.datetime | Literal["now"]
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        sequence_result = _query_sequence_model(self._get_sql_session(), path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.content()
+        if not State.is_transition_allowed(sequence.state, State.RUNNING):
+            return Failure(
+                InvalidStateTransitionError(
+                    f"Sequence at {path} can't transition from {sequence.state} to "
+                    f"{State.RUNNING}"
+                )
+            )
+        sequence.state = State.RUNNING
+        if start_time == "now":
+            start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        if not is_tz_aware(start_time):
+            raise ValueError("Start time must be timezone aware")
+        sequence.start_time = start_time.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        )
+        return Success(None)
 
     def set_device_configurations(
         self,
@@ -905,3 +935,7 @@ def serialize_shot_parameters(
         )
         for variable_name, parameter in shot_parameters.items()
     }
+
+
+def is_tz_aware(dt: datetime.datetime) -> bool:
+    return dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None

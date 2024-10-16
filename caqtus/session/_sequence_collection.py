@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import datetime
 from collections.abc import Mapping, Set, Iterable
-from typing import Protocol, Optional, assert_type
+from typing import Protocol, Optional, assert_type, Literal
 
 import attrs
 
@@ -326,12 +326,24 @@ class SequenceCollection(Protocol):
         self.set_global_parameters(path, global_parameters)
         return Success(None)
 
+    @abc.abstractmethod
     def set_running(
-        self, path: PureSequencePath
-    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
-        """Set a sequence to the RUNNING state."""
+        self, path: PureSequencePath, start_time: datetime.datetime | Literal["now"]
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        """Set a sequence to the RUNNING state.
 
-        return self.set_state(path, State.RUNNING)
+        Args:
+            path: The path to the sequence.
+            start_time: The time at which the sequence started running.
+                Must be a timezone-aware datetime object.
+        """
+
+        raise NotImplementedError
 
     def set_finished(
         self, path: PureSequencePath
