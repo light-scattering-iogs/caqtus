@@ -8,7 +8,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from caqtus.utils.result import (
-    Result,
     Success,
     Failure,
     is_failure,
@@ -39,7 +38,7 @@ class SQLPathHierarchy(PathHierarchy):
 
     def create_path(
         self, path: PureSequencePath
-    ) -> Result[list[PureSequencePath], PathIsSequenceError]:
+    ) -> Success[list[PureSequencePath]] | Failure[PathIsSequenceError]:
         paths_to_create: list[PureSequencePath] = []
         current = path
         sequence_collection = self.parent_session.sequences
@@ -150,14 +149,16 @@ class SQLPathHierarchy(PathHierarchy):
     ) -> Success[datetime] | Failure[PathNotFoundError] | Failure[PathIsRootError]:
         return _get_path_creation_date(self._get_sql_session(), path)
 
-    def move(self, source: PureSequencePath, destination: PureSequencePath) -> Result[
-        None,
-        PathNotFoundError
-        | PathExistsError
-        | PathIsSequenceError
-        | RecursivePathMoveError
-        | SequenceRunningError,
-    ]:
+    def move(
+        self, source: PureSequencePath, destination: PureSequencePath
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathExistsError]
+        | Failure[PathIsSequenceError]
+        | Failure[RecursivePathMoveError]
+        | Failure[SequenceRunningError]
+    ):
         if destination.is_descendant_of(source) or source == destination:
             return Failure(
                 RecursivePathMoveError(f"Cannot move {source} into {destination}")

@@ -44,7 +44,6 @@ from caqtus.types.iteration import (
 )
 from caqtus.types.timelane import TimeLanes
 from caqtus.utils.result import (
-    Result,
     is_failure,
     Failure,
     Success,
@@ -670,7 +669,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             [Qt.ItemDataRole.DisplayRole],
         )
 
-    def rename(self, index: QModelIndex, new_name: str) -> Result[None, Exception]:
+    def rename(
+        self, index: QModelIndex, new_name: str
+    ) -> Success[None] | Failure[Exception]:
         """Rename a sequence or folder in the model.
 
         Args:

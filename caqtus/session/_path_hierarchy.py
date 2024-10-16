@@ -4,7 +4,7 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
-from caqtus.utils.result import Result, Success, Failure
+from caqtus.utils.result import Success, Failure
 from ._path import PureSequencePath
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def create_path(
         self, path: PureSequencePath
-    ) -> Result[list[PureSequencePath], PathIsSequenceError]:
+    ) -> Success[list[PureSequencePath]] | Failure[PathIsSequenceError]:
         """Create the path in the session and its ancestors if they do not exist.
 
         If is safe to call this method even if the path already exists, in which case
@@ -138,14 +138,16 @@ class PathHierarchy(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def move(self, source: PureSequencePath, destination: PureSequencePath) -> Result[
-        None,
-        PathNotFoundError
-        | PathExistsError
-        | PathIsSequenceError
-        | RecursivePathMoveError
-        | SequenceRunningError,
-    ]:
+    def move(
+        self, source: PureSequencePath, destination: PureSequencePath
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathExistsError]
+        | Failure[PathIsSequenceError]
+        | Failure[RecursivePathMoveError]
+        | Failure[SequenceRunningError]
+    ):
         """Move a path to a new location.
 
         Args:
