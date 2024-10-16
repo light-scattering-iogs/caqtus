@@ -1,5 +1,6 @@
 """Allows to interact with the storage of the experiment."""
 
+from . import copy
 from . import sql
 from ._device_configuration_collection import DeviceConfigurationCollection
 from ._exception_summary import TracebackSummary
@@ -54,4 +55,5 @@ __all__ = [
     "TracebackSummary",
     "SequenceNotCrashedError",
     "sql",
+    "copy",
 ]
