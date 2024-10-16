@@ -93,7 +93,7 @@ class Experiment:
         "Pass the configuration directly to the Experiment() constructor instead."
     )
     def configure_storage(
-        self, backend_config: PostgreSQLConfig | SQLiteConfig
+        self, storage_config: PostgreSQLConfig | SQLiteConfig
     ) -> None:
         """Configure the storage backend to be used by the application.
 
@@ -109,7 +109,7 @@ class Experiment:
 
         if self._storage_config is not None:
             warnings.warn("Storage configuration is being overwritten.", stacklevel=2)
-        self._storage_config = backend_config
+        self._storage_config = storage_config
 
     def configure_shot_retry(
         self, shot_retry_config: Optional[ShotRetryConfig]
@@ -199,18 +199,20 @@ class Experiment:
 
         self._extension.register_device_server_config(name, config)
 
-    def get_session_maker(self) -> ExperimentSessionMaker:
-        """Get the session maker to be used by the application.
+    def get_storage_manager(self) -> ExperimentSessionMaker:
+        """Get the storage manager to be used by the application.
 
-        The session maker is responsible for interacting with the storage of the
+        The storage manager is responsible for interacting with the storage of the
         experiment.
-
-        The method :meth:`configure_storage` must be called before this method.
         """
 
-        return self._get_session_maker(check_schema=True)
+        return self._get_storage_manager(check_schema=True)
 
-    def build_storage_backend_manager[
+    @deprecated("Use get_storage_manager instead.")
+    def get_session_maker(self) -> ExperimentSessionMaker:
+        return self.get_storage_manager()
+
+    def build_storage_manager[
         T: ExperimentSessionMaker, **P
     ](
         self,
@@ -226,7 +228,7 @@ class Experiment:
             **kwargs: The keyword arguments to pass to the storage backend constructor.
         """
 
-        storage_backend_manager = self._build_storage_backend_manager(
+        storage_backend_manager = self._build_storage_manager(
             backend_type,
             *args,
             **kwargs,
@@ -236,7 +238,7 @@ class Experiment:
 
         return storage_backend_manager
 
-    def _build_storage_backend_manager[
+    def _build_storage_manager[
         T: ExperimentSessionMaker, **P
     ](
         self,
@@ -250,28 +252,28 @@ class Experiment:
             **kwargs,
         )
 
-    def _get_session_maker(self, check_schema: bool = True) -> ExperimentSessionMaker:
+    def _get_storage_manager(self, check_schema: bool = True) -> ExperimentSessionMaker:
         if self._storage_config is None:
             error = RuntimeError("Storage configuration has not been set.")
             error.add_note(
-                "Call `configure_storage` with the appropriate configuration."
+                "Pass the storage configuration to the Experiment() constructor."
             )
             raise error
         if isinstance(self._storage_config, SQLiteConfig):
-            session_maker = self._build_storage_backend_manager(
+            storage_manager = self._build_storage_manager(
                 SQLiteExperimentSessionMaker,
                 config=self._storage_config,
             )
         elif isinstance(self._storage_config, PostgreSQLConfig):
-            session_maker = self._build_storage_backend_manager(
+            storage_manager = self._build_storage_manager(
                 PostgreSQLExperimentSessionMaker,
                 config=self._storage_config,
             )
         else:
             assert_never(self._storage_config)
         if check_schema:
-            session_maker.check()
-        return session_maker
+            storage_manager.check()
+        return storage_manager
 
     def connect_to_experiment_manager(self) -> ExperimentManager:
         """Connect to the experiment manager."""
@@ -300,7 +302,7 @@ class Experiment:
 
         if self._experiment_manager is None:
             self._experiment_manager = LocalExperimentManager(
-                session_maker=self.get_session_maker(),
+                session_maker=self.get_storage_manager(),
                 device_manager_extension=self._extension.device_manager_extension,
                 shot_retry_config=self._shot_retry_config,
             )
@@ -325,7 +327,7 @@ class Experiment:
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
         app = Condetrol(
-            self.get_session_maker(),
+            self.get_storage_manager(),
             extension=self._extension.condetrol_extension,
             connect_to_experiment_manager=self.connect_to_experiment_manager,
         )
@@ -365,7 +367,7 @@ class Experiment:
             raise error
 
         server = RemoteExperimentManagerServer(
-            session_maker=self.get_session_maker(),
+            session_maker=self.get_storage_manager(),
             address=("localhost", self._experiment_manager_location.port),
             authkey=bytes(self._experiment_manager_location.authkey, "utf-8"),
             shot_retry_config=self._shot_retry_config,
@@ -409,7 +411,7 @@ class Experiment:
         A session can be used to access the data stored in the experiment.
         """
 
-        return self.get_session_maker().session()
+        return self.get_storage_manager().session()
 
 
 def upgrade_database(experiment: Experiment) -> None:
@@ -425,14 +427,14 @@ def upgrade_database(experiment: Experiment) -> None:
             It must have been configured with a PostgreSQL storage backend.
     """
 
-    session_maker = experiment._get_session_maker(check_schema=False)
-    if not isinstance(session_maker, SQLExperimentSessionMaker):
+    storage_manager = experiment._get_storage_manager(check_schema=False)
+    if not isinstance(storage_manager, SQLExperimentSessionMaker):
         error = RuntimeError("The session maker is not a SQL session maker.")
         error.add_note(
             "The upgrade_database method is only available for SQL session makers."
         )
         raise error
-    session_maker.upgrade()
+    storage_manager.upgrade()
 
 
 def stamp_database(experiment: Experiment) -> None:
@@ -443,10 +445,10 @@ def stamp_database(experiment: Experiment) -> None:
 
     from alembic.command import stamp
 
-    session_maker = experiment._get_session_maker(check_schema=False)
-    if not isinstance(session_maker, PostgreSQLExperimentSessionMaker):
+    storage_manager = experiment._get_storage_manager(check_schema=False)
+    if not isinstance(storage_manager, PostgreSQLExperimentSessionMaker):
         raise RuntimeError("The session maker is not a PostgreSQL session maker.")
-    config = session_maker._get_alembic_config()
+    config = storage_manager._get_alembic_config()
 
     stamp(config, "038164d73465")
 

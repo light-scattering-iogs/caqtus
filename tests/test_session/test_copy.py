@@ -33,7 +33,7 @@ def destination_session_maker(postgresql_destination) -> ExperimentSessionMaker:
     exp._extension.device_configurations_serializer.register_device_configuration(
         DummyConfiguration, DummyConfiguration.dump, DummyConfiguration.load
     )
-    return exp._get_session_maker(check_schema=False)
+    return exp._get_storage_manager(check_schema=False)
 
 
 @pytest.fixture
