@@ -35,7 +35,6 @@ Example:
 
 from ._result import (
     Failure,
-    Result,
     Success,
     is_failure,
     is_failure_type,
@@ -45,7 +44,6 @@ from ._result import (
 
 __all__ = [
     "Failure",
-    "Result",
     "Success",
     "is_failure",
     "is_failure_type",

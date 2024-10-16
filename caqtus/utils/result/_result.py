@@ -35,19 +35,21 @@ class Success(Generic[T]):
         return self.value
 
 
-def is_success(result: Result[T, Any]) -> TypeIs[Success[T]]:
+def is_success(result: Success[T] | Failure[Any]) -> TypeIs[Success[T]]:
     """Check if a result is a success."""
 
     return isinstance(result, Success)
 
 
-def is_failure(result: Result[Any, E]) -> TypeIs[Failure[E]]:
+def is_failure(result: Success[Any] | Failure[E]) -> TypeIs[Failure[E]]:
     """Check if a result is a failure."""
 
     return isinstance(result, Failure)
 
 
-def is_failure_type(result: Result, error_type: type[E]) -> TypeIs[Failure[E]]:
+def is_failure_type(
+    result: Success | Failure, error_type: type[E]
+) -> TypeIs[Failure[E]]:
     """Check if a result is a failure and contains a specific error type."""
 
     return is_failure(result) and isinstance(result._error, error_type)
@@ -64,9 +66,6 @@ class Failure(Generic[E]):
 
     def __str__(self) -> str:
         return str(self._error)
-
-
-type Result[T, E] = Success[T] | Failure[E]
 
 
 @overload
