@@ -7,7 +7,11 @@ from pytest_postgresql import factories
 
 from caqtus.extension import Experiment
 from caqtus.extension import upgrade_database
-from caqtus.session import PureSequencePath, State, ExperimentSessionMaker
+from caqtus.session import (
+    PureSequencePath,
+    ExperimentSessionMaker,
+    TracebackSummary,
+)
 from caqtus.session.sql import PostgreSQLConfig
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
@@ -17,6 +21,7 @@ from caqtus.types.iteration import (
     LinspaceLoop,
     ArangeLoop,
 )
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from tests.test_session.test_sql.device_configuration import DummyConfiguration
@@ -138,19 +143,23 @@ def draft_sequence(
 @pytest.fixture
 def initializing_sequence(session_maker, draft_sequence) -> PureSequencePath:
     with session_maker.session() as session:
-        session.sequences.set_state(draft_sequence, State.PREPARING)
+        session.sequences.set_preparing(draft_sequence, {}, ParameterNamespace.empty())
     return draft_sequence
 
 
 @pytest.fixture
 def running_sequence(session_maker, initializing_sequence) -> PureSequencePath:
     with session_maker.session() as session:
-        session.sequences.set_state(initializing_sequence, State.RUNNING)
+        session.sequences.set_running(initializing_sequence, start_time="now")
     return initializing_sequence
 
 
 @pytest.fixture
 def crashed_sequence(session_maker, running_sequence) -> PureSequencePath:
     with session_maker.session() as session:
-        session.sequences.set_state(running_sequence, State.CRASHED)
+        session.sequences.set_crashed(
+            running_sequence,
+            TracebackSummary.from_exception(RuntimeError("error")),
+            stop_time="now",
+        )
     return running_sequence
