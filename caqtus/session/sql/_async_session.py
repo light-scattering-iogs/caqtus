@@ -15,7 +15,7 @@ from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils.result import Result, Failure, Success
+from caqtus.utils.result import Failure, Success
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
 from ._sequence_collection import (
@@ -193,7 +193,7 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
 
     async def is_sequence(
         self, path: PureSequencePath
-    ) -> Result[bool, PathNotFoundError]:
+    ) -> Success[bool] | Failure[PathNotFoundError]:
         return await self._run_sync(_is_sequence, path)
 
     async def get_stats(
@@ -215,10 +215,14 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
     ):
         return await self._run_sync(_reset_to_draft, path)
 
-    async def get_traceback_summary(self, path: PureSequencePath) -> Result[
-        Optional[TracebackSummary],
-        PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
-    ]:
+    async def get_traceback_summary(
+        self, path: PureSequencePath
+    ) -> (
+        Success[Optional[TracebackSummary]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotCrashedError]
+    ):
         return await self._run_sync(_get_exceptions, path)
 
     async def get_time_lanes(self, path: PureSequencePath) -> TimeLanes:

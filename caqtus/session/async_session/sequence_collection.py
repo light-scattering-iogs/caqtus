@@ -8,7 +8,7 @@ from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils.result import Result, Success, Failure
+from caqtus.utils.result import Success, Failure
 from .._data_id import DataId
 from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
@@ -28,7 +28,7 @@ class AsyncSequenceCollection(Protocol):
     @abc.abstractmethod
     async def is_sequence(
         self, path: PureSequencePath
-    ) -> Result[bool, PathNotFoundError]:
+    ) -> Success[bool] | Failure[PathNotFoundError]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -59,10 +59,14 @@ class AsyncSequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def get_traceback_summary(self, path: PureSequencePath) -> Result[
-        Optional[TracebackSummary],
-        PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
-    ]:
+    async def get_traceback_summary(
+        self, path: PureSequencePath
+    ) -> (
+        Success[Optional[TracebackSummary]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotCrashedError]
+    ):
         raise NotImplementedError
 
     @abc.abstractmethod

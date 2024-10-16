@@ -29,7 +29,6 @@ from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from caqtus.utils.result import (
-    Result,
     Success,
     Failure,
     is_failure_type,
@@ -121,7 +120,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_contained_running_sequences(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError]:
+    ) -> Success[set[PureSequencePath]] | Failure[PathNotFoundError]:
         path_model_result = _query_path_model(self._get_sql_session(), path)
 
         running_sequences = set()
@@ -553,7 +552,9 @@ class SQLSequenceCollection(SequenceCollection):
 
     def _query_path_model(
         self, path: PureSequencePath
-    ) -> Result[SQLSequencePath, PathNotFoundError | PathIsRootError]:
+    ) -> (
+        Success[SQLSequencePath] | Failure[PathNotFoundError] | Failure[PathIsRootError]
+    ):
         return _query_path_model(self._get_sql_session(), path)
 
     def _query_sequence_model(
@@ -567,9 +568,12 @@ class SQLSequenceCollection(SequenceCollection):
 
     def _query_shot_model(
         self, path: PureSequencePath, shot_index: int
-    ) -> Result[
-        SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError
-    ]:
+    ) -> (
+        Success[SQLShot]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[ShotNotFoundError]
+    ):
         return _query_shot_model(self._get_sql_session(), path, shot_index)
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
@@ -597,7 +601,7 @@ def _convert_to_unknown(value: Optional[int]) -> int | Unknown:
 
 def _is_sequence(
     session: Session, path: PureSequencePath
-) -> Result[bool, PathNotFoundError]:
+) -> Success[bool] | Failure[PathNotFoundError]:
     path_model_result = _query_path_model(session, path)
     if isinstance(path_model_result, Failure):
         if is_failure_type(path_model_result, PathNotFoundError):
@@ -873,10 +877,13 @@ def _query_data_model(
     path: PureSequencePath,
     shot_index: int,
     data_labels: Set[DataLabel],
-) -> Result[
-    dict[DataLabel, SQLShotArray | SQLStructuredShotData],
-    PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError | DataNotFoundError,
-]:
+) -> (
+    Success[dict[DataLabel, SQLShotArray | SQLStructuredShotData]]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[ShotNotFoundError]
+    | Failure[DataNotFoundError]
+):
     data = {}
     data_labels = set(data_labels)
     stmt = (
@@ -946,7 +953,12 @@ def _query_sequence_model(
 
 def _query_shot_model(
     session: Session, path: PureSequencePath, shot_index: int
-) -> Result[SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError]:
+) -> (
+    Success[SQLShot]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[ShotNotFoundError]
+):
     stmt = (
         select(SQLShot)
         .where(SQLShot.index == shot_index)
