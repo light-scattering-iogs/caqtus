@@ -434,35 +434,7 @@ class SQLSequenceCollection(SequenceCollection):
         | Failure[PathIsNotSequenceError]
         | Failure[InvalidStateTransitionError]
     ):
-        session = self._get_sql_session()
-        sequence_result = _query_sequence_model(session, path)
-        if is_failure(sequence_result):
-            return sequence_result
-        sequence = sequence_result.value
-        if not State.is_transition_allowed(sequence.state, State.DRAFT):
-            return Failure(
-                InvalidStateTransitionError(
-                    f"Sequence at {path} can't transition from {sequence.state} to "
-                    f"{State.DRAFT}"
-                )
-            )
-        sequence.state = State.DRAFT
-        sequence.start_time = None
-        sequence.stop_time = None
-        sequence.parameters.content = None
-        if sequence.exception_traceback:
-            session.delete(sequence.exception_traceback)
-            sequence.exception_traceback = None
-            delete_device_configurations = sqlalchemy.delete(
-                SQLDeviceConfiguration
-            ).where(SQLDeviceConfiguration.sequence == sequence)
-            session.execute(delete_device_configurations)
-
-            delete_shots = sqlalchemy.delete(SQLShot).where(
-                SQLShot.sequence == sequence
-            )
-            session.execute(delete_shots)
-        return Success(None)
+        return _reset_to_draft(self._get_sql_session(), path)
 
     def _set_device_configurations(
         self,
@@ -1039,6 +1011,42 @@ def _query_shot_model(
                 return failure
             case _:
                 assert_never(sequence_model_result)
+
+
+def _reset_to_draft(
+    session: Session, path: PureSequencePath
+) -> (
+    Success[None]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[InvalidStateTransitionError]
+):
+    sequence_result = _query_sequence_model(session, path)
+    if is_failure(sequence_result):
+        return sequence_result
+    sequence = sequence_result.value
+    if not State.is_transition_allowed(sequence.state, State.DRAFT):
+        return Failure(
+            InvalidStateTransitionError(
+                f"Sequence at {path} can't transition from {sequence.state} to "
+                f"{State.DRAFT}"
+            )
+        )
+    sequence.state = State.DRAFT
+    sequence.start_time = None
+    sequence.stop_time = None
+    sequence.parameters.content = None
+    if sequence.exception_traceback:
+        session.delete(sequence.exception_traceback)
+        sequence.exception_traceback = None
+        delete_device_configurations = sqlalchemy.delete(SQLDeviceConfiguration).where(
+            SQLDeviceConfiguration.sequence == sequence
+        )
+        session.execute(delete_device_configurations)
+
+        delete_shots = sqlalchemy.delete(SQLShot).where(SQLShot.sequence == sequence)
+        session.execute(delete_shots)
+    return Success(None)
 
 
 def serialize_data(
