@@ -9,6 +9,7 @@ from caqtus.utils.result import (
     is_failure_type,
     unwrap,
 )
+from . import InvalidStateTransitionError
 from ._exception_summary import TracebackSummary
 from ._experiment_session import ExperimentSession
 from ._path import PureSequencePath
@@ -88,8 +89,10 @@ def _copy_sequence(
     )
     assert not is_failure_type(preparing_result, PathNotFoundError)
     assert not is_failure_type(preparing_result, PathIsNotSequenceError)
+    assert not is_failure_type(preparing_result, InvalidStateTransitionError)
     assert_type(preparing_result, Success[None])
 
+    assert stats.start_time is not None
     running_result = destination_session.sequences.set_running(
         path, start_time=stats.start_time
     )
