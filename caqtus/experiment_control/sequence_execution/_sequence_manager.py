@@ -12,9 +12,7 @@ from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
-    State,
     TracebackSummary,
-    ExperimentSession,
 )
 from caqtus.session._shot_id import ShotId
 from caqtus.shot_compilation import (
@@ -192,7 +190,7 @@ class SequenceManager:
                     yield scheduler
         except* anyio.get_cancelled_exc_class():
             with self._session_maker() as session:
-                _interrupt_sequence(self._sequence_path, session)
+                session.sequences.set_interrupted(self._sequence_path)
             raise
         except* BaseException as e:
             tb_summary = TracebackSummary.from_exception(e)
@@ -232,7 +230,3 @@ class SequenceManager:
                 shot_data.end_time,
             )
             unwrap(result)
-
-
-def _interrupt_sequence(path: PureSequencePath, session: ExperimentSession) -> None:
-    unwrap(session.sequences.set_state(path, State.INTERRUPTED))

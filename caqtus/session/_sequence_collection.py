@@ -340,6 +340,13 @@ class SequenceCollection(Protocol):
 
         return self.set_state(path, State.FINISHED)
 
+    def set_interrupted(
+        self, path: PureSequencePath
+    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        """Set a sequence to the INTERRUPTED state."""
+
+        return self.set_state(path, State.INTERRUPTED)
+
     @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath
