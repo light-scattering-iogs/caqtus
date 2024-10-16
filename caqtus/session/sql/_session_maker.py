@@ -122,7 +122,9 @@ class SQLStorageManager(StorageManager):
             up_to_date = set(context.get_current_heads()) == set(directory.get_heads())
 
         if not up_to_date:
-            exception = InvalidDatabaseSchemaError("Database is not up to date.")
+            exception = InvalidDatabaseSchemaError(
+                f"Database at {self._engine.url} is not up to date."
+            )
             exception.add_note(
                 "Upgrade the database following the procedure at "
                 "https://caqtus.readthedocs.io/en/stable/how-to/upgrade-database.html."
