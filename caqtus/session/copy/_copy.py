@@ -32,6 +32,16 @@ def copy_path(
     source: ExperimentSessionMaker,
     destination: ExperimentSessionMaker,
 ) -> None:
+    """Copy the path and its descendants from one session to another.
+
+    Args:
+        path: The path to copy.
+        source: Used to connect to the storage when the data to be copied is located.
+            The path must exist in the source session.
+        destination: Used to connect to the storage where the data will be copied.
+            The path must not exist in the destination session.
+    """
+
     with source() as source_session, destination() as destination_session:
         unwrap(_copy_path(path, source_session, destination_session))
 
