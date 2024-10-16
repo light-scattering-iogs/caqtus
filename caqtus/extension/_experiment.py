@@ -3,7 +3,8 @@ import ctypes
 import logging.config
 import platform
 import warnings
-from typing import Optional, assert_never
+from collections.abc import Callable
+from typing import Optional, assert_never, Concatenate
 
 import tblib.pickling_support
 from typing_extensions import deprecated
@@ -30,6 +31,7 @@ from ..experiment_control.manager import (
 )
 from ..experiment_control.sequence_execution import ShotRetryConfig
 from ..session import ExperimentSessionMaker, ExperimentSession
+from ..session.sql._serializer import SerializerProtocol
 from ..session.sql._session_maker import (
     SQLiteConfig,
     SQLiteExperimentSessionMaker,
@@ -210,6 +212,46 @@ class Experiment:
 
         return self._get_session_maker(check_schema=True)
 
+    def build_storage_backend_manager[
+        T: ExperimentSessionMaker, **P
+    ](
+        self,
+        backend_type: Callable[Concatenate[SerializerProtocol, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        """Create and set up a storage manager with the current registered extensions.
+
+        Args:
+            backend_type: Defines how the data will be stored.
+            *args: The arguments to pass to the storage backend constructor.
+            **kwargs: The keyword arguments to pass to the storage backend constructor.
+        """
+
+        storage_backend_manager = self._build_storage_backend_manager(
+            backend_type,
+            *args,
+            **kwargs,
+        )
+        if isinstance(storage_backend_manager, SQLExperimentSessionMaker):
+            storage_backend_manager.check()
+
+        return storage_backend_manager
+
+    def _build_storage_backend_manager[
+        T: ExperimentSessionMaker, **P
+    ](
+        self,
+        backend_type: Callable[Concatenate[SerializerProtocol, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        return self._extension.create_session_maker(
+            backend_type,
+            *args,
+            **kwargs,
+        )
+
     def _get_session_maker(self, check_schema: bool = True) -> ExperimentSessionMaker:
         if self._session_maker_config is None:
             error = RuntimeError("Storage configuration has not been set.")
@@ -218,12 +260,12 @@ class Experiment:
             )
             raise error
         if isinstance(self._session_maker_config, SQLiteConfig):
-            session_maker = self._extension.create_session_maker(
+            session_maker = self._build_storage_backend_manager(
                 SQLiteExperimentSessionMaker,
                 config=self._session_maker_config,
             )
         elif isinstance(self._session_maker_config, PostgreSQLConfig):
-            session_maker = self._extension.create_session_maker(
+            session_maker = self._build_storage_backend_manager(
                 PostgreSQLExperimentSessionMaker,
                 config=self._session_maker_config,
             )
