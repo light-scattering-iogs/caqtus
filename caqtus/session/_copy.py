@@ -139,8 +139,4 @@ def _copy_sequence(
     else:
         assert_never(state)  # type: ignore[reportArgumentType]
 
-    destination_session.sequences.update_start_and_end_time(
-        path, stats.start_time, stats.stop_time
-    )
-
     return Success(None)

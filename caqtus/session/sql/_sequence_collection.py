@@ -575,24 +575,6 @@ class SQLSequenceCollection(SequenceCollection):
     ) -> datetime.datetime:
         return _get_shot_end_time(self._get_sql_session(), path, shot_index)
 
-    def update_start_and_end_time(
-        self,
-        path: PureSequencePath,
-        start_time: Optional[datetime.datetime],
-        end_time: Optional[datetime.datetime],
-    ) -> None:
-        sequence = unwrap(self._query_sequence_model(path))
-        sequence.start_time = (
-            start_time.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-            if start_time
-            else None
-        )
-        sequence.stop_time = (
-            end_time.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-            if end_time
-            else None
-        )
-
     def get_sequences_in_state(self, state: State) -> Iterable[PureSequencePath]:
         stmt = (
             select(SQLSequencePath).join(SQLSequence).where(SQLSequence.state == state)
