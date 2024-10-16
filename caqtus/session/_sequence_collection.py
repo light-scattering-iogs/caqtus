@@ -228,36 +228,6 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_exception(
-        self, path: PureSequencePath, exception: TracebackSummary
-    ) -> (
-        Success[None]
-        | Failure[PathNotFoundError]
-        | Failure[PathIsNotSequenceError]
-        | Failure[SequenceNotCrashedError]
-    ):
-        """Set the exception that occurred while running the sequence.
-
-        Return:
-            Success if the exception was set successfully, or a failure otherwise.
-        """
-
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def set_state(
-        self, path: PureSequencePath, state: State
-    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
-        """
-
-        Args:
-            state: If state is RUNNING, this will set the sequence start time to the
-                current time.
-        """
-
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def set_preparing(
         self,
         path: PureSequencePath,

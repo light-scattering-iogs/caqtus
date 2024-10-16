@@ -13,26 +13,12 @@ def test_get_exception_not_crashed(session_maker, draft_sequence):
 
 def test_get_exception_crashed(session_maker, crashed_sequence):
     with session_maker.session() as session:
-        assert unwrap(session.sequences.get_exception(crashed_sequence)) is None
-
-
-def test_set_exception_crashed(session_maker, crashed_sequence):
-    error = RuntimeError("error")
-
-    tb = TracebackSummary.from_exception(error)
-    with session_maker.session() as session:
-        unwrap(session.sequences.set_exception(crashed_sequence, tb))
-    with session_maker.session() as session:
-        assert unwrap(session.sequences.get_exception(crashed_sequence)) == tb
+        assert unwrap(
+            session.sequences.get_exception(crashed_sequence)
+        ) == TracebackSummary.from_exception(RuntimeError("error"))
 
 
 def test_set_exception_after_reset(session_maker, crashed_sequence):
-    error = RuntimeError("error")
-
-    tb = TracebackSummary.from_exception(error)
-    with session_maker.session() as session:
-        unwrap(session.sequences.set_exception(crashed_sequence, tb))
-
     with session_maker.session() as session:
         unwrap(session.sequences.reset_to_draft(crashed_sequence))
         unwrap(

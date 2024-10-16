@@ -265,7 +265,7 @@ class SQLSequenceCollection(SequenceCollection):
     ):
         return _get_exceptions(self._get_sql_session(), path)
 
-    def set_exception(
+    def _set_exception(
         self, path: PureSequencePath, exception: TracebackSummary
     ) -> (
         Success[None]
@@ -274,11 +274,6 @@ class SQLSequenceCollection(SequenceCollection):
         | Failure[SequenceNotCrashedError]
     ):
         return _set_exception(self._get_sql_session(), path, exception)
-
-    def set_state(
-        self, path: PureSequencePath, state: State
-    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
-        return _set_state(self._get_sql_session(), path, state)
 
     def set_preparing(
         self,
@@ -424,7 +419,7 @@ class SQLSequenceCollection(SequenceCollection):
         sequence.stop_time = stop_time.astimezone(datetime.timezone.utc).replace(
             tzinfo=None
         )
-        set_exception_result = self.set_exception(path, tb_summary)
+        set_exception_result = self._set_exception(path, tb_summary)
         assert not is_failure_type(set_exception_result, PathNotFoundError)
         assert not is_failure_type(set_exception_result, PathIsNotSequenceError)
         assert not is_failure_type(set_exception_result, SequenceNotCrashedError)
