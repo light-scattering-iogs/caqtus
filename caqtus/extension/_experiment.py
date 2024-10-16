@@ -61,9 +61,7 @@ class Experiment:
                 DeprecationWarning,
                 stacklevel=2,
             )
-        self._session_maker_config: PostgreSQLConfig | SQLiteConfig | None = (
-            storage_config
-        )
+        self._storage_config: PostgreSQLConfig | SQLiteConfig | None = storage_config
         self._extension = CaqtusExtension()
         self._experiment_manager: Optional[LocalExperimentManager] = None
         self._experiment_manager_location: ExperimentManagerConnection = (
@@ -109,9 +107,9 @@ class Experiment:
             configuration.
         """
 
-        if self._session_maker_config is not None:
+        if self._storage_config is not None:
             warnings.warn("Storage configuration is being overwritten.", stacklevel=2)
-        self._session_maker_config = backend_config
+        self._storage_config = backend_config
 
     def configure_shot_retry(
         self, shot_retry_config: Optional[ShotRetryConfig]
@@ -253,24 +251,24 @@ class Experiment:
         )
 
     def _get_session_maker(self, check_schema: bool = True) -> ExperimentSessionMaker:
-        if self._session_maker_config is None:
+        if self._storage_config is None:
             error = RuntimeError("Storage configuration has not been set.")
             error.add_note(
                 "Call `configure_storage` with the appropriate configuration."
             )
             raise error
-        if isinstance(self._session_maker_config, SQLiteConfig):
+        if isinstance(self._storage_config, SQLiteConfig):
             session_maker = self._build_storage_backend_manager(
                 SQLiteExperimentSessionMaker,
-                config=self._session_maker_config,
+                config=self._storage_config,
             )
-        elif isinstance(self._session_maker_config, PostgreSQLConfig):
+        elif isinstance(self._storage_config, PostgreSQLConfig):
             session_maker = self._build_storage_backend_manager(
                 PostgreSQLExperimentSessionMaker,
-                config=self._session_maker_config,
+                config=self._storage_config,
             )
         else:
-            assert_never(self._session_maker_config)
+            assert_never(self._storage_config)
         if check_schema:
             session_maker.check()
         return session_maker
