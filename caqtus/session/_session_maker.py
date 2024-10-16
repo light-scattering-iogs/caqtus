@@ -1,11 +1,11 @@
 import abc
 from typing import Protocol
 
-from .async_session import AsyncExperimentSession
 from ._experiment_session import ExperimentSession
+from .async_session import AsyncExperimentSession
 
 
-class ExperimentSessionMaker(Protocol):
+class StorageManager(Protocol):
     """Used to create a new experiment sessions."""
 
     @abc.abstractmethod
@@ -24,3 +24,7 @@ class ExperimentSessionMaker(Protocol):
         """Create a new asynchronous experiment session."""
 
         raise NotImplementedError
+
+
+# Deprecated alias to StorageManager
+ExperimentSessionMaker = StorageManager

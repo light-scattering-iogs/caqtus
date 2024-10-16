@@ -25,12 +25,13 @@ from ._sequence_collection import (
     ShotNotFoundError,
     SequenceNotCrashedError,
 )
-from ._session_maker import ExperimentSessionMaker
+from ._session_maker import ExperimentSessionMaker, StorageManager
 from ._state import State
 from .async_session import AsyncExperimentSession
 
 __all__ = [
     "ExperimentSession",
+    "StorageManager",
     "Sequence",
     "State",
     "Shot",
