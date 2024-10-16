@@ -184,20 +184,6 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_device_configurations(
-        self,
-        path: PureSequencePath,
-        device_configurations: Mapping[DeviceName, DeviceConfiguration],
-    ) -> None:
-        """Set the device configurations that should be used by this sequence.
-
-        Raises:
-            SequenceNotEditableError: If the sequence is not in the PREPARING state.
-        """
-
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def get_device_configurations(
         self, path: PureSequencePath
     ) -> Mapping[DeviceName, DeviceConfiguration]:

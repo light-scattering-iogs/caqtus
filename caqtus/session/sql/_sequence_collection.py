@@ -303,7 +303,7 @@ class SQLSequenceCollection(SequenceCollection):
                 )
             )
         sequence.state = State.PREPARING
-        self.set_device_configurations(path, device_configurations)
+        self._set_device_configurations(path, device_configurations)
         self.set_global_parameters(path, global_parameters)
         return Success(None)
 
@@ -469,7 +469,7 @@ class SQLSequenceCollection(SequenceCollection):
             session.execute(delete_shots)
         return Success(None)
 
-    def set_device_configurations(
+    def _set_device_configurations(
         self,
         path: PureSequencePath,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
