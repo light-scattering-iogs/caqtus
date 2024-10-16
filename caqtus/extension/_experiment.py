@@ -30,7 +30,7 @@ from ..experiment_control.manager import (
     RemoteExperimentManagerConfiguration,
 )
 from ..experiment_control.sequence_execution import ShotRetryConfig
-from ..session import ExperimentSessionMaker, ExperimentSession
+from ..session import ExperimentSession, StorageManager
 from ..session.sql._serializer import SerializerProtocol
 from ..session.sql._session_maker import (
     SQLiteConfig,
@@ -199,7 +199,7 @@ class Experiment:
 
         self._extension.register_device_server_config(name, config)
 
-    def get_storage_manager(self) -> ExperimentSessionMaker:
+    def get_storage_manager(self) -> StorageManager:
         """Get the storage manager to be used by the application.
 
         The storage manager is responsible for interacting with the storage of the
@@ -209,11 +209,11 @@ class Experiment:
         return self._get_storage_manager(check_schema=True)
 
     @deprecated("Use get_storage_manager instead.")
-    def get_session_maker(self) -> ExperimentSessionMaker:
+    def get_session_maker(self) -> StorageManager:
         return self.get_storage_manager()
 
     def build_storage_manager[
-        T: ExperimentSessionMaker, **P
+        T: StorageManager, **P
     ](
         self,
         backend_type: Callable[Concatenate[SerializerProtocol, P], T],
@@ -239,7 +239,7 @@ class Experiment:
         return storage_backend_manager
 
     def _build_storage_manager[
-        T: ExperimentSessionMaker, **P
+        T: StorageManager, **P
     ](
         self,
         backend_type: Callable[Concatenate[SerializerProtocol, P], T],
@@ -252,7 +252,7 @@ class Experiment:
             **kwargs,
         )
 
-    def _get_storage_manager(self, check_schema: bool = True) -> ExperimentSessionMaker:
+    def _get_storage_manager(self, check_schema: bool = True) -> StorageManager:
         if self._storage_config is None:
             error = RuntimeError("Storage configuration has not been set.")
             error.add_note(
