@@ -29,8 +29,7 @@ postgresql_destination = factories.postgresql("postgresql_destination_no_proc")
 
 @pytest.fixture
 def destination_session_maker(postgresql_destination) -> ExperimentSessionMaker:
-    exp = Experiment()
-    exp.configure_storage(to_postgresql_config(postgresql_destination))
+    exp = Experiment(to_postgresql_config(postgresql_destination))
     exp._extension.device_configurations_serializer.register_device_configuration(
         DummyConfiguration, DummyConfiguration.dump, DummyConfiguration.load
     )

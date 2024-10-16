@@ -38,8 +38,7 @@ postgresql_empty = factories.postgresql("postgresql_empty_no_proc")
 
 
 def initialize(**kwargs):
-    exp = Experiment()
-    exp.configure_storage(
+    exp = Experiment(
         PostgreSQLConfig(
             username=kwargs["user"],
             host=kwargs["host"],
@@ -48,6 +47,7 @@ def initialize(**kwargs):
             database=kwargs["dbname"],
         )
     )
+
     upgrade_database(exp)
 
 
@@ -80,8 +80,7 @@ def initialized_database_config(postgresql_initialized) -> PostgreSQLConfig:
 
 @pytest.fixture
 def session_maker(initialized_database_config) -> ExperimentSessionMaker:
-    exp = Experiment()
-    exp.configure_storage(initialized_database_config)
+    exp = Experiment(initialized_database_config)
     exp._extension.device_configurations_serializer.register_device_configuration(
         DummyConfiguration, DummyConfiguration.dump, DummyConfiguration.load
     )

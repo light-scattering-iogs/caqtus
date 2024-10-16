@@ -7,8 +7,7 @@ from caqtus.session.sql._session_maker import InvalidDatabaseSchemaError
 
 def test_initialization_postgres(empty_database_config):
 
-    exp = Experiment()
-    exp.configure_storage(empty_database_config)
+    exp = Experiment(empty_database_config)
     with pytest.raises(InvalidDatabaseSchemaError):
         exp.get_session_maker()
 

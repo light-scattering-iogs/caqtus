@@ -6,6 +6,7 @@ import warnings
 from typing import Optional, assert_never
 
 import tblib.pickling_support
+from typing_extensions import deprecated
 
 from caqtus.experiment_control.manager import (
     LocalExperimentManager,
@@ -42,10 +43,25 @@ class Experiment:
     There should be only a single instance of this class in the entire application.
     It is used to configure the experiment and knows how to launch the different
     components of the application after it has been configured.
+
+    Args:
+        storage_config: The configuration of the storage backend to be used to store the
+            data of the experiment.
     """
 
-    def __init__(self) -> None:
-        self._session_maker_config: Optional[PostgreSQLConfig | SQLiteConfig] = None
+    def __init__(
+        self, storage_config: PostgreSQLConfig | SQLiteConfig | None = None
+    ) -> None:
+        if storage_config is None:
+            warnings.warn(
+                "A storage configuration should be passed when initializing the "
+                "experiment.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self._session_maker_config: PostgreSQLConfig | SQLiteConfig | None = (
+            storage_config
+        )
         self._extension = CaqtusExtension()
         self._experiment_manager: Optional[LocalExperimentManager] = None
         self._experiment_manager_location: ExperimentManagerConnection = (
@@ -73,6 +89,9 @@ class Experiment:
         self.register_time_lane_extension(analog_time_lane_extension)
         self.register_time_lane_extension(camera_time_lane_extension)
 
+    @deprecated(
+        "Pass the configuration directly to the Experiment() constructor instead."
+    )
     def configure_storage(
         self, backend_config: PostgreSQLConfig | SQLiteConfig
     ) -> None:
