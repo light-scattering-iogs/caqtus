@@ -118,7 +118,8 @@ def _copy_sequence(
         assert stats.stop_time is not None
         destination_session.sequences.set_finished(path, stop_time=stats.stop_time)
     elif state == State.INTERRUPTED:
-        destination_session.sequences.set_interrupted(path)
+        assert stats.stop_time is not None
+        destination_session.sequences.set_interrupted(path, stop_time=stats.stop_time)
     elif state == State.CRASHED:
         exception_result = source_session.sequences.get_exception(path)
         assert not is_failure_type(exception_result, PathNotFoundError)

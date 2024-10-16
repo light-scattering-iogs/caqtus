@@ -190,7 +190,7 @@ class SequenceManager:
                     yield scheduler
         except* anyio.get_cancelled_exc_class():
             with self._session_maker() as session:
-                session.sequences.set_interrupted(self._sequence_path)
+                session.sequences.set_interrupted(self._sequence_path, stop_time="now")
             raise
         except* BaseException as e:
             tb_summary = TracebackSummary.from_exception(e)
