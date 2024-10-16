@@ -304,12 +304,18 @@ class SequenceCollection(Protocol):
         assert_type(set_exception_result, Success[None])
         return Success(None)
 
+    @abc.abstractmethod
     def set_preparing(
         self,
         path: PureSequencePath,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
         global_parameters: ParameterNamespace,
-    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
         """Set a sequence to the PREPARING state.
 
         Args:
@@ -319,12 +325,7 @@ class SequenceCollection(Protocol):
             global_parameters: The parameters used to run the sequence.
         """
 
-        state_result = self.set_state(path, State.PREPARING)
-        if is_failure(state_result):
-            return state_result
-        self.set_device_configurations(path, device_configurations)
-        self.set_global_parameters(path, global_parameters)
-        return Success(None)
+        raise NotImplementedError
 
     @abc.abstractmethod
     def set_running(

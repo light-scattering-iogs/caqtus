@@ -280,6 +280,33 @@ class SQLSequenceCollection(SequenceCollection):
     ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
         return _set_state(self._get_sql_session(), path, state)
 
+    def set_preparing(
+        self,
+        path: PureSequencePath,
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
+        global_parameters: ParameterNamespace,
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        sequence_result = _query_sequence_model(self._get_sql_session(), path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.value
+        if not State.is_transition_allowed(sequence.state, State.PREPARING):
+            return Failure(
+                InvalidStateTransitionError(
+                    f"Sequence at {path} can't transition from {sequence.state} to "
+                    f"{State.PREPARING}"
+                )
+            )
+        sequence.state = State.PREPARING
+        self.set_device_configurations(path, device_configurations)
+        self.set_global_parameters(path, global_parameters)
+        return Success(None)
+
     def set_running(
         self, path: PureSequencePath, start_time: datetime.datetime | Literal["now"]
     ) -> (
