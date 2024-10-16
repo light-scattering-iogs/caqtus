@@ -183,7 +183,7 @@ class SequenceManager:
                 ),
             ):
                 with self._session_maker() as session:
-                    _start_sequence(self._sequence_path, session)
+                    session.sequences.set_running(self._sequence_path)
                 async with (
                     anyio.create_task_group() as tg,
                     scheduler_cm as scheduler,
@@ -232,10 +232,6 @@ class SequenceManager:
                 shot_data.end_time,
             )
             unwrap(result)
-
-
-def _start_sequence(path: PureSequencePath, session: ExperimentSession):
-    unwrap(session.sequences.set_state(path, State.RUNNING))
 
 
 def _finish_sequence(path: PureSequencePath, session: ExperimentSession) -> None:

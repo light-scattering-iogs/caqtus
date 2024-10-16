@@ -326,6 +326,13 @@ class SequenceCollection(Protocol):
         self.set_global_parameters(path, global_parameters)
         return Success(None)
 
+    def set_running(
+        self, path: PureSequencePath
+    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        """Set a sequence to the RUNNING state."""
+
+        return self.set_state(path, State.RUNNING)
+
     @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath

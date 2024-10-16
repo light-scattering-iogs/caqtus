@@ -3,7 +3,6 @@
 from typing import assert_never, assert_type
 
 from caqtus.experiment_control.sequence_execution._sequence_manager import (
-    _start_sequence,
     _finish_sequence,
     _interrupt_sequence,
 )
@@ -95,7 +94,9 @@ def _copy_sequence(
     assert not is_failure_type(preparing_result, PathIsNotSequenceError)
     assert_type(preparing_result, Success[None])
 
-    _start_sequence(path, destination_session)
+    running_result = destination_session.sequences.set_running(path)
+    assert not is_failure_type(running_result, PathNotFoundError)
+    assert not is_failure_type(running_result, PathIsNotSequenceError)
 
     for shot_index in range(stats.number_completed_shots):
         shot_parameters = source_session.sequences.get_shot_parameters(path, shot_index)
