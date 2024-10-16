@@ -79,10 +79,6 @@ def fmt_param_assign(name: "DottedVariableName", expression: "Expression") -> st
     return f"parameter assignment '{name}' = '{expression}'"
 
 
-def fmt_type(value: type | str) -> str:
-    return f"type '{value.__name__}'"
-
-
 def device(name: "DeviceName") -> str:
     return f"device '{name}'"
 
