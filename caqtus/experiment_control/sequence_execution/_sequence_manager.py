@@ -207,7 +207,7 @@ class SequenceManager:
 
         else:
             with self._session_maker() as session:
-                session.sequences.set_finished(self._sequence_path)
+                session.sequences.set_finished(self._sequence_path, stop_time="now")
 
     async def _store_shots(
         self,

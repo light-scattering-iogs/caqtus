@@ -336,6 +336,35 @@ class SQLSequenceCollection(SequenceCollection):
         )
         return Success(None)
 
+    def set_finished(
+        self, path: PureSequencePath, stop_time: datetime.datetime | Literal["now"]
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        sequence_result = _query_sequence_model(self._get_sql_session(), path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.value
+        if not State.is_transition_allowed(sequence.state, State.FINISHED):
+            return Failure(
+                InvalidStateTransitionError(
+                    f"Sequence at {path} can't transition from {sequence.state} to "
+                    f"{State.FINISHED}"
+                )
+            )
+        sequence.state = State.FINISHED
+        if stop_time == "now":
+            stop_time = datetime.datetime.now(tz=datetime.timezone.utc)
+        if not is_tz_aware(stop_time):
+            raise ValueError("Stop time must be timezone aware")
+        sequence.stop_time = stop_time.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        )
+        return Success(None)
+
     def set_device_configurations(
         self,
         path: PureSequencePath,

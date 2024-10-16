@@ -346,12 +346,24 @@ class SequenceCollection(Protocol):
 
         raise NotImplementedError
 
+    @abc.abstractmethod
     def set_finished(
-        self, path: PureSequencePath
-    ) -> Success[None] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
-        """Set a sequence to the FINISHED state."""
+        self, path: PureSequencePath, stop_time: datetime.datetime | Literal["now"]
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[InvalidStateTransitionError]
+    ):
+        """Set a sequence to the FINISHED state.
 
-        return self.set_state(path, State.FINISHED)
+        Args:
+            path: The path to the sequence.
+            stop_time: The time at which the sequence stopped running.
+                Must be a timezone-aware datetime object.
+        """
+
+        raise NotImplementedError
 
     def set_interrupted(
         self, path: PureSequencePath

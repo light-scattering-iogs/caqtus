@@ -115,7 +115,8 @@ def _copy_sequence(
         )
 
     if state == State.FINISHED:
-        destination_session.sequences.set_finished(path)
+        assert stats.stop_time is not None
+        destination_session.sequences.set_finished(path, stop_time=stats.stop_time)
     elif state == State.INTERRUPTED:
         destination_session.sequences.set_interrupted(path)
     elif state == State.CRASHED:
