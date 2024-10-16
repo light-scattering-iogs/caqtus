@@ -24,7 +24,7 @@ from .._shot_id import ShotId
 from .._state import State
 
 
-def copy_path(
+def _copy_path(
     path: PureSequencePath,
     source_session: ExperimentSession,
     destination_session: ExperimentSession,
@@ -56,7 +56,9 @@ def copy_path(
     else:
         children = children_result.value
         for child in children:
-            copy_path(child, source_session, destination_session)
+            copy_child_result = _copy_path(child, source_session, destination_session)
+            if is_failure(copy_child_result):
+                return copy_child_result
         return Success(None)
 
 
