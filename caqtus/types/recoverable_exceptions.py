@@ -65,7 +65,7 @@ def split_recoverable(
     """
 
     if isinstance(exception, BaseExceptionGroup):
-        return exception.split(is_recoverable)
+        return exception.split(is_recoverable)  # type: ignore[reportReturnType]
     else:
         if is_recoverable(exception):
             return exception, None
@@ -73,7 +73,7 @@ def split_recoverable(
             return None, exception
 
 
-class RecoverableException(Exception):
+class RecoverableException(Exception):  # noqa: N818
     """An error that can be recovered from.
 
     This is an error that happen when the user does something wrong, and it is possible
