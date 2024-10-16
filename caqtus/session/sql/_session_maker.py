@@ -19,7 +19,7 @@ from ._async_session import (
 )
 from ._experiment_session import SQLExperimentSession
 from ._serializer import SerializerProtocol
-from .._session_maker import ExperimentSessionMaker
+from .._session_maker import StorageManager
 
 
 # We need to enable foreign key constraints for sqlite databases and not for other
@@ -32,7 +32,7 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.close()
 
 
-class SQLExperimentSessionMaker(ExperimentSessionMaker):
+class SQLStorageManager(StorageManager):
     """Used to access experiment storage were the data are stored in a SQL database.
 
     This session maker can create session that connects to a database using sqlalchemy.
@@ -78,7 +78,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
             self._serializer,
         )
 
-    # The following methods are required to make ExperimentSessionMaker pickleable since
+    # The following methods are required to make the storage manager pickleable since
     # sqlalchemy engine is not pickleable.
     # Only the engine url is pickled so the engine created upon unpickling might not be
     # exactly the same as the original one.
@@ -146,6 +146,10 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         alembic.command.upgrade(alembic_cfg, "head")
 
 
+# Deprecated alias to SQLStorageManager
+SQLExperimentSessionMaker = SQLStorageManager
+
+
 @attrs.define
 class SQLiteConfig:
     """Configuration for connecting to a SQLite database."""
@@ -153,7 +157,7 @@ class SQLiteConfig:
     path: str
 
 
-class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
+class SQLiteStorageManager(SQLStorageManager):
     def __init__(
         self,
         serializer: SerializerProtocol,
@@ -194,6 +198,10 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
         Base.metadata.create_all(self._engine)
 
 
+# Deprecated alias to SQLiteStorageManager
+SQLiteExperimentSessionMaker = SQLiteStorageManager
+
+
 @attrs.define
 class PostgreSQLConfig:
     """Configuration for connecting to a PostgreSQL database."""
@@ -216,7 +224,7 @@ class PostgreSQLConfig:
         return cls(**config)
 
 
-class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
+class PostgreSQLStorageManager(SQLStorageManager):
     """Used to access experiment data stored in a PostgreSQL database."""
 
     def __init__(
@@ -262,6 +270,10 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         config = state.pop("config")
         serializer = state.pop("serializer")
         self.__init__(serializer, config)
+
+
+# Deprecated alias to PostgreSQLStorageManager
+PostgreSQLExperimentSessionMaker = PostgreSQLStorageManager
 
 
 class InvalidDatabaseSchemaError(Exception):
