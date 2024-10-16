@@ -1,8 +1,9 @@
 import pytest
 
-from caqtus.session import PureSequencePath, PathIsSequenceError, State
+from caqtus.session import PureSequencePath, PathIsSequenceError
 from caqtus.session._path_hierarchy import PathExistsError, RecursivePathMoveError
 from caqtus.session._sequence_collection import SequenceRunningError
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils.result import unwrap
 
 
@@ -134,11 +135,11 @@ def test_cant_move_with_sequence_in_dst_path(
 def test_cant_move_running_sequence(session_maker, steps_configuration, time_lanes):
     with session_maker() as session:
         src = PureSequencePath.root() / "src"
-        session.paths.create_path(src)
+        unwrap(session.paths.create_path(src))
 
-        session.sequences.create(src, steps_configuration, time_lanes)
-        session.sequences.set_state(src, State.PREPARING)
-        session.sequences.set_state(src, State.RUNNING)
+        unwrap(session.sequences.create(src, steps_configuration, time_lanes))
+        unwrap(session.sequences.set_preparing(src, {}, ParameterNamespace.empty()))
+        unwrap(session.sequences.set_running(src, start_time="now"))
 
         dst = PureSequencePath.root() / "dst"
         with pytest.raises(SequenceRunningError):

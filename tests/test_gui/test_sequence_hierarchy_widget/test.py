@@ -4,6 +4,7 @@ from pytestqt.modeltest import ModelTester
 from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyModel
 from caqtus.gui.qtutil import qt_trio
 from caqtus.session import PureSequencePath, State
+from caqtus.types.parameter import ParameterNamespace
 
 
 def test_0(session_maker, qtmodeltester: ModelTester):
@@ -38,7 +39,7 @@ def test_2(
     assert index.data().state == State.DRAFT
 
     with session_maker() as session:
-        session.sequences.set_state(path, State.PREPARING)
+        session.sequences.set_preparing(path, {}, ParameterNamespace.empty())
 
     qt_trio.run(model.update_stats, model.index(0, 0))
     assert index.data().state == State.PREPARING
