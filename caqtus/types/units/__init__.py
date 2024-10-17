@@ -20,6 +20,7 @@ from ._units import (
     InvalidDimensionalityError,
     is_quantity,
     is_scalar_quantity,
+    Magnitude,
 )
 from .unit_namespace import units
 
@@ -28,6 +29,7 @@ __all__ = [
     "ureg",
     "unit_registry",
     "Quantity",
+    "Magnitude",
     "Unit",
     "UndefinedUnitError",
     "DimensionalityError",
