@@ -6,9 +6,10 @@ from typing_extensions import TypeIs
 
 from ..recoverable_exceptions import InvalidTypeError
 from ..units import Quantity, Unit, dimensionless, UnitLike
+from ..units._units import FloatArray
 
 ScalarAnalogValue: TypeAlias = float | Quantity[float]
-ArrayAnalogValue: TypeAlias = NDArray[np.floating] | Quantity[NDArray[np.floating]]
+ArrayAnalogValue: TypeAlias = FloatArray | Quantity[FloatArray]
 AnalogValue: TypeAlias = ScalarAnalogValue | ArrayAnalogValue
 
 
@@ -68,7 +69,7 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
 
 @overload
 def magnitude_in_unit[
-    M: float | NDArray[np.floating]
+    M: float | FloatArray
 ](value: Quantity[M], unit: Optional[UnitLike]) -> M: ...
 
 
@@ -77,9 +78,7 @@ def magnitude_in_unit(value: float, unit: Optional[UnitLike]) -> float: ...
 
 
 @overload
-def magnitude_in_unit[
-    A: NDArray[np.floating]
-](value: A, unit: Optional[UnitLike]) -> A: ...
+def magnitude_in_unit[A: FloatArray](value: A, unit: Optional[UnitLike]) -> A: ...
 
 
 def magnitude_in_unit(value, unit):
