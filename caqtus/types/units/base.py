@@ -1,3 +1,15 @@
+"""Utilities to work with base units.
+
+Base units are units that are expressed only as power of SI units.
+For example, `kg`, `m/s`, 'kg*m^2/s**2` are base units, but `mg`, `km/h`, 'J' or `dB`
+are not.
+
+Non-base units are useful for human readability, but some operations are ill-defined
+when using them, especially for non-linear operations.
+It is strongly recommended to convert all values to base units as soon as possible to
+avoid ambiguities.
+"""
+
 from typing import overload, Optional, NewType
 
 from typing_extensions import TypeIs
@@ -10,6 +22,7 @@ from ._units import (
 )
 
 BaseUnit = NewType("BaseUnit", Unit)
+"""A type that represents a unit expressed in base SI units."""
 
 
 def base_units(units: Unit) -> BaseUnit:
