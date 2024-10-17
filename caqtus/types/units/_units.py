@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import importlib.resources
-from typing import NewType
+from collections.abc import Sequence
+from typing import NewType, SupportsFloat
 from typing import overload, Any, Generic
 
 import numpy as np
@@ -55,7 +56,12 @@ class Quantity(
     @overload
     def __new__(cls, value: M, units: V) -> Quantity[M, V]: ...
 
-    def __new__(cls, value: int | Magnitude, units: Unit):
+    @overload
+    def __new__(
+        cls, value: Sequence[SupportsFloat], units: V
+    ) -> Quantity[FloatArray, V]: ...
+
+    def __new__(cls, value: int | Magnitude | Sequence[SupportsFloat], units: Unit):
         if isinstance(value, int):
             return super().__new__(
                 cls,
