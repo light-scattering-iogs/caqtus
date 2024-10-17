@@ -12,7 +12,12 @@ import cattrs.strategies
 
 from ._converter import converter, structure_evaluable_output
 from ._output_mapping import LinearInterpolation
-from .transformation import Transformation, evaluate, EvaluableOutput
+from ._transformation import (
+    Transformation,
+    evaluate,
+    EvaluableOutput,
+    evaluable_output_validator,
+)
 
 cattrs.strategies.include_subclasses(
     Transformation,
@@ -29,4 +34,5 @@ __all__ = [
     "evaluate",
     "EvaluableOutput",
     "converter",
+    "evaluable_output_validator",
 ]

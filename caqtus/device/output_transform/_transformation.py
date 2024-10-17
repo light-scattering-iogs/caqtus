@@ -21,6 +21,7 @@ from caqtus.types.variable_name import DottedVariableName
 class Transformation(abc.ABC):
     """Defines a transformation that can be applied to produce an output value."""
 
+    @abc.abstractmethod
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
         """Evaluates the transformation using the given variables."""
 

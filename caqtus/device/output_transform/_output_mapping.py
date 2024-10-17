@@ -11,6 +11,7 @@ from caqtus.types.parameter import (
     magnitude_in_unit,
     add_unit,
 )
+from caqtus.types.parameter._analog_value import ScalarAnalogValue, ArrayAnalogValue
 from caqtus.types.recoverable_exceptions import NotDefinedUnitError
 from caqtus.types.units import (
     Unit,
@@ -21,14 +22,13 @@ from caqtus.types.units import (
     UndefinedUnitError,
 )
 from caqtus.types.variable_name import DottedVariableName
-from .transformation import (
+from ._transformation import (
     Transformation,
     EvaluableOutput,
     evaluable_output_validator,
     OutputValue,
     evaluate,
 )
-from ...types.parameter._analog_value import ScalarAnalogValue, ArrayAnalogValue
 
 
 def _data_points_converter(data_points: Iterable[tuple[float, float]]):

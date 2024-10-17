@@ -2,7 +2,7 @@ import cattrs.strategies
 
 from caqtus.types.expression import Expression
 from caqtus.utils.serialization import copy_converter
-from .transformation import EvaluableOutput, Transformation
+from ._transformation import EvaluableOutput, Transformation
 
 converter = copy_converter()
 
