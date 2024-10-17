@@ -1,7 +1,7 @@
 __version__ = "0.1.0"
 
 from . import base
-from ._unit_list import SECOND, NANOSECOND
+from ._unit_list import SECOND, NANOSECOND, DECIBEL, MEGAHERTZ
 from ._units import (
     ureg,
     unit_registry,
@@ -52,4 +52,6 @@ __all__ = [
     "is_scalar_quantity",
     "SECOND",
     "NANOSECOND",
+    "DECIBEL",
+    "MEGAHERTZ",
 ]
