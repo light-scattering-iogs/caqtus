@@ -1,23 +1,24 @@
 from __future__ import annotations
 
 import importlib.resources
-from collections.abc import Sequence
-from typing import overload, Self
+from typing import overload, Any
 
+import numpy as np
 import pint._typing
 import pint.facets
 import pint.facets.nonmultiplicative.objects
 import pint.facets.numpy.quantity
 import pint.facets.numpy.unit
-from pint.facets.plain.quantity import ScalarT
 from typing_extensions import TypeIs
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
 
 UnitLike = pint._typing.UnitLike
 
+type FloatArray = np.ndarray[Any, np.dtype[np.floating]]
 
-class Quantity[M: pint._typing.Magnitude](
+
+class Quantity[M: float | FloatArray](
     pint.facets.system.objects.SystemQuantity[M],
     pint.facets.numpy.quantity.NumpyQuantity[M],
     pint.facets.nonmultiplicative.objects.NonMultiplicativeQuantity[M],
@@ -25,29 +26,21 @@ class Quantity[M: pint._typing.Magnitude](
 ):
 
     @overload
-    def __new__(
-        cls, value: int | float, units: UnitLike | None = None
-    ) -> Quantity[float]: ...
+    def __new__(cls, value: int | float, units: UnitLike | None) -> Quantity[float]: ...
 
     @overload
-    def __new__(cls, value: str, units: UnitLike | None = None) -> Self: ...
-
-    @overload
-    def __new__(  # type: ignore[misc]
-        cls, value: Sequence[ScalarT], units: UnitLike | None = None
-    ) -> Self: ...
-
-    @overload
-    def __new__(cls, value: Self, units: UnitLike | None = None) -> Self: ...
+    def __new__[
+        A: FloatArray
+    ](cls, value: A, units: UnitLike | None) -> Quantity[A]: ...
 
     def __new__(cls, value, units=None):
         if isinstance(value, int):
-            return super().__new__(  # pyright: ignore[reportCallIssue]
+            return super().__new__(
                 cls,
-                float(value),  # pyright: ignore[reportArgumentType]
+                float(value),  # type: ignore[reportArgumentType]
                 units,
             )
-        return super().__new__(cls, value, units)
+        return super().__new__(cls, value, units)  # type: ignore[reportArgumentType]
 
     @property
     def units(self) -> Unit:
