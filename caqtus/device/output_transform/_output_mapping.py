@@ -1,26 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Iterable, Sequence
-from typing import Any, Optional, overload, assert_type
+from collections.abc import Mapping, Iterable
+from typing import Any, Optional, assert_type
 
 import attrs
 import numpy as np
 
-import caqtus.formatter as fmt
 from caqtus.types.parameter import (
     magnitude_in_unit,
     add_unit,
 )
-from caqtus.types.parameter._analog_value import ScalarAnalogValue, ArrayAnalogValue
-from caqtus.types.recoverable_exceptions import NotDefinedUnitError
 from caqtus.types.units import (
-    Unit,
-    Quantity,
-    UnitLike,
     DimensionalityError,
     InvalidDimensionalityError,
-    UndefinedUnitError,
+    Unit,
 )
+from caqtus.types.units.base import convert_to_base_units
 from caqtus.types.variable_name import DottedVariableName
 from ._transformation import (
     Transformation,
@@ -72,8 +67,12 @@ class LinearInterpolation(Transformation):
 
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
         input_value = evaluate(self.input_, variables)
+        input_units = Unit(self.input_points_unit) if self.input_points_unit else None
+        output_units = (
+            Unit(self.output_points_unit) if self.output_points_unit else None
+        )
         interpolator = Interpolator(
-            self.measured_data_points, self.input_points_unit, self.output_points_unit
+            self.measured_data_points, input_units, output_units
         )
         try:
             return interpolator(input_value)
@@ -81,57 +80,30 @@ class LinearInterpolation(Transformation):
             raise InvalidDimensionalityError("Invalid dimensionality") from e
 
 
-def to_base_units(
-    values: Sequence[float], required_unit: Optional[UnitLike]
-) -> tuple[Sequence[float], Optional[Unit]]:
-
-    if required_unit is None:
-        return values, None
-    try:
-        unit = Unit(required_unit)
-    except UndefinedUnitError:
-        raise NotDefinedUnitError(f"Undefined {fmt.unit(required_unit)}.") from None
-    base_unit = Quantity(1, unit).to_base_units().units
-    return [
-        Quantity(value, unit).to(base_unit).magnitude for value in values
-    ], base_unit  # pyright: ignore[reportReturnType]
-
-
 class Interpolator:
     def __init__(
         self,
         measured_data_points: Iterable[tuple[float, float]],
-        input_units: Optional[UnitLike],
-        output_units: Optional[UnitLike],
+        input_units: Optional[Unit],
+        output_units: Optional[Unit],
     ):
         measured_data_points = sorted(measured_data_points, key=lambda x: x[0])
-        self.input_points, self.input_unit = to_base_units(
-            [point[0] for point in measured_data_points], input_units
+        self.input_points, self.input_unit = convert_to_base_units(
+            np.array([point[0] for point in measured_data_points]), input_units
         )
-        self.output_points, self.output_unit = to_base_units(
-            [point[1] for point in measured_data_points], output_units
+        self.output_points, self.output_unit = convert_to_base_units(
+            np.array([point[1] for point in measured_data_points]), output_units
         )
 
-    @overload
-    def __call__(self, input_value: ScalarAnalogValue) -> ScalarAnalogValue: ...
-
-    @overload
-    def __call__(self, input_value: ArrayAnalogValue) -> ArrayAnalogValue: ...
-
-    def __call__(self, input_value):
-
-        input_magnitudes = magnitude_in_unit(input_value, self.input_unit)
+    def __call__(self, input_value: OutputValue) -> OutputValue:
+        input_magnitude = magnitude_in_unit(input_value, self.input_unit)
+        assert_type(input_magnitude, float)
 
         output_magnitude = np.interp(
-            x=input_magnitudes,
+            x=input_magnitude,
             xp=self.input_points,
             fp=self.output_points,
             left=self.output_points[0],
             right=self.output_points[-1],
         )
-        if np.isscalar(output_magnitude):
-            assert isinstance(output_magnitude, np.floating)
-            return add_unit(float(output_magnitude), self.output_unit)
-        else:
-            assert_type(output_magnitude, np.ndarray[Any, np.dtype[np.float64]])
-            return add_unit(output_magnitude, self.output_unit)
+        return add_unit(float(output_magnitude), self.output_unit)
