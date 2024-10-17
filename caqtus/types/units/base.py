@@ -10,32 +10,17 @@ It is strongly recommended to convert all values to base units as soon as possib
 avoid ambiguities.
 """
 
-from typing import overload, Optional, NewType
+from typing import overload, Optional
 
 from typing_extensions import TypeIs
 
 from ._units import (
     Unit,
+    BaseUnit,
     Quantity,
     dimensionless,
     Magnitude,
 )
-
-BaseUnit = NewType("BaseUnit", Unit)
-"""A type that represents a unit expressed in base SI units."""
-
-
-def base_units(units: Unit) -> BaseUnit:
-    """Return the base units of the given units.
-
-    Args:
-        units: The units to convert to base units.
-
-    Returns:
-        The base units of the given units.
-    """
-
-    return BaseUnit(Quantity(1.0, units).to_base_units().units)
 
 
 def is_in_base_units(units: Unit) -> TypeIs[BaseUnit]:
@@ -51,7 +36,13 @@ def is_in_base_units(units: Unit) -> TypeIs[BaseUnit]:
         True if the units are expressed in the base units of the registry.
     """
 
-    return base_units(units) == units
+    return units.to_base() == units
+
+
+def is_base_quantity[M: Magnitude](value: Quantity[M]) -> TypeIs[Quantity[M, BaseUnit]]:
+    """Check if the given value is expressed in base units."""
+
+    return is_in_base_units(value.units)
 
 
 @overload
@@ -90,9 +81,3 @@ def convert_to_base_units(
         else:
             assert is_in_base_units(base_units)
         return magnitude_in_base_units, base_units
-
-
-def is_base_quantity[M: Magnitude](value: Quantity[M]) -> TypeIs[Quantity[M, BaseUnit]]:
-    """Check if the given value is expressed in base units."""
-
-    return is_in_base_units(value.units)
