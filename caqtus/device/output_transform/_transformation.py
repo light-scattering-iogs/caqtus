@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Mapping
-from typing import Any, TypeAlias, Union
+from typing import Any, TypeAlias, Union, assert_never
 
 import attrs
-from typing_extensions import assert_never
 
 import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.units import Quantity, is_scalar_quantity
+from caqtus.types.units.base import is_in_base_units
 from caqtus.types.variable_name import DottedVariableName
 
 
@@ -20,7 +20,10 @@ class Transformation(abc.ABC):
 
     @abc.abstractmethod
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
-        """Evaluates the transformation using the given variables."""
+        """Evaluates the transformation using the given variables.
+
+        If the value returned is a quantity, it must be expressed in base units.
+        """
 
         raise NotImplementedError
 
@@ -46,6 +49,7 @@ def evaluate(
     if isinstance(input_, Transformation):
         evaluated = input_.evaluate(variables)
         if is_scalar_quantity(evaluated):
+            assert is_in_base_units(evaluated.units)
             return evaluated.to_base_units()
         else:
             return evaluated
