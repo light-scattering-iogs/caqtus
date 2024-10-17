@@ -4,7 +4,6 @@ import importlib.resources
 from typing import overload, Any, TYPE_CHECKING, Generic
 
 import numpy as np
-import pint._typing
 import pint.facets
 import pint.facets.nonmultiplicative.objects
 import pint.facets.numpy.quantity
@@ -12,20 +11,10 @@ import pint.facets.numpy.unit
 from typing_extensions import TypeIs, TypeVar
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
+from ._unit import Unit
 
 if TYPE_CHECKING:
     from .base import BaseUnit
-
-UnitLike = pint._typing.UnitLike
-
-
-class Unit(
-    pint.facets.SystemRegistry.Unit,
-    pint.facets.numpy.unit.NumpyUnit,
-    pint.facets.nonmultiplicative.objects.NonMultiplicativeUnit,
-    pint.facets.plain.PlainUnit,
-):
-    pass
 
 
 type FloatArray = np.ndarray[Any, np.dtype[np.floating]]

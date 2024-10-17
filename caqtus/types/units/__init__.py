@@ -1,11 +1,11 @@
 __version__ = "0.1.0"
 
 from . import base
+from ._unit import Unit, UnitLike
 from ._units import (
     ureg,
     unit_registry,
     Quantity,
-    Unit,
     UndefinedUnitError,
     DimensionalityError,
     dimensionless,
@@ -16,7 +16,6 @@ from ._units import (
     CURRENT_UNITS,
     VOLTAGE_UNITS,
     UNITS,
-    UnitLike,
     InvalidDimensionalityError,
     is_quantity,
     is_scalar_quantity,
