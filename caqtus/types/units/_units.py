@@ -81,6 +81,11 @@ class Quantity(
         return result
 
     def to_unit(self, unit: V) -> Quantity[M, V]:
+        """
+
+        Raises:
+            DimensionalityError: If the units are not compatible.
+        """
         result = super().to(unit)
         assert isinstance(result, Quantity)
         return result
