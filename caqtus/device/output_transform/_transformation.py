@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Mapping
-from typing import Any, TypeAlias, Union, assert_never, assert_type
+from typing import Any, TypeAlias, Union, assert_never
 
 import attrs
 
 import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
-from caqtus.types.units import is_scalar_quantity, is_quantity
-from caqtus.types.units.base import ScalarBaseQuantity, is_base_quantity, to_base_units
+from caqtus.types.units import is_scalar_quantity, Quantity
+from caqtus.types.units.base import BaseUnit
 from caqtus.types.variable_name import DottedVariableName
 
 
@@ -28,7 +28,7 @@ class Transformation(abc.ABC):
         raise NotImplementedError
 
 
-type OutputValue = float | int | bool | ScalarBaseQuantity
+type OutputValue = float | int | bool | Quantity[float, BaseUnit]
 """A value that can be used to compute the output of a device.
 
 If the value is a quantity, it must be a scalar and expressed in base units.
@@ -50,20 +50,14 @@ def evaluate(
     """
 
     if isinstance(input_, Transformation):
-        evaluated = input_.evaluate(variables)
-        if is_quantity(evaluated):
-            assert_type(evaluated, ScalarBaseQuantity)
-            assert is_scalar_quantity(evaluated) and is_base_quantity(evaluated)
-            return evaluated
-        else:
-            return evaluated
+        return input_.evaluate(variables)
     elif isinstance(input_, Expression):
         evaluated = input_.evaluate(variables)
 
         if isinstance(evaluated, (float, int, bool)):
             return evaluated
         elif is_scalar_quantity(evaluated):
-            return to_base_units(evaluated)
+            return evaluated.to_base_units()
         else:
             raise InvalidTypeError(
                 f"{fmt.expression(input_)} does not evaluate to a parameter, "
