@@ -20,8 +20,7 @@ from caqtus.shot_compilation.timed_instructions import (
     Ramp,
     create_ramp,
 )
-from caqtus.types.units import Unit, InvalidDimensionalityError
-from caqtus.types.units.base import convert_to_base_units
+from caqtus.types.units import Unit, InvalidDimensionalityError, Quantity, dimensionless
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.itertools import pairwise
 from .channel_output import ChannelOutput
@@ -157,16 +156,16 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
         return apply_piecewise_linear_calibration(
             input_values,
             self.measured_data_points,
-            Unit(self.input_units) if self.input_units is not None else None,
-            Unit(self.output_units) if self.output_units is not None else None,
+            Unit(self.input_units) if self.input_units is not None else dimensionless,
+            Unit(self.output_units) if self.output_units is not None else dimensionless,
         )
 
 
 def apply_piecewise_linear_calibration(
     values: DimensionedSeries[np.floating],
     calibration_points: Sequence[tuple[float, float]],
-    input_point_units: Optional[Unit],
-    output_point_units: Optional[Unit],
+    input_point_units: Unit,
+    output_point_units: Unit,
 ) -> DimensionedSeries[np.float64]:
     """Apply a piecewise linear calibration to a sequencer instruction.
 
@@ -191,27 +190,25 @@ def apply_piecewise_linear_calibration(
             are not compatible with the units of the values to map.
     """
 
-    input_points = np.array([x for x, _ in calibration_points], dtype=np.float64)
-    output_points = np.array([y for _, y in calibration_points], dtype=np.float64)
-    input_magnitudes, input_base_units = convert_to_base_units(
-        input_points, input_point_units
-    )
-    output_magnitudes, output_base_units = convert_to_base_units(
-        output_points, output_point_units
-    )
+    input_points = Quantity(
+        [x for x, _ in calibration_points], input_point_units
+    ).to_base_units()
+    output_points = Quantity(
+        [y for _, y in calibration_points], output_point_units
+    ).to_base_units()
 
-    if input_base_units != values.units:
+    if input_points.units != values.units:
         raise InvalidDimensionalityError(
-            f"Can't apply calibration with units {input_base_units} to "
+            f"Can't apply calibration with units {input_points.units} to "
             f"instruction with units {values.units}"
         )
 
     calibration = DimensionlessCalibration(
-        list(zip(input_magnitudes, output_magnitudes, strict=True))
+        list(zip(input_points.magnitude, output_points.magnitude, strict=True))
     )
     return DimensionedSeries(
         calibration.apply(values.values.as_type(np.dtype(np.float64))),
-        output_base_units,
+        output_points.units,
     )
 
 
