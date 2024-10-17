@@ -405,10 +405,10 @@ async def send_fast(
         return stream.send_nowait(value)
     except anyio.WouldBlock:
         try:
-            with anyio.fail_after(1):
+            with anyio.fail_after(5):
                 await stream.send(value)
         except TimeoutError:
-            raise RuntimeError(f"Could not push value to {stream_name}") from None
+            raise RuntimeError("Data could not be saved after 5 s") from None
         message = (
             "The experiment produces data faster than it is consumed."
             "This might cause a slowdown of the experiment."
