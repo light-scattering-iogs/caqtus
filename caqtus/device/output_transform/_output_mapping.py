@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Iterable
-from typing import Any, Optional, assert_type
+from collections.abc import Mapping, Iterable, Sequence
+from typing import Any, Optional
 
 import attrs
 import numpy as np
 
-from caqtus.types.parameter import (
-    magnitude_in_unit,
-    add_unit,
-)
 from caqtus.types.units import (
     DimensionalityError,
     InvalidDimensionalityError,
     Unit,
+    Quantity,
+    dimensionless,
 )
-from caqtus.types.units.base import convert_to_base_units
 from caqtus.types.variable_name import DottedVariableName
 from ._transformation import (
     Transformation,
@@ -24,7 +21,6 @@ from ._transformation import (
     OutputValue,
     evaluate,
 )
-from ...types.units.base import convert_to_base_units
 
 
 def _data_points_converter(data_points: Iterable[tuple[float, float]]):
@@ -68,12 +64,10 @@ class LinearInterpolation(Transformation):
 
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
         input_value = evaluate(self.input_, variables)
-        input_units = Unit(self.input_points_unit) if self.input_points_unit else None
-        output_units = (
-            Unit(self.output_points_unit) if self.output_points_unit else None
-        )
         interpolator = Interpolator(
-            self.measured_data_points, input_units, output_units
+            self.measured_data_points,
+            Unit(self.input_points_unit) if self.input_points_unit else dimensionless,
+            Unit(self.output_points_unit) if self.output_points_unit else dimensionless,
         )
         try:
             return interpolator(input_value)
@@ -84,27 +78,25 @@ class LinearInterpolation(Transformation):
 class Interpolator:
     def __init__(
         self,
-        measured_data_points: Iterable[tuple[float, float]],
-        input_units: Optional[Unit],
-        output_units: Optional[Unit],
+        measured_data_points: Sequence[tuple[float, float]],
+        input_units: Unit,
+        output_units: Unit,
     ):
         measured_data_points = sorted(measured_data_points, key=lambda x: x[0])
-        self.input_points, self.input_unit = convert_to_base_units(
-            np.array([point[0] for point in measured_data_points]), input_units
-        )
-        self.output_points, self.output_unit = convert_to_base_units(
-            np.array([point[1] for point in measured_data_points]), output_units
-        )
+        self.input_points = Quantity(
+            [point[0] for point in measured_data_points], input_units
+        ).to_base_units()
+        self.output_points = Quantity(
+            [point[1] for point in measured_data_points], output_units
+        ).to_base_units()
 
     def __call__(self, input_value: OutputValue) -> OutputValue:
-        input_magnitude = magnitude_in_unit(input_value, self.input_unit)
-        assert_type(input_magnitude, float)
+        if not isinstance(input_value, Quantity):
+            input_value = Quantity(input_value, dimensionless)
 
         output_magnitude = np.interp(
-            x=input_magnitude,
-            xp=self.input_points,
-            fp=self.output_points,
-            left=self.output_points[0],
-            right=self.output_points[-1],
+            x=input_value.to_unit(self.input_points.units).magnitude,
+            xp=self.input_points.magnitude,
+            fp=self.output_points.magnitude,
         )
-        return add_unit(float(output_magnitude), self.output_unit)
+        return Quantity(float(output_magnitude), self.output_points.units)
