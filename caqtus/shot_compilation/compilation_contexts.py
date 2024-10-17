@@ -11,9 +11,14 @@ from caqtus.types.variable_name import DottedVariableName
 from .timing import to_time, get_step_bounds, Time
 from ..formatter import fmt
 from ..types.expression import Expression
-from ..types.parameter import is_quantity, magnitude_in_unit, NotQuantityError
+from ..types.parameter import NotQuantityError
 from ..types.recoverable_exceptions import InvalidValueError, EvaluationError
-from ..types.units import DimensionalityError, InvalidDimensionalityError
+from ..types.units import (
+    DimensionalityError,
+    InvalidDimensionalityError,
+    SECOND,
+    is_scalar_quantity,
+)
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import DeviceCompiler
@@ -242,18 +247,18 @@ def evaluate_step_durations(
                 )
             ) from e
 
-        if not is_quantity(evaluated):
+        if not is_scalar_quantity(evaluated):
             raise NotQuantityError(
                 fmt(
                     "{:expression} for duration of {:step} does not evaluate "
-                    "to a quantity",
+                    "to a scalar quantity",
                     duration,
                     (step, name),
                 )
             )
 
         try:
-            seconds = float(magnitude_in_unit(evaluated, "s"))
+            seconds = evaluated.to_unit(SECOND).magnitude
         except DimensionalityError as error:
             raise InvalidDimensionalityError(
                 fmt(
