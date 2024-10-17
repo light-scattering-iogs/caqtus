@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import importlib.resources
-from typing import overload, Any
+from typing import overload, Any, TYPE_CHECKING
 
 import numpy as np
 import pint._typing
@@ -13,57 +13,12 @@ from typing_extensions import TypeIs
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
 
+if TYPE_CHECKING:
+    from .base import BaseUnit
+
 UnitLike = pint._typing.UnitLike
 
 type FloatArray = np.ndarray[Any, np.dtype[np.floating]]
-
-
-class Quantity[M: float | FloatArray](
-    pint.facets.system.objects.SystemQuantity[M],
-    pint.facets.numpy.quantity.NumpyQuantity[M],
-    pint.facets.nonmultiplicative.objects.NonMultiplicativeQuantity[M],
-    pint.facets.plain.PlainQuantity[M],
-):
-
-    @overload
-    def __new__(cls, value: int | float, units: UnitLike | None) -> Quantity[float]: ...
-
-    @overload
-    def __new__[
-        A: FloatArray
-    ](cls, value: A, units: UnitLike | None) -> Quantity[A]: ...
-
-    def __new__(cls, value, units=None):
-        if isinstance(value, int):
-            return super().__new__(
-                cls,
-                float(value),  # type: ignore[reportArgumentType]
-                units,
-            )
-        return super().__new__(cls, value, units)  # type: ignore[reportArgumentType]
-
-    @property
-    def units(self) -> Unit:
-        u = super().units
-        assert isinstance(u, Unit)
-        return u
-
-    def to_base_units(self) -> Quantity[M]:
-        result = super().to_base_units()
-        assert isinstance(result, Quantity)
-        return result
-
-
-def is_quantity(value) -> TypeIs[Quantity]:
-    """Returns True if the value is a quantity, False otherwise."""
-
-    return isinstance(value, Quantity)
-
-
-def is_scalar_quantity(value) -> TypeIs[Quantity[float]]:
-    """Returns True if the value is a scalar quantity, False otherwise."""
-
-    return is_quantity(value) and isinstance(value.magnitude, float)
 
 
 class Unit(
@@ -75,9 +30,57 @@ class Unit(
     pass
 
 
+class Quantity[M: float | FloatArray, U: Unit](
+    pint.facets.system.objects.SystemQuantity[M],
+    pint.facets.numpy.quantity.NumpyQuantity[M],
+    pint.facets.nonmultiplicative.objects.NonMultiplicativeQuantity[M],
+    pint.facets.plain.PlainQuantity[M],
+):
+    @overload
+    def __new__[
+        U1: Unit
+    ](cls, value: int | float, units: U1) -> Quantity[float, U1]: ...
+
+    @overload
+    def __new__[
+        A: FloatArray, U1: Unit
+    ](cls, value: A, units: U1) -> Quantity[A, U1]: ...
+
+    def __new__(cls, value: int | float | FloatArray, units: Unit) -> Quantity:
+        if isinstance(value, int):
+            return super().__new__(
+                cls,
+                float(value),  # type: ignore[reportArgumentType]
+                units,
+            )
+        return super().__new__(cls, value, units)  # type: ignore[reportArgumentType]
+
+    @property
+    def units(self) -> U:
+        u = super().units
+        return u  # type: ignore[reportReturnType]
+
+    def to_base_units(self) -> Quantity[M, "BaseUnit"]:
+        result = super().to_base_units()
+        assert isinstance(result, Quantity)
+        return result
+
+
+def is_quantity(value) -> TypeIs[Quantity]:
+    """Returns True if the value is a quantity, False otherwise."""
+
+    return isinstance(value, Quantity)
+
+
+def is_scalar_quantity(value) -> TypeIs[Quantity[float, Unit]]:
+    """Returns True if the value is a scalar quantity, False otherwise."""
+
+    return is_quantity(value) and isinstance(value.magnitude, float)
+
+
 class UnitRegistry(pint.UnitRegistry):
-    Quantity = Quantity  # pyright: ignore[reportAssignmentType]
-    Unit = Unit  # pyright: ignore[reportAssignmentType]
+    Quantity = Quantity  # type: ignore[reportAssignmentType]
+    Unit = Unit  # type: ignore[reportAssignmentType]
 
 
 units_definition_file = importlib.resources.files("caqtus.types.units").joinpath(
@@ -96,7 +99,7 @@ pint.set_application_registry(unit_registry)
 UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
-dimensionless = Quantity(1, "").units
+dimensionless = Unit("dimensionless")
 
 TIME_UNITS = {"s", "ms", "µs", "us", "ns"}
 
