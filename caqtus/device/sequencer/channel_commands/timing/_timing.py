@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Optional, Any
+from typing import Any
 
 import attrs
-import numpy as np
 
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
-from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.recoverable_exceptions import InvalidValueError
-from caqtus.types.units import Unit
+from caqtus.types.units import (
+    is_scalar_quantity,
+    DimensionalityError,
+    InvalidDimensionalityError,
+    NANOSECOND,
+)
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_output import ChannelOutput
 from ...timing import TimeStep
@@ -37,8 +40,8 @@ class Advance(ChannelOutput):
         append: int,
         shot_context: ShotContext,
     ):
-        evaluated_advance = _evaluate_expression_in_unit(
-            self.advance, Unit("ns"), shot_context.get_parameters()
+        evaluated_advance = _evaluate_in_nanoseconds(
+            self.advance, shot_context.get_parameters()
         )
         number_ticks_to_advance = round(evaluated_advance / float(required_time_step))
         if number_ticks_to_advance < 0:
@@ -63,7 +66,7 @@ class Advance(ChannelOutput):
         time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
-        advance = _evaluate_expression_in_unit(self.advance, Unit("ns"), variables)
+        advance = _evaluate_in_nanoseconds(self.advance, variables)
         if advance < 0:
             raise InvalidValueError("Advance must be a positive number.")
         advance_ticks = round(advance / float(time_step))
@@ -94,8 +97,8 @@ class Delay(ChannelOutput):
         append: int,
         shot_context: ShotContext,
     ):
-        evaluated_delay = _evaluate_expression_in_unit(
-            self.delay, Unit("ns"), shot_context.get_variables()
+        evaluated_delay = _evaluate_in_nanoseconds(
+            self.delay, shot_context.get_parameters()
         )
         number_ticks_to_delay = round(evaluated_delay / float(required_time_step))
         if number_ticks_to_delay < 0:
@@ -120,7 +123,7 @@ class Delay(ChannelOutput):
         time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
-        delay = _evaluate_expression_in_unit(self.delay, Unit("ns"), variables)
+        delay = _evaluate_in_nanoseconds(self.delay, variables)
         if delay < 0:
             raise ValueError("Delay must be a positive number.")
         delay_ticks = round(delay / float(time_step))
@@ -130,11 +133,16 @@ class Delay(ChannelOutput):
         return input_advance, delay_ticks + input_delay
 
 
-def _evaluate_expression_in_unit(
-    expression: Expression,
-    required_unit: Optional[Unit],
-    variables: Mapping[DottedVariableName, Any],
-) -> np.floating:
-    value = expression.evaluate(variables)
-    magnitude = magnitude_in_unit(value, required_unit)
-    return magnitude
+def _evaluate_in_nanoseconds(
+    expression: Expression, variables: Mapping[DottedVariableName, Any]
+) -> float:
+    evaluated = expression.evaluate(variables)
+    if not is_scalar_quantity(evaluated):
+        raise InvalidValueError("Advance must be a scalar quantity.")
+    try:
+        evaluated_advance = evaluated.to_unit(NANOSECOND).magnitude
+    except DimensionalityError as e:
+        raise InvalidDimensionalityError(
+            f"Advance must be expressed in seconds, not {evaluated.units}"
+        ) from e
+    return evaluated_advance
