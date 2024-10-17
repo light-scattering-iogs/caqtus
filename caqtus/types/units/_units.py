@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import importlib.resources
-from typing import overload, Any, TYPE_CHECKING
+from typing import overload, Any, TYPE_CHECKING, Generic
 
 import numpy as np
 import pint._typing
@@ -9,7 +9,7 @@ import pint.facets
 import pint.facets.nonmultiplicative.objects
 import pint.facets.numpy.quantity
 import pint.facets.numpy.unit
-from typing_extensions import TypeIs
+from typing_extensions import TypeIs, TypeVar
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
 
@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from .base import BaseUnit
 
 UnitLike = pint._typing.UnitLike
-
-type FloatArray = np.ndarray[Any, np.dtype[np.floating]]
 
 
 class Unit(
@@ -30,23 +28,30 @@ class Unit(
     pass
 
 
-class Quantity[M: float | FloatArray, U: Unit](
+type FloatArray = np.ndarray[Any, np.dtype[np.floating]]
+type Magnitude = float | FloatArray
+
+
+M = TypeVar("M", bound=Magnitude, default=Magnitude)
+U = TypeVar("U", bound=Unit, covariant=True, default=Unit)
+V = TypeVar("V", bound=Unit, covariant=True, default=Unit)
+A = TypeVar("A", bound=FloatArray, covariant=True, default=FloatArray)
+
+
+class Quantity(
     pint.facets.system.objects.SystemQuantity[M],
     pint.facets.numpy.quantity.NumpyQuantity[M],
     pint.facets.nonmultiplicative.objects.NonMultiplicativeQuantity[M],
     pint.facets.plain.PlainQuantity[M],
+    Generic[M, U],
 ):
     @overload
-    def __new__[
-        U1: Unit
-    ](cls, value: int | float, units: U1) -> Quantity[float, U1]: ...
+    def __new__(cls, value: int, units: V) -> Quantity[float, V]: ...
 
     @overload
-    def __new__[
-        A: FloatArray, U1: Unit
-    ](cls, value: A, units: U1) -> Quantity[A, U1]: ...
+    def __new__(cls, value: M, units: V) -> Quantity[M, V]: ...
 
-    def __new__(cls, value: int | float | FloatArray, units: Unit) -> Quantity:
+    def __new__(cls, value: int | Magnitude, units: Unit):
         if isinstance(value, int):
             return super().__new__(
                 cls,
@@ -72,7 +77,7 @@ def is_quantity(value) -> TypeIs[Quantity]:
     return isinstance(value, Quantity)
 
 
-def is_scalar_quantity(value) -> TypeIs[Quantity[float, Unit]]:
+def is_scalar_quantity(value) -> TypeIs[Quantity[float]]:
     """Returns True if the value is a scalar quantity, False otherwise."""
 
     return is_quantity(value) and isinstance(value.magnitude, float)
