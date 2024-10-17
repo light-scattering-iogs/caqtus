@@ -1,12 +1,12 @@
 from typing import Any, Optional, overload, TypeAlias
 
 import numpy as np
-from numpy.typing import NDArray
 from typing_extensions import TypeIs
 
 from ..recoverable_exceptions import InvalidTypeError
 from ..units import Quantity, Unit, dimensionless, UnitLike
 from ..units._units import FloatArray
+from ..units.base import BaseUnit, ArrayBaseQuantity, ScalarBaseQuantity
 
 ScalarAnalogValue: TypeAlias = float | Quantity[float]
 ArrayAnalogValue: TypeAlias = FloatArray | Quantity[FloatArray]
@@ -101,7 +101,11 @@ def add_unit(magnitude: float, unit: None) -> float: ...
 
 
 @overload
-def add_unit(magnitude: NDArray[np.floating], unit: None) -> NDArray[np.floating]: ...
+def add_unit(magnitude: FloatArray, unit: None) -> FloatArray: ...
+
+
+@overload
+def add_unit(magnitude: float, unit: BaseUnit) -> ScalarBaseQuantity: ...
 
 
 @overload
@@ -109,12 +113,16 @@ def add_unit(magnitude: float, unit: Unit) -> Quantity[float]: ...
 
 
 @overload
+def add_unit(magnitude: FloatArray, unit: BaseUnit) -> ArrayBaseQuantity: ...
+
+
+@overload
+def add_unit(magnitude: FloatArray, unit: Unit) -> Quantity[FloatArray]: ...
+
+
 def add_unit(
-    magnitude: NDArray[np.floating], unit: Unit
-) -> Quantity[NDArray[np.floating]]: ...
-
-
-def add_unit(magnitude, unit):
+    magnitude: float | FloatArray, unit: Optional[Unit]
+) -> float | FloatArray | Quantity[float] | Quantity[FloatArray]:
     """Add a unit to a magnitude."""
 
     if unit is None:
