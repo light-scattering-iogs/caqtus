@@ -10,6 +10,7 @@ import pint.facets.nonmultiplicative.objects
 import pint.facets.numpy.quantity
 import pint.facets.numpy.unit
 from pint.facets.plain.quantity import ScalarT
+from typing_extensions import TypeIs
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
 
@@ -58,6 +59,18 @@ class Quantity[M: pint._typing.Magnitude](
         result = super().to_base_units()
         assert isinstance(result, Quantity)
         return result
+
+
+def is_quantity(value) -> TypeIs[Quantity]:
+    """Returns True if the value is a quantity, False otherwise."""
+
+    return isinstance(value, Quantity)
+
+
+def is_scalar_quantity(value) -> TypeIs[Quantity[float]]:
+    """Returns True if the value is a scalar quantity, False otherwise."""
+
+    return is_quantity(value) and isinstance(value.magnitude, float)
 
 
 class Unit(

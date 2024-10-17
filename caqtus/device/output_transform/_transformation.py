@@ -5,15 +5,12 @@ from collections.abc import Mapping
 from typing import Any, TypeAlias, Union
 
 import attrs
+from typing_extensions import assert_never
 
 import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
-from caqtus.types.parameter import (
-    Parameter,
-    is_parameter,
-    is_quantity,
-)
 from caqtus.types.recoverable_exceptions import InvalidTypeError
+from caqtus.types.units import Quantity, is_scalar_quantity
 from caqtus.types.variable_name import DottedVariableName
 
 
@@ -28,7 +25,7 @@ class Transformation(abc.ABC):
         raise NotImplementedError
 
 
-OutputValue: TypeAlias = Parameter
+type OutputValue = float | Quantity[float] | int | bool
 """A value that can be used to compute the output of a device."""
 
 EvaluableOutput: TypeAlias = Union[Expression, Transformation]
@@ -41,26 +38,30 @@ Evaluable object can be used in the :func:`evaluate` function.
 def evaluate(
     input_: EvaluableOutput, variables: Mapping[DottedVariableName, Any]
 ) -> OutputValue:
-    """Evaluates the input and returns the result as a parameter."""
+    """Evaluates the input and returns the result as a parameter.
 
-    evaluated = input_.evaluate(variables)
+    If the evaluated input is a quantity, it is converted to its base units.
+    """
 
-    if not is_parameter(evaluated):
-        if isinstance(input_, Expression):
+    if isinstance(input_, Transformation):
+        evaluated = input_.evaluate(variables)
+        if is_scalar_quantity(evaluated):
+            return evaluated.to_base_units()
+        else:
+            return evaluated
+    elif isinstance(input_, Expression):
+        evaluated = input_.evaluate(variables)
+
+        if isinstance(evaluated, (float, int, bool)):
+            return evaluated
+        elif is_scalar_quantity(evaluated):
+            return evaluated.to_base_units()
+        else:
             raise InvalidTypeError(
                 f"{fmt.expression(input_)} does not evaluate to a parameter, "
                 f"got {fmt.type_(type(evaluated))}.",
             )
-        # We only make the error recoverable if the user messed up the expression.
-        # Otherwise, it is a bug because transformations should always return an output
-        # value.
-        raise TypeError(f"Expected {OutputValue}, got {type(evaluated)}.")
-
-    if is_quantity(evaluated):
-        # We convert to base units ASAP to avoid dealing with non-linear units like dB
-        # and dBm.
-        return evaluated.to_base_units()
-    return evaluated
+    assert_never(input_)
 
 
 evaluable_output_validator = attrs.validators.instance_of((Expression, Transformation))
