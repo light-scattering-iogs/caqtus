@@ -1,14 +1,15 @@
-from typing import overload, Optional, Any, NewType
+from typing import overload, Optional, NewType
 
-import numpy as np
 from typing_extensions import TypeIs
 
-from . import is_scalar_quantity
-from ._units import Unit, Quantity, dimensionless, FloatArray
+from ._units import (
+    Unit,
+    Quantity,
+    dimensionless,
+    Magnitude,
+)
 
 BaseUnit = NewType("BaseUnit", Unit)
-ScalarBaseQuantity = NewType("ScalarBaseQuantity", Quantity[float])
-ArrayBaseQuantity = NewType("ArrayBaseQuantity", Quantity[FloatArray])
 
 
 def base_units(units: Unit) -> BaseUnit:
@@ -41,30 +42,18 @@ def is_in_base_units(units: Unit) -> TypeIs[BaseUnit]:
 
 
 @overload
-def convert_to_base_units(magnitude: float, unit: None) -> tuple[float, None]: ...
+def convert_to_base_units[M: Magnitude](magnitude: M, unit: None) -> tuple[M, None]: ...
 
 
 @overload
 def convert_to_base_units[
-    A: np.ndarray[Any, np.dtype[np.floating]]
-](magnitude: A, unit: None) -> tuple[A, None]: ...
-
-
-@overload
-def convert_to_base_units(
-    magnitude: float, unit: Unit
-) -> tuple[float, Optional[BaseUnit]]: ...
-
-
-@overload
-def convert_to_base_units[
-    A: np.ndarray[Any, np.dtype[np.floating]]
-](magnitude: A, unit: Unit) -> tuple[A, Optional[BaseUnit]]: ...
+    M: Magnitude
+](magnitude: M, unit: Unit) -> tuple[M, Optional[BaseUnit]]: ...
 
 
 def convert_to_base_units(
-    magnitude: float | np.ndarray[Any, np.dtype[np.floating]], unit: Optional[Unit]
-):
+    magnitude: Magnitude, unit: Optional[Unit]
+) -> tuple[Magnitude, Optional[BaseUnit]]:
     """Convert values into base units.
 
     Args:
@@ -90,31 +79,9 @@ def convert_to_base_units(
         return magnitude_in_base_units, base_units
 
 
-def is_base_quantity(value: Quantity) -> TypeIs[ScalarBaseQuantity | ArrayBaseQuantity]:
+def is_base_quantity[
+    M: Magnitude
+](value: Quantity[M, Unit]) -> TypeIs[Quantity[M, BaseUnit]]:
     """Check if the given value is expressed in base units."""
 
     return is_in_base_units(value.units)
-
-
-@overload
-def to_base_units(quantity: Quantity[float]) -> ScalarBaseQuantity: ...
-
-
-@overload
-def to_base_units(quantity: Quantity[FloatArray]) -> ArrayBaseQuantity: ...
-
-
-def to_base_units(quantity: Quantity) -> ScalarBaseQuantity | ArrayBaseQuantity:
-    """Convert the given quantity to base units.
-
-    Args:
-        quantity: The quantity to convert.
-
-    Returns:
-        The quantity expressed in base units.
-    """
-
-    if is_scalar_quantity(quantity):
-        return ScalarBaseQuantity(quantity.to_base_units())
-    else:
-        return ArrayBaseQuantity(quantity.to_base_units())
