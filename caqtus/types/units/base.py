@@ -3,6 +3,7 @@ from typing import overload, Optional, Any, NewType
 import numpy as np
 from typing_extensions import TypeIs
 
+from . import is_scalar_quantity
 from ._units import Unit, Quantity, dimensionless, FloatArray
 
 BaseUnit = NewType("BaseUnit", Unit)
@@ -87,3 +88,33 @@ def convert_to_base_units(
         else:
             assert is_in_base_units(base_units)
         return magnitude_in_base_units, base_units
+
+
+def is_base_quantity(value: Quantity) -> TypeIs[ScalarBaseQuantity | ArrayBaseQuantity]:
+    """Check if the given value is expressed in base units."""
+
+    return is_in_base_units(value.units)
+
+
+@overload
+def to_base_units(quantity: Quantity[float]) -> ScalarBaseQuantity: ...
+
+
+@overload
+def to_base_units(quantity: Quantity[FloatArray]) -> ArrayBaseQuantity: ...
+
+
+def to_base_units(quantity: Quantity) -> ScalarBaseQuantity | ArrayBaseQuantity:
+    """Convert the given quantity to base units.
+
+    Args:
+        quantity: The quantity to convert.
+
+    Returns:
+        The quantity expressed in base units.
+    """
+
+    if is_scalar_quantity(quantity):
+        return ScalarBaseQuantity(quantity.to_base_units())
+    else:
+        return ArrayBaseQuantity(quantity.to_base_units())
