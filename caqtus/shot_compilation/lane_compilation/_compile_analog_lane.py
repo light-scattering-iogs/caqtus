@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import collections
 from collections.abc import Sequence, Mapping
-from numbers import Real
 from typing import assert_never, Optional, Any
 
 import attrs
@@ -10,6 +9,7 @@ import numpy as np
 import numpy.typing as npt
 
 import caqtus.formatter as fmt
+from caqtus.device.output_transform import evaluate
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import AnalogTimeLane, Ramp, Block
@@ -17,11 +17,11 @@ from caqtus.types.units import (
     ureg,
     Quantity,
     dimensionless,
-    UnitLike,
     InvalidDimensionalityError,
     Unit,
+    is_scalar_quantity,
 )
-from caqtus.types.units.base import is_in_base_units
+from caqtus.types.units.base import is_in_base_units, BaseUnit
 from caqtus.types.variable_name import VariableName, DottedVariableName
 from ..timed_instructions import (
     TimedInstruction,
@@ -41,24 +41,20 @@ class DimensionedSeries[T: (np.number, np.bool_)]:
     Parameters:
         values: The sequence of values to output.
         units: The units in which the values are expressed.
-            The units must be expressed in the base units of the registry.
-            If the values are dimensionless, the units must be `None`.
+            They must be in base SI units.
     """
 
     values: TimedInstruction[T]
-    units: Optional[Unit] = attrs.field(
-        validator=attrs.validators.optional(attrs.validators.instance_of(Unit))
-    )
+    units: BaseUnit = attrs.field()
 
-    @units.validator  # type: ignore
-    def _validate_units(self, _, units: Optional[Unit]):
-        if units is not None:
-            if not is_in_base_units(units):
-                raise ValueError(
-                    f"Unit {units} is not expressed in the base units of the registry."
-                )
-            if units.is_compatible_with(dimensionless):
-                raise ValueError(f"Unit {units} is dimensionless and must be None.")
+    @units.validator  # type: ignore[reportAttributeAccessIssue]
+    def _validate_units(self, _, units):
+        if not isinstance(units, Unit):
+            raise TypeError(f"Expected a unit, got {type(units)}")
+        if not is_in_base_units(units):
+            raise ValueError(
+                f"Unit {units} is not expressed in the base units of the registry."
+            )
 
 
 def compile_analog_lane(
@@ -170,8 +166,8 @@ def compile_analog_lane(
 
 
 def get_unique_units(
-    units: Mapping[Block, Optional[UnitLike]]
-) -> dict[Optional[UnitLike], list[Block]]:
+    units: Mapping[Block, Optional[Unit]]
+) -> dict[Optional[Unit], list[Block]]:
     unique_units = collections.defaultdict(list)
 
     for block, unit in units.items():
@@ -201,23 +197,19 @@ def evaluate_constant_expression(
     variables: Mapping[DottedVariableName, Any],
     length: int,
 ) -> ConstantBlockResult:
-    value = expression.evaluate(variables)
-    if isinstance(value, Quantity):
-        in_base_units = value.to_base_units()
-        magnitude = in_base_units.magnitude
-        unit = in_base_units.units
+    value = evaluate(expression, variables)
+
+    if is_scalar_quantity(value):
         return ConstantBlockResult(
-            value=float(magnitude),
+            value=value.magnitude,
             length=length,
-            unit=(
-                unit if unit != dimensionless else None
-            ),  # pyright: ignore[reportArgumentType]
+            unit=value.units,
         )
-    elif isinstance(value, Real):
+    elif isinstance(value, float):
         return ConstantBlockResult(
-            value=float(value),
+            value=value,
             length=length,
-            unit=None,
+            unit=dimensionless,
         )
     else:
         raise InvalidValueError(
@@ -262,7 +254,7 @@ def evaluate_time_dependent_expression(
         unit = in_base_units.units
     elif isinstance(evaluated, np.ndarray):
         magnitudes = evaluated
-        unit = None
+        unit = dimensionless
     else:
         raise InvalidTypeError(
             f"{fmt.expression(expression)} does not evaluate to a series of values"
@@ -275,9 +267,7 @@ def evaluate_time_dependent_expression(
         )
     return TimeDependentBlockResult(
         values=magnitudes[1:-1].astype(np.float64),
-        unit=(
-            unit if unit != dimensionless else None
-        ),  # pyright: ignore[reportArgumentType]
+        unit=unit,
         initial_value=float(magnitudes[0]),
         final_value=float(magnitudes[-1]),
     )
@@ -351,7 +341,7 @@ class ConstantBlockResult:
 
     value: float
     length: int
-    unit: Optional[Unit]
+    unit: BaseUnit
 
     def get_initial_value(self) -> float:
         return self.value
@@ -368,7 +358,7 @@ class TimeDependentBlockResult:
     """Result of compiling a time-dependent block."""
 
     values: npt.NDArray[np.float64]
-    unit: Optional[Unit]
+    unit: BaseUnit
 
     initial_value: float
     final_value: float
@@ -401,7 +391,7 @@ class RampBlockResult:
     final_value: float
     length: int
 
-    unit: Optional[Unit]
+    unit: BaseUnit
 
     @classmethod
     def through_two_points(
@@ -411,7 +401,7 @@ class RampBlockResult:
         t1: Time,
         v1: float,
         time_step: Time,
-        unit: Optional[UnitLike],
+        unit: BaseUnit,
     ) -> RampBlockResult:
         def f(t: Time) -> float:
             return float((t - t0) / (t1 - t0)) * (v1 - v0) + v0
@@ -438,7 +428,7 @@ class RampBlockResult:
             initial_value,
             final_value,
             length,
-            unit,  # pyright: ignore[reportArgumentType]
+            unit,
         )
 
     def to_instruction(self) -> TimedInstruction[np.float64]:
