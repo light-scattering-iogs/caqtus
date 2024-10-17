@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib.resources
-from typing import overload, Any, TYPE_CHECKING, Generic
+from typing import NewType
+from typing import overload, Any, Generic
 
 import numpy as np
+import pint._typing
 import pint.facets
 import pint.facets.nonmultiplicative.objects
 import pint.facets.numpy.quantity
@@ -11,15 +13,28 @@ import pint.facets.numpy.unit
 from typing_extensions import TypeIs, TypeVar
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
-from ._unit import Unit
 
-if TYPE_CHECKING:
-    from .base import BaseUnit
+UnitLike = pint._typing.UnitLike
+
+
+class Unit(
+    pint.facets.SystemRegistry.Unit,
+    pint.facets.numpy.unit.NumpyUnit,
+    pint.facets.nonmultiplicative.objects.NonMultiplicativeUnit,
+    pint.facets.plain.PlainUnit,
+):
+    def to_base(self) -> BaseUnit:
+        """Convert the unit to base units."""
+
+        return BaseUnit(Quantity(1.0, self).to_base_units().units)
+
+
+BaseUnit = NewType("BaseUnit", Unit)
+"""A type that represents a unit expressed in base SI units."""
 
 
 type FloatArray = np.ndarray[Any, np.dtype[np.floating]]
 type Magnitude = float | FloatArray
-
 
 M = TypeVar("M", bound=Magnitude, default=Magnitude)
 U = TypeVar("U", bound=Unit, covariant=True, default=Unit)
