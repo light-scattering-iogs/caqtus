@@ -20,6 +20,7 @@ from ._units import (
     is_scalar_quantity,
     Magnitude,
     Unit,
+    BaseUnit,
     UnitLike,
 )
 from .unit_namespace import units
@@ -31,6 +32,7 @@ __all__ = [
     "Quantity",
     "Magnitude",
     "Unit",
+    "BaseUnit",
     "UndefinedUnitError",
     "DimensionalityError",
     "dimensionless",
