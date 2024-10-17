@@ -258,7 +258,7 @@ class ShotManager:
                 index=shot_parameters.index,
                 shot_parameters=shot_parameters.parameters,
                 device_parameters=compiled,
-                timeout=shot_duration + 2,
+                timeout=2 * shot_duration + 2,
             )
         except Exception as e:
             raise ShotCompilationError(
