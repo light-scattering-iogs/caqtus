@@ -1,7 +1,6 @@
 __version__ = "0.1.0"
 
 from . import base
-from ._unit import Unit, UnitLike
 from ._units import (
     ureg,
     unit_registry,
@@ -20,6 +19,8 @@ from ._units import (
     is_quantity,
     is_scalar_quantity,
     Magnitude,
+    Unit,
+    UnitLike,
 )
 from .unit_namespace import units
 
