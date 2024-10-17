@@ -70,6 +70,11 @@ class Quantity(
         assert isinstance(result, Quantity)
         return result
 
+    def to_unit(self, unit: V) -> Quantity[M, V]:
+        result = super().to(unit)
+        assert isinstance(result, Quantity)
+        return result
+
 
 def is_quantity(value) -> TypeIs[Quantity]:
     """Returns True if the value is a quantity, False otherwise."""
