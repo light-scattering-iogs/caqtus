@@ -24,6 +24,7 @@ from ._transformation import (
     OutputValue,
     evaluate,
 )
+from ...types.units.base import convert_to_base_units
 
 
 def _data_points_converter(data_points: Iterable[tuple[float, float]]):
