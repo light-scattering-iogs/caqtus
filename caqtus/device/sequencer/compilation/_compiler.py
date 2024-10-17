@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Iterable
-from typing import Mapping, Any, Optional, TypedDict
+from typing import Mapping, Any, TypedDict
 
 import attrs
 import numpy as np
@@ -22,8 +22,8 @@ from caqtus.shot_compilation.timed_instructions import (
     Repeated,
 )
 from caqtus.types.recoverable_exceptions import InvalidValueError
-from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
-from caqtus.types.units.base import is_in_base_units, base_units
+from caqtus.types.units import Unit, InvalidDimensionalityError, BaseUnit, dimensionless
+from caqtus.types.units.base import is_in_base_units
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_commands import ChannelOutput
 from ..channel_commands._channel_sources._trigger_compiler import (
@@ -105,10 +105,10 @@ class SequencerCompiler(TriggerableDeviceCompiler):
             output = channel.output
             if isinstance(channel, DigitalChannelConfiguration):
                 dtype = np.dtype(np.bool_)
-                units = None
+                units = dimensionless
             elif isinstance(channel, AnalogChannelConfiguration):
                 dtype = np.dtype(np.float64)
-                units = base_units(Unit(channel.output_unit))
+                units = Unit(channel.output_unit).to_base()
             else:
                 raise TypeError(
                     f"Expected a digital or analog channel configuration, got "
@@ -185,19 +185,16 @@ class InstructionCompilationParameters:
         validator=attrs.validators.instance_of(ChannelOutput),
     )
     dtype: np.dtype = attrs.field(validator=attrs.validators.instance_of(np.dtype))
-    units: Optional[Unit] = attrs.field(
-        validator=attrs.validators.optional(attrs.validators.instance_of(Unit))
-    )
+    units: BaseUnit = attrs.field()
 
-    @units.validator  # type: ignore
-    def _validate_units(self, _, units: Optional[Unit]):
-        if units is not None:
-            if not is_in_base_units(units):
-                raise ValueError(
-                    f"Unit {units} is not expressed in the base units of the registry."
-                )
-            if units.is_compatible_with(dimensionless):
-                raise ValueError(f"Unit {units} is dimensionless and must be None.")
+    @units.validator  # type: ignore[reportAttributeAccessIssue]
+    def _validate_units(self, _, units):
+        if not isinstance(units, Unit):
+            raise TypeError(f"Expected a unit, got {type(units)}")
+        if not is_in_base_units(units):
+            raise ValueError(
+                f"Unit {units} is not expressed in the base units of the registry."
+            )
 
 
 def compile_parallel_instructions(
