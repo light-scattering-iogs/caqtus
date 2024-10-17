@@ -109,7 +109,7 @@ pint.set_application_registry(unit_registry)
 UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
-dimensionless = Unit("dimensionless")
+dimensionless = BaseUnit(Unit("dimensionless"))
 
 TIME_UNITS = {"s", "ms", "µs", "us", "ns"}
 
