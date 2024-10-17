@@ -79,9 +79,7 @@ def convert_to_base_units(
         return magnitude_in_base_units, base_units
 
 
-def is_base_quantity[
-    M: Magnitude
-](value: Quantity[M, Unit]) -> TypeIs[Quantity[M, BaseUnit]]:
+def is_base_quantity[M: Magnitude](value: Quantity[M]) -> TypeIs[Quantity[M, BaseUnit]]:
     """Check if the given value is expressed in base units."""
 
     return is_in_base_units(value.units)
