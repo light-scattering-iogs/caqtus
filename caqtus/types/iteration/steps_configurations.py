@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Iterable, Callable, Generator
 from collections.abc import Mapping, Iterator
-from typing import TypeAlias, TypeGuard, Any
+from typing import TypeAlias, TypeGuard, Any, assert_type
 from typing import assert_never
 
 import attrs
@@ -13,9 +13,6 @@ import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
     NotAnalogValueError,
-    get_unit,
-    add_unit,
-    magnitude_in_unit,
 )
 from caqtus.types.parameter import is_parameter
 from caqtus.types.recoverable_exceptions import InvalidTypeError
@@ -24,7 +21,13 @@ from ._step_context import StepContext
 from .iteration_configuration import IterationConfiguration, Unknown
 from ..parameter._analog_value import is_scalar_analog_value, ScalarAnalogValue
 from ..recoverable_exceptions import EvaluationError
-from ..units import DimensionalityError, InvalidDimensionalityError
+from ..units import (
+    DimensionalityError,
+    InvalidDimensionalityError,
+    dimensionless,
+    Quantity,
+)
+from ..units._units import is_quantity_compatible_with, quantity_to_unit, Unit
 from ..variable_name import DottedVariableName
 
 
@@ -125,31 +128,50 @@ class LinspaceLoop(ContainsSubSteps):
             DimensionalityError: if the start or stop values are not commensurate.
         """
 
-        start = self.start.evaluate(evaluation_context)
-        if isinstance(start, int):
-            start = float(start)
-        if not is_scalar_analog_value(start):
-            raise NotAnalogValueError(f"Start of {self} is not an analog value")
-        stop = self.stop.evaluate(evaluation_context)
-        if isinstance(stop, int):
-            stop = float(stop)
-        if not is_scalar_analog_value(stop):
-            raise NotAnalogValueError(f"Stop of {self} is not an analog value")
-
-        unit = get_unit(start)
-
-        start_magnitude = magnitude_in_unit(start, unit)
         try:
-            stop_magnitude = magnitude_in_unit(stop, unit)
-        except DimensionalityError as e:
-            raise InvalidDimensionalityError(
-                f"Start of {self} has invalid dimensionality"
-            ) from e
+            start = _to_scalar_analog_value(self.start.evaluate(evaluation_context))
+        except NotAnalogValueError:
+            raise NotAnalogValueError(
+                f"Start {fmt.expression(self.start)} of {self} does not evaluate to an "
+                f"analog value"
+            ) from None
+        try:
+            stop = _to_scalar_analog_value(self.stop.evaluate(evaluation_context))
+        except NotAnalogValueError:
+            raise NotAnalogValueError(
+                f"Stop {fmt.expression(self.stop)} of {self} does not evaluate to an "
+                f"analog value"
+            ) from None
 
-        for value in numpy.linspace(start_magnitude, stop_magnitude, self.num):
-            # val.item() is used to convert numpy scalar to python scalar
-            value_with_unit = add_unit(value.item(), unit)
-            yield value_with_unit
+        # Here we enforce that the values generated have the same format as the start
+        # value.
+        if isinstance(start, float):
+            try:
+                stop = _to_dimensionless_float(stop)
+            except DimensionalityError:
+                raise InvalidDimensionalityError(
+                    f"Start {fmt.expression(self.start)} of {self} is "
+                    f"dimensionless, but stop {fmt.expression(self.stop)} cannot "
+                    f"be converted to dimensionless"
+                ) from None
+            assert_type(stop, float)
+            assert_type(start, float)
+            for value in numpy.linspace(start, stop, self.num):
+                yield float(value.item())
+        elif isinstance(start, int):
+            raise AssertionError("start must be strictly a float or a Quantity")
+        else:
+            try:
+                stop = _to_unit(stop, start.units)
+            except DimensionalityError as e:
+                raise InvalidDimensionalityError(
+                    f"Start {fmt.expression(self.start)} of {self} has invalid "
+                    f"dimensionality."
+                ) from e
+            assert_type(start, Quantity[float])
+            assert_type(stop, Quantity[float])
+            for value in numpy.linspace(start.magnitude, stop.magnitude, self.num):
+                yield Quantity(float(value), start.units)
 
 
 @attrs.define
@@ -208,41 +230,74 @@ class ArangeLoop(ContainsSubSteps):
                 commensurate.
         """
 
-        start = self.start.evaluate(evaluation_context)
-        if isinstance(start, int):
-            start = float(start)
-        if not is_scalar_analog_value(start):
-            raise NotAnalogValueError(f"Start of {self} is not an analog value.")
-        stop = self.stop.evaluate(evaluation_context)
-        if isinstance(stop, int):
-            stop = float(stop)
-        if not is_scalar_analog_value(stop):
-            raise NotAnalogValueError(f"Stop of {self} is not an analog value.")
-        step = self.step.evaluate(evaluation_context)
-        if isinstance(step, int):
-            step = float(step)
-        if not is_scalar_analog_value(step):
-            raise NotAnalogValueError(f"Step of {self} is not an analog value.")
-
-        unit = get_unit(start)
-        start_magnitude = magnitude_in_unit(start, unit)
         try:
-            stop_magnitude = magnitude_in_unit(stop, unit)
-        except DimensionalityError as e:
-            raise InvalidDimensionalityError(
-                f"Start of {self} has invalid dimensionality."
-            ) from e
+            start = _to_scalar_analog_value(self.start.evaluate(evaluation_context))
+        except NotAnalogValueError:
+            raise NotAnalogValueError(
+                f"Start {fmt.expression(self.start)} of {self} does not evaluate to an "
+                f"analog value"
+            ) from None
         try:
-            step_magnitude = magnitude_in_unit(step, unit)
-        except DimensionalityError as e:
-            raise InvalidDimensionalityError(
-                f"Step of {self} has invalid dimensionality."
-            ) from e
+            stop = _to_scalar_analog_value(self.stop.evaluate(evaluation_context))
+        except NotAnalogValueError:
+            raise NotAnalogValueError(
+                f"Stop {fmt.expression(self.stop)} of {self} does not evaluate to an "
+                f"analog value"
+            ) from None
+        try:
+            step = _to_scalar_analog_value(self.step.evaluate(evaluation_context))
+        except NotAnalogValueError:
+            raise NotAnalogValueError(
+                f"Step {fmt.expression(self.step)} of {self} does not evaluate to an "
+                f"analog value"
+            ) from None
 
-        for value in numpy.arange(start_magnitude, stop_magnitude, step_magnitude):
-            # val.item() is used to convert numpy scalar to python scalar
-            value_with_unit = add_unit(value.item(), unit)
-            yield value_with_unit
+        # Here we enforce that the values generated have the same format as the start
+        # value.
+        if isinstance(start, float):
+            try:
+                stop = _to_dimensionless_float(stop)
+            except DimensionalityError:
+                raise InvalidDimensionalityError(
+                    f"Start {fmt.expression(self.start)} of {self} is "
+                    f"dimensionless, but stop {fmt.expression(self.stop)} cannot "
+                    f"be converted to dimensionless"
+                ) from None
+            try:
+                step = _to_dimensionless_float(step)
+            except DimensionalityError:
+                raise InvalidDimensionalityError(
+                    f"Step {fmt.expression(self.step)} of {self} is "
+                    f"dimensionless, but stop {fmt.expression(self.stop)} cannot "
+                    f"be converted to dimensionless"
+                ) from None
+            assert_type(start, float)
+            assert_type(stop, float)
+            assert_type(step, float)
+            for value in numpy.arange(start, stop, step):
+                yield float(value)
+        elif isinstance(start, int):
+            raise AssertionError("start must be strictly a float or a Quantity")
+        else:
+            try:
+                stop = _to_unit(stop, start.units)
+            except DimensionalityError as e:
+                raise InvalidDimensionalityError(
+                    f"Start {fmt.expression(self.start)} of {self} has invalid "
+                    f"dimensionality."
+                ) from e
+            try:
+                step = _to_unit(step, start.units)
+            except DimensionalityError as e:
+                raise InvalidDimensionalityError(
+                    f"Step {fmt.expression(self.step)} of {self} has invalid "
+                    f"dimensionality."
+                ) from e
+            assert_type(start, Quantity[float])
+            assert_type(stop, Quantity[float])
+            assert_type(step, Quantity[float])
+            for value in numpy.arange(start.magnitude, stop.magnitude, step.magnitude):
+                yield Quantity(float(value), start.units)
 
 
 @attrs.define
@@ -526,3 +581,51 @@ def _(
 
 class StepEvaluationError(Exception):
     pass
+
+
+def _to_scalar_analog_value(value: Any) -> ScalarAnalogValue:
+    """Attempt to convert a value to a scalar analog value.
+
+    Raises:
+        NotAnalogValueError: If the value can't be converted to a scalar analog value.
+    """
+
+    if isinstance(value, int):
+        return float(value)
+    if not is_scalar_analog_value(value):
+        raise NotAnalogValueError(value)
+    return value
+
+
+def _to_dimensionless_float(value: ScalarAnalogValue) -> float:
+    """Convert a scalar analog value to a dimensionless float.
+
+    Raises:
+        DimensionalityError: If the value is a quantity not commensurate with
+        dimensionless.
+    """
+
+    if isinstance(value, Quantity):
+        return value.to_unit(dimensionless).magnitude
+    elif isinstance(value, float):
+        return value
+    elif isinstance(value, int):
+        raise AssertionError("stop must be strictly a float or a Quantity")
+    else:
+        assert_never(value)
+
+
+def _to_unit[U: Unit](value: ScalarAnalogValue, unit: U) -> Quantity[float, U]:
+    """Convert a scalar analog value to the same unit as another.
+
+    Raises:
+        DimensionalityError: If the value is a quantity not commensurate with the unit.
+    """
+
+    if isinstance(value, float):
+        value = Quantity(value, dimensionless)
+    elif isinstance(value, int):
+        raise AssertionError("stop must be strictly a float or a Quantity")
+    if not is_quantity_compatible_with(value, unit):
+        raise DimensionalityError(value.units, unit)
+    return quantity_to_unit(value, unit)

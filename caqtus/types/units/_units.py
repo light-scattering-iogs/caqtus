@@ -48,6 +48,24 @@ V = TypeVar("V", bound=Unit, covariant=True, default=Unit)
 A = TypeVar("A", bound=FloatArray, covariant=True, default=FloatArray)
 
 
+class UnitCompatibleWith(Unit, Generic[U]):
+    pass
+
+
+def is_unit_compatible_with(u1: Unit, u2: U) -> TypeIs[UnitCompatibleWith[U]]:
+    return u1.is_compatible_with(u2)
+
+
+def is_quantity_compatible_with(
+    q1: Quantity[M], unit: U
+) -> TypeIs[Quantity[M, UnitCompatibleWith[U]]]:
+    return q1.units.is_compatible_with(unit)
+
+
+def quantity_to_unit(q1: Quantity[M, UnitCompatibleWith[U]], unit: U) -> Quantity[M, U]:
+    return q1.to_unit(unit)
+
+
 class Quantity(
     pint.facets.system.objects.SystemQuantity[M],
     pint.facets.numpy.quantity.NumpyQuantity[M],
@@ -129,7 +147,8 @@ pint.set_application_registry(unit_registry)
 UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
-dimensionless = BaseUnit(Unit("dimensionless"))
+Dimensionless = NewType("Dimensionless", BaseUnit)
+dimensionless = Dimensionless(BaseUnit(Unit("dimensionless")))
 
 TIME_UNITS = {"s", "ms", "µs", "us", "ns"}
 
