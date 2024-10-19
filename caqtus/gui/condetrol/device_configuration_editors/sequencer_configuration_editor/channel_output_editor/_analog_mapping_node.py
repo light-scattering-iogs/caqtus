@@ -24,13 +24,14 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
 )
 
+from caqtus.device.output_transform._output_mapping import interpolate
 from caqtus.gui._common.NodeGraphQt import BaseNode, NodeBaseWidget
 from caqtus.gui.condetrol._icons import get_icon
-from caqtus.types.parameter import add_unit, magnitude_in_unit
-from caqtus.types.units import Unit
-from caqtus.types.units.base import convert_to_base_units
+from caqtus.types.units import Unit, Quantity, dimensionless
 from caqtus.utils.itertools import pairwise
 from .calibrated_analog_mapping_widget_ui import Ui_CalibratedAnalogMappingWigdet
+
+_QMODEL_INDEX = QModelIndex()
 
 
 class CalibratedAnalogMappingNode(BaseNode):
@@ -59,7 +60,7 @@ class CalibratedAnalogMappingNode(BaseNode):
         elif len(input_nodes) == 1:
             return input_nodes[0]
         else:
-            assert False, "There can't be multiple nodes connected to the input"
+            raise AssertionError("There can't be multiple nodes connected to the input")
 
     def get_units(self) -> tuple[Optional[str], Optional[str]]:
         return self._widget._widget.get_units()
@@ -146,15 +147,10 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         for row in range(number_points):
             x_points.append(self._sorted_model.data(self._sorted_model.index(row, 0)))
             y_points.append(self._sorted_model.data(self._sorted_model.index(row, 1)))
-        input_units = Unit(u) if (u := self.input_units()) else None
-        input_base_points, input_base_units = convert_to_base_units(
-            np.array(x_points), input_units
-        )
-
-        output_units = Unit(u) if (u := self.output_units()) else None
-        y_base_points, y_base_units = convert_to_base_units(
-            np.array(y_points), output_units
-        )
+        input_units = Unit(u) if (u := self.input_units()) else dimensionless
+        calibration_input_points = Quantity(x_points, input_units)
+        output_units = Unit(u) if (u := self.output_units()) else dimensionless
+        calibration_output_points = Quantity(y_points, output_units)
 
         if len(x_points) >= 2:
             input_points = np.concat(
@@ -162,18 +158,19 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
             )
         else:
             input_points = x_points
-        interpolation_input_base_points, _ = convert_to_base_units(
-            input_points, input_units
+        input_points = Quantity(input_points, input_units)
+        output_points = interpolate(
+            input_points,
+            calibration_input_points,
+            calibration_output_points,
         )
 
-        output_points_base = np.interp(
-            interpolation_input_base_points, input_base_points, y_base_points
-        )
-        output_points = magnitude_in_unit(
-            add_unit(output_points_base, y_base_units), output_units
-        )
-
-        new_points = [QPointF(x, y) for x, y in zip(input_points, output_points)]
+        new_points = [
+            QPointF(x, y)
+            for x, y in zip(
+                input_points.magnitude, output_points.magnitude, strict=True
+            )
+        ]
         self._series.append(new_points)
         self.auto_scale()
 
@@ -236,7 +233,6 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         )
 
     def on_remove_button_clicked(self):
-
         self._model.removeRow(
             self._sorted_model.mapToSource(self.tableView.currentIndex()).row()
         )
@@ -247,13 +243,13 @@ class Model(QAbstractTableModel):
         super().__init__(parent)
         self._values = []
 
-    def rowCount(self, parent):
+    def rowCount(self, parent=_QMODEL_INDEX):  # noqa: N802
         return len(self._values)
 
-    def columnCount(self, parent):
+    def columnCount(self, parent=_QMODEL_INDEX):  # noqa: N802
         return 2
 
-    def data(self, index, role):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
                 return self._values[index.row()][0]
@@ -261,7 +257,7 @@ class Model(QAbstractTableModel):
                 return self._values[index.row()][1]
         return None
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):  # noqa: N802
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
                 self._values[index.row()] = (value, self._values[index.row()][1])
@@ -292,7 +288,9 @@ class Model(QAbstractTableModel):
             | Qt.ItemFlag.ItemIsSelectable
         )
 
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(  # noqa: N802
+        self, section, orientation, role=Qt.ItemDataRole.DisplayRole
+    ):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
@@ -303,13 +301,13 @@ class Model(QAbstractTableModel):
                 return str(section)
         return None
 
-    def insertRow(self, row, parent=QModelIndex()):
+    def insertRow(self, row, parent=_QMODEL_INDEX):  # noqa: N802
         self.beginInsertRows(parent, row, row)
         self._values.insert(row, (0.0, 0.0))
         self.endInsertRows()
         return True
 
-    def removeRow(self, row, parent=QModelIndex()):
+    def removeRow(self, row, parent=_QMODEL_INDEX):  # noqa: N802
         self.beginRemoveRows(parent, row, row)
         del self._values[row]
         self.endRemoveRows()
@@ -320,7 +318,7 @@ class ItemEditorFactory(QItemEditorFactory):
     def __init__(self):
         super().__init__()
 
-    def createEditor(self, userType, parent):
+    def createEditor(self, userType, parent):  # noqa: N802, N803
         if userType == 6:
             spin_box = QDoubleSpinBox(parent)
             spin_box.setDecimals(3)
