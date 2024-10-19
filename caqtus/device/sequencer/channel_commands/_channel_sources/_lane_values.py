@@ -15,6 +15,7 @@ from caqtus.shot_compilation.timed_instructions import Pattern
 from caqtus.shot_compilation.timing import Time
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane, AnalogTimeLane
+from caqtus.types.units import dimensionless
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_output import ChannelOutput
 from ...timing import TimeStep, ns
@@ -53,7 +54,7 @@ class LaneValues(ChannelOutput):
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ):
+    ) -> DimensionedSeries:
         """Evaluate the output of a channel as the values of a lane.
 
         This function will look in the shot time lanes to find the lane referenced by
@@ -86,7 +87,7 @@ class LaneValues(ChannelOutput):
                 Time(required_time_step * ns),
                 shot_context.get_parameters(),
             )
-            result = DimensionedSeries(lane_values, units=None)
+            result = DimensionedSeries(lane_values, units=dimensionless)
         elif isinstance(lane, AnalogTimeLane):
             result = compile_analog_lane(
                 lane,
