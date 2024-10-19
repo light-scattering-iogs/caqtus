@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import collections
 from collections.abc import Sequence, Mapping
-from typing import assert_never, Optional, Any
+from typing import assert_never, Optional, Any, assert_type
 
 import attrs
 import numpy as np
@@ -205,16 +205,12 @@ def evaluate_constant_expression(
             length=length,
             unit=value.units,
         )
-    elif isinstance(value, float | int):
+    else:
+        assert_type(value, float | int | bool)
         return ConstantBlockResult(
-            value=value,
+            value=float(value),
             length=length,
             unit=dimensionless,
-        )
-    else:
-        raise InvalidValueError(
-            f"{fmt.expression(expression)} does not evaluate to a number or a quantity"
-            f" but to {fmt.type_(type(value))}",
         )
 
 
