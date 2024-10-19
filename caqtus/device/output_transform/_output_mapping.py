@@ -130,7 +130,7 @@ def interpolate[
     ).to_base_units()
 
     output_magnitude = np.interp(
-        x=values.to_unit(input_values.units).magnitude,
+        x=values.magnitude,
         xp=input_points.magnitude,
         fp=output_points.magnitude,
     )
