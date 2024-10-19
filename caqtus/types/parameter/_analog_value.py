@@ -1,12 +1,11 @@
-from typing import Any, Optional, overload, TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 from typing_extensions import TypeIs
 
+from .._array import FloatArray
 from ..recoverable_exceptions import InvalidTypeError
-from ..units import Quantity, Unit, dimensionless, UnitLike
-from ..units._units import FloatArray
-from ..units.base import BaseUnit, ArrayBaseQuantity, ScalarBaseQuantity
+from ..units import Quantity
 
 ScalarAnalogValue: TypeAlias = float | Quantity[float]
 ArrayAnalogValue: TypeAlias = FloatArray | Quantity[FloatArray]
@@ -57,85 +56,3 @@ def is_quantity(value: Any) -> TypeIs[Quantity]:
     """Returns True if the value is a quantity, False otherwise."""
 
     return isinstance(value, Quantity)
-
-
-def get_unit(value: AnalogValue) -> Optional[Unit]:
-    """Returns the unit of the value if it has one, None otherwise."""
-
-    if isinstance(value, Quantity):
-        return value.units
-    return None
-
-
-@overload
-def magnitude_in_unit[
-    M: float | FloatArray
-](value: Quantity[M], unit: Optional[UnitLike]) -> M: ...
-
-
-@overload
-def magnitude_in_unit(value: float, unit: Optional[UnitLike]) -> float: ...
-
-
-@overload
-def magnitude_in_unit[A: FloatArray](value: A, unit: Optional[UnitLike]) -> A: ...
-
-
-def magnitude_in_unit(value, unit):
-    """Return the magnitude of a value in the given unit."""
-
-    if is_quantity(value):
-        if unit is None:
-            return value.to(dimensionless).magnitude
-        return value.to(unit).magnitude
-    else:
-        if unit is None:
-            return value
-        else:
-            value = value * dimensionless
-            return value.to(unit).magnitude
-
-
-@overload
-def add_unit(magnitude: float, unit: None) -> float: ...
-
-
-@overload
-def add_unit(magnitude: FloatArray, unit: None) -> FloatArray: ...
-
-
-@overload
-def add_unit(magnitude: float, unit: BaseUnit) -> ScalarBaseQuantity: ...
-
-
-@overload
-def add_unit(magnitude: float, unit: Unit) -> Quantity[float]: ...
-
-
-@overload
-def add_unit(magnitude: FloatArray, unit: BaseUnit) -> ArrayBaseQuantity: ...
-
-
-@overload
-def add_unit(magnitude: FloatArray, unit: Unit) -> Quantity[FloatArray]: ...
-
-
-def add_unit(
-    magnitude: float | FloatArray, unit: Optional[Unit]
-) -> float | FloatArray | Quantity[float] | Quantity[FloatArray]:
-    """Add a unit to a magnitude."""
-
-    if unit is None:
-        return magnitude
-    return Quantity(magnitude, unit)  # pyright: ignore[reportReturnType]
-
-
-def are_units_compatible(unit1: Optional[Unit], unit2: Optional[Unit]) -> bool:
-    """Return True if the two units are compatible, False otherwise."""
-
-    if unit1 is None:
-        return unit2 is None
-    if unit2 is None:
-        return unit1 is None
-
-    return unit1.is_compatible_with(unit2)
