@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Mapping
-from typing import Any, TypeAlias, Union, assert_never
+from typing import Any, TypeAlias, Union, assert_type
 
 import attrs
 
 import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
-from caqtus.types.units import is_scalar_quantity, Quantity
+from caqtus.types.units import is_scalar_quantity, Quantity, dimensionless
 from caqtus.types.units.base import BaseUnit
 from caqtus.types.variable_name import DottedVariableName
 
@@ -50,20 +50,23 @@ def evaluate(
     """
 
     if isinstance(input_, Transformation):
-        return input_.evaluate(variables)
+        result = input_.evaluate(variables)
     elif isinstance(input_, Expression):
         evaluated = input_.evaluate(variables)
 
         if isinstance(evaluated, (float, int, bool)):
-            return evaluated
+            result = evaluated
         elif is_scalar_quantity(evaluated):
-            return evaluated.to_base_units()
+            result = evaluated.to_base_units()
         else:
             raise InvalidTypeError(
                 f"{fmt.expression(input_)} does not evaluate to a parameter, "
                 f"got {fmt.type_(type(evaluated))}.",
             )
-    assert_never(input_)
+    assert_type(result, OutputValue)
+    if isinstance(result, Quantity) and result.units == dimensionless:
+        return result.magnitude
+    return result
 
 
 evaluable_output_validator = attrs.validators.instance_of((Expression, Transformation))

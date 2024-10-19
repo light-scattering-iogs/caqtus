@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Iterable, Sequence
-from typing import Any, Optional
+from collections.abc import Mapping, Iterable
+from typing import Any, Optional, overload
 
 import attrs
 import numpy as np
 
+from caqtus.types._array import FloatArray1D
 from caqtus.types.units import (
-    DimensionalityError,
-    InvalidDimensionalityError,
     Unit,
     Quantity,
     dimensionless,
+    is_scalar_quantity,
 )
 from caqtus.types.variable_name import DottedVariableName
 from ._transformation import (
@@ -63,40 +63,82 @@ class LinearInterpolation(Transformation):
     )
 
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
-        input_value = evaluate(self.input_, variables)
-        interpolator = Interpolator(
-            self.measured_data_points,
-            Unit(self.input_points_unit) if self.input_points_unit else dimensionless,
-            Unit(self.output_points_unit) if self.output_points_unit else dimensionless,
+        evaluated = evaluate(self.input_, variables)
+        if isinstance(evaluated, Quantity):
+            input_value = evaluated
+        else:
+            input_value = Quantity(float(evaluated), dimensionless)
+        result = interpolate(
+            input_value,
+            Quantity(
+                [point[0] for point in self.measured_data_points],
+                (
+                    Unit(self.input_points_unit)
+                    if self.input_points_unit
+                    else dimensionless
+                ),
+            ),
+            Quantity(
+                [point[1] for point in self.measured_data_points],
+                (
+                    Unit(self.output_points_unit)
+                    if self.output_points_unit
+                    else dimensionless
+                ),
+            ),
         )
-        try:
-            return interpolator(input_value)
-        except DimensionalityError as e:
-            raise InvalidDimensionalityError("Invalid dimensionality") from e
+        return result.to_base_units()
 
 
-class Interpolator:
-    def __init__(
-        self,
-        measured_data_points: Sequence[tuple[float, float]],
-        input_units: Unit,
-        output_units: Unit,
-    ):
-        measured_data_points = sorted(measured_data_points, key=lambda x: x[0])
-        self.input_points = Quantity(
-            [point[0] for point in measured_data_points], input_units
-        ).to_base_units()
-        self.output_points = Quantity(
-            [point[1] for point in measured_data_points], output_units
-        ).to_base_units()
+@overload
+def interpolate[
+    InputUnits: Unit, OutputUnits: Unit, L: int
+](
+    values: Quantity[float, InputUnits],
+    input_values: Quantity[FloatArray1D[L], InputUnits],
+    output_values: Quantity[FloatArray1D[L], OutputUnits],
+) -> Quantity[float, OutputUnits]: ...
 
-    def __call__(self, input_value: OutputValue) -> OutputValue:
-        if not isinstance(input_value, Quantity):
-            input_value = Quantity(input_value, dimensionless)
 
-        output_magnitude = np.interp(
-            x=input_value.to_unit(self.input_points.units).magnitude,
-            xp=self.input_points.magnitude,
-            fp=self.output_points.magnitude,
+@overload
+def interpolate[
+    InputUnits: Unit, OutputUnits: Unit, L: int
+](
+    values: Quantity[FloatArray1D, InputUnits],
+    input_values: Quantity[FloatArray1D[L], InputUnits],
+    output_values: Quantity[FloatArray1D[L], OutputUnits],
+) -> Quantity[FloatArray1D, OutputUnits]: ...
+
+
+def interpolate[
+    InputUnits: Unit, OutputUnits: Unit, L: int
+](
+    values: Quantity[FloatArray1D | float, InputUnits],
+    input_values: Quantity[FloatArray1D[L], InputUnits],
+    output_values: Quantity[FloatArray1D[L], OutputUnits],
+) -> Quantity[FloatArray1D | float, OutputUnits]:
+    sorted_points = sorted(
+        zip(input_values.magnitude, output_values.magnitude, strict=True),
+        key=lambda x: x[0],
+    )
+
+    input_points = Quantity(
+        [point[0] for point in sorted_points], input_values.units
+    ).to_base_units()
+    output_points = Quantity(
+        [point[1] for point in sorted_points], output_values.units
+    ).to_base_units()
+
+    output_magnitude = np.interp(
+        x=values.to_unit(input_values.units).magnitude,
+        xp=input_points.magnitude,
+        fp=output_points.magnitude,
+    )
+    if is_scalar_quantity(values):
+        return Quantity(float(output_magnitude), output_points.units).to_unit(
+            output_values.units
         )
-        return Quantity(float(output_magnitude), self.output_points.units)
+    else:
+        return Quantity[FloatArray1D](output_magnitude, output_points.units).to_unit(
+            output_values.units
+        )

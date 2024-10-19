@@ -41,35 +41,17 @@ BaseUnit = NewType("BaseUnit", Unit)
 
 type Magnitude = float | FloatArray
 
-M = TypeVar("M", bound=Magnitude, default=Magnitude)
+M = TypeVar("M", bound=Magnitude, covariant=True, default=Magnitude)
 U = TypeVar("U", bound=Unit, covariant=True, default=Unit)
 V = TypeVar("V", bound=Unit, covariant=True, default=Unit)
 A = TypeVar("A", bound=FloatArray, covariant=True, default=FloatArray)
 
 
-class UnitCompatibleWith(Unit, Generic[U]):
-    pass
-
-
-def is_unit_compatible_with(u1: Unit, u2: U) -> TypeIs[UnitCompatibleWith[U]]:
-    return u1.is_compatible_with(u2)
-
-
-def is_quantity_compatible_with(
-    q1: Quantity[M], unit: U
-) -> TypeIs[Quantity[M, UnitCompatibleWith[U]]]:
-    return q1.units.is_compatible_with(unit)
-
-
-def quantity_to_unit(q1: Quantity[M, UnitCompatibleWith[U]], unit: U) -> Quantity[M, U]:
-    return q1.to_unit(unit)
-
-
 class Quantity(
-    pint.facets.system.objects.SystemQuantity[M],
-    pint.facets.numpy.quantity.NumpyQuantity[M],
-    pint.facets.nonmultiplicative.objects.NonMultiplicativeQuantity[M],
-    pint.facets.plain.PlainQuantity[M],
+    pint.facets.system.objects.SystemQuantity[M],  # type: ignore[reportInvalidTypeArguments]
+    pint.facets.numpy.quantity.NumpyQuantity[M],  # type: ignore[reportInvalidTypeArguments]
+    pint.facets.nonmultiplicative.objects.NonMultiplicativeQuantity[M],  # type: ignore[reportInvalidTypeArguments]
+    pint.facets.plain.PlainQuantity[M],  # type: ignore[reportInvalidTypeArguments]
     Generic[M, U],
 ):
     @overload
