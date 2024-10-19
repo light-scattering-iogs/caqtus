@@ -26,8 +26,8 @@ from ..units import (
     InvalidDimensionalityError,
     dimensionless,
     Quantity,
+    Unit,
 )
-from ..units._units import is_quantity_compatible_with, quantity_to_unit, Unit
 from ..variable_name import DottedVariableName
 
 
@@ -626,6 +626,4 @@ def _to_unit[U: Unit](value: ScalarAnalogValue, unit: U) -> Quantity[float, U]:
         value = Quantity(value, dimensionless)
     elif isinstance(value, int):
         raise AssertionError("stop must be strictly a float or a Quantity")
-    if not is_quantity_compatible_with(value, unit):
-        raise DimensionalityError(value.units, unit)
-    return quantity_to_unit(value, unit)
+    return value.to_unit(unit)
