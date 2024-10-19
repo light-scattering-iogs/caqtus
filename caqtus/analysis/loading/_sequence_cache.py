@@ -1,17 +1,15 @@
 import datetime
-from typing import Protocol, TypeVar, Optional
+from typing import Protocol, Optional
 
 from caqtus.session import Sequence, PureSequencePath
 
-T = TypeVar("T", covariant=True)
 
-
-class SequenceFunction(Protocol[T]):
+class SequenceFunction[T](Protocol):
     def __call__(self, sequence: Sequence) -> T: ...
 
 
 # noinspection PyPep8Naming
-class cache_per_sequence:
+class cache_per_sequence[T]:  # noqa: N801
     def __init__(self, func: SequenceFunction[T]) -> None:
         self.func = func
         self.cache: dict[PureSequencePath, tuple[Optional[datetime.datetime], T]] = {}
