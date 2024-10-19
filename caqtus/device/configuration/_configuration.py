@@ -43,10 +43,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
             the experiment.
     """
 
-    remote_server: Optional[DeviceServerName] = attrs.field(
-        converter=attrs.converters.optional(str),
-        on_setattr=attrs.setters.convert,
-    )
+    remote_server: Optional[DeviceServerName] = attrs.field()
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
