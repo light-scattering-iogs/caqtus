@@ -29,6 +29,11 @@ class Unit(
 
         return BaseUnit(Quantity(1.0, self).to_base_units().units)
 
+    def __pow__(self, power) -> Unit:
+        result = super().__pow__(power)
+        assert isinstance(result, Unit)
+        return result
+
 
 BaseUnit = NewType("BaseUnit", Unit)
 """A type that represents a unit expressed in base SI units."""
