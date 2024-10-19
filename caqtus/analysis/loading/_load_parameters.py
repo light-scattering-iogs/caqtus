@@ -1,13 +1,13 @@
+from collections.abc import Mapping
 from typing import Literal, assert_never
 
 import attrs
 import polars
 
-from caqtus.session import Shot, Sequence
+from caqtus.session import Shot
 from caqtus.types.parameter import is_analog_value, is_quantity, Parameter
 from caqtus.types.variable_name import DottedVariableName
 from ._combinable_importers import CombinableLoader
-from ._sequence_cache import cache_per_sequence
 
 
 @attrs.define
@@ -30,12 +30,9 @@ class LoadShotParameters(CombinableLoader):
 
     which: Literal["sequence", "all"] = "sequence"
 
-    def __attrs_post_init__(self):
-        self._get_local_parameters = cache_per_sequence(get_local_parameters)
-
     @staticmethod
     def _parameters_to_dataframe(
-        parameters: dict[DottedVariableName, Parameter]
+        parameters: Mapping[DottedVariableName, Parameter]
     ) -> polars.DataFrame:
         series: list[polars.Series] = []
 
@@ -67,13 +64,9 @@ class LoadShotParameters(CombinableLoader):
         if self.which == "all":
             pass
         elif self.which == "sequence":
-            local_parameters = self._get_local_parameters(shot.sequence)
+            local_parameters = shot.sequence.get_local_parameters()
             parameters = {name: parameters[name] for name in local_parameters}
         else:
             assert_never(self.which)
 
         return self._parameters_to_dataframe(parameters)
-
-
-def get_local_parameters(sequence: Sequence) -> set[DottedVariableName]:
-    return sequence.get_local_parameters()
