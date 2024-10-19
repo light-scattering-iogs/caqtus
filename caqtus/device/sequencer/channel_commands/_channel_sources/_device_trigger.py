@@ -15,6 +15,7 @@ from caqtus.shot_compilation.timed_instructions import (
     Pattern,
 )
 from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableException
+from caqtus.types.units import dimensionless
 from caqtus.types.variable_name import DottedVariableName
 from ._trigger_compiler import TriggerableDeviceCompiler
 from ..channel_output import ChannelOutput
@@ -111,7 +112,7 @@ class DeviceTrigger(ChannelOutput):
 
         return DimensionedSeries(
             prepend * Pattern([False]) + trigger_values + append * Pattern([False]),
-            units=None,
+            units=dimensionless,
         )
 
     def evaluate_max_advance_and_delay(
