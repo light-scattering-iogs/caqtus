@@ -3,9 +3,8 @@ from __future__ import annotations
 import importlib.resources
 from collections.abc import Sequence
 from typing import NewType, SupportsFloat
-from typing import overload, Any, Generic
+from typing import overload, Generic
 
-import numpy as np
 import pint._typing
 import pint.facets
 import pint.facets.nonmultiplicative.objects
@@ -14,6 +13,7 @@ import pint.facets.numpy.unit
 from typing_extensions import TypeIs, TypeVar
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
+from .._array import FloatArray
 
 UnitLike = pint._typing.UnitLike
 
@@ -39,7 +39,6 @@ BaseUnit = NewType("BaseUnit", Unit)
 """A type that represents a unit expressed in base SI units."""
 
 
-type FloatArray = np.ndarray[Any, np.dtype[np.floating]]
 type Magnitude = float | FloatArray
 
 M = TypeVar("M", bound=Magnitude, default=Magnitude)
