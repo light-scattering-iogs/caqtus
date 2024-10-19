@@ -27,7 +27,7 @@ class VariableNamespace(Generic[T]):
         }
 
     def __getitem__(self, item: DottedVariableName) -> T:
-        return self._dict[str(item)]
+        return self._dict[str(item)]  # type: ignore[reportReturnType]
 
     def __contains__(self, item: DottedVariableName) -> bool:
         return str(item) in self._dict
@@ -38,8 +38,8 @@ class VariableNamespace(Generic[T]):
         if isinstance(other, Mapping):
             new = self._dict.clone()
             for key, value in other.items():
-                new[key] = value
-            return new
+                new[key] = value  # type: ignore[reportArgumentType]
+            return new  # type: ignore[no-any-return]
         else:
             return NotImplemented
 
