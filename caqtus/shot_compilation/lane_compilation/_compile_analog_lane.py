@@ -205,7 +205,7 @@ def evaluate_constant_expression(
             length=length,
             unit=value.units,
         )
-    elif isinstance(value, float):
+    elif isinstance(value, float | int):
         return ConstantBlockResult(
             value=value,
             length=length,
