@@ -14,10 +14,16 @@ from caqtus.shot_compilation.lane_compilation._compile_analog_lane import (
 from caqtus.shot_compilation.timed_instructions import Pattern, create_ramp
 from caqtus.shot_compilation.timing import to_time, get_step_bounds, Time
 from caqtus.types.expression import Expression
-from caqtus.types.recoverable_exceptions import InvalidValueError
+from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.recoverable_exceptions import RecoverableException
 from caqtus.types.timelane import AnalogTimeLane, Ramp
-from caqtus.types.units import Unit, InvalidDimensionalityError
+from caqtus.types.units import (
+    Unit,
+    InvalidDimensionalityError,
+    SECOND,
+    dimensionless,
+    BaseUnit,
+)
 
 
 def into_time(value) -> Time:
@@ -33,7 +39,7 @@ def test_evaluate_constant_expression_0():
     variables = {}
     length = 1
     result = evaluate_constant_expression(expression, variables, length)
-    assert result == ConstantBlockResult(1e6, 1, Unit("Hz"))
+    assert result == ConstantBlockResult(1e6, 1, BaseUnit(SECOND**-1))
 
 
 def test_evaluate_constant_expression_1():
@@ -41,7 +47,7 @@ def test_evaluate_constant_expression_1():
     variables = {}
     length = 1
     result = evaluate_constant_expression(expression, variables, length)
-    assert result == ConstantBlockResult(1, 1, None)
+    assert result == ConstantBlockResult(1, 1, dimensionless)
 
 
 def test_evaluate_constant_expression_2():
@@ -49,14 +55,14 @@ def test_evaluate_constant_expression_2():
     variables = {}
     length = 1
     result = evaluate_constant_expression(expression, variables, length)
-    assert result == ConstantBlockResult(0, 1, None)
+    assert result == ConstantBlockResult(0, 1, dimensionless)
 
 
 def test_evaluate_constant_expression_3():
     expression = Expression("...")
     variables = {}
     length = 1
-    with raises(InvalidValueError):
+    with raises(InvalidTypeError):
         evaluate_constant_expression(expression, variables, length)
 
 
@@ -69,7 +75,7 @@ def test_evaluate_time_dependent_expression_0():
     )
     assert result == TimeDependentBlockResult(
         values=np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-        unit=None,
+        unit=dimensionless,
         initial_value=0,
         final_value=10,
     )
@@ -86,7 +92,7 @@ def test_evaluate_time_dependent_expression_1():
 
     assert result == TimeDependentBlockResult(
         values=np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-        unit=Unit("s"),
+        unit=SECOND,
         initial_value=0,
         final_value=10,
     )
@@ -103,7 +109,7 @@ def test_evaluate_time_dependent_expression_2():
 
     assert result == TimeDependentBlockResult(
         values=np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-        unit=None,
+        unit=dimensionless,
         initial_value=0,
         final_value=10,
     )
@@ -114,7 +120,7 @@ def test_logarithmic_expression():
     result = compile_analog_lane(lane, {}, into_bounds([10e-9, 10e-9]), into_time(1))
     expected = Pattern([1]) * 10 + Pattern([10]) * 10
     assert result.values == approx(expected)
-    assert result.units is None
+    assert result.units == dimensionless
 
 
 def test_ramp():
@@ -123,7 +129,7 @@ def test_ramp():
     expected = create_ramp(0, 10, 4)
 
     assert result.values == expected
-    assert result.units is None
+    assert result.units == dimensionless
 
 
 def test_ramp_zero_duration():
@@ -132,7 +138,7 @@ def test_ramp_zero_duration():
     expected = Pattern([0]) * 10 + Pattern([10]) * 5
 
     assert result.values == approx(expected)
-    assert result.units is None
+    assert result.units == dimensionless
 
 
 def test_ramp_2():
@@ -157,7 +163,7 @@ def test_logarithmic_ramp():
     expected = Pattern([1.0]) * 3 + create_ramp(1, 10, 4) + 3 * Pattern([10.0])
 
     assert result.values == approx(expected)
-    assert result.units is None
+    assert result.units == dimensionless
 
 
 def test_ramp_time_dependent():
@@ -182,7 +188,7 @@ def test_non_integer_ramp():
     )
     expected = Pattern([0, 1 / 4, 3 / 4, 1])
     assert result.values == approx(expected)
-    assert result.units is None
+    assert result.units == dimensionless
 
 
 def test_expression_with_unit():
