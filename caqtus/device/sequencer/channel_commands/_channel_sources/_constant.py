@@ -6,6 +6,7 @@ from typing import Mapping, Any, Optional
 import attrs
 
 import caqtus.formatter as fmt
+from caqtus.device.output_transform import evaluate
 from caqtus.device.sequencer.channel_commands.channel_output import (
     ChannelOutput,
 )
@@ -49,9 +50,14 @@ class Constant(ChannelOutput):
             + number_time_steps(shot_context.get_shot_duration(), required_time_step)
             + append
         )
-        value = self.value.evaluate(shot_context.get_parameters())
-        magnitude, units = split_magnitude_units(value)
-        return DimensionedSeries(Pattern([magnitude]) * length, units)
+        value = evaluate(self.value, shot_context.get_parameters())
+        if isinstance(value, Quantity):
+            magnitude = value.magnitude
+            unit = value.units
+        else:
+            magnitude = value
+            unit = dimensionless
+        return DimensionedSeries(Pattern([magnitude]) * length, unit)
 
     def evaluate_max_advance_and_delay(
         self,
