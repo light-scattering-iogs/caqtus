@@ -10,7 +10,7 @@ from caqtus.gui.condetrol.timelanes_editor.extension import (
 )
 
 # noinspection PyPep8Naming
-from caqtus.types.timelane import TimeLaneType as L, TimeLane
+from caqtus.types.timelane import TimeLane
 from caqtus.utils.serialization import JSON
 
 
@@ -19,7 +19,7 @@ def no_lane_delegate_factory(lane: TimeLane, lane_name: str) -> None:
 
 
 @attrs.frozen
-class TimeLaneExtension:
+class TimeLaneExtension[L: TimeLane]:
     """Define how to implement a time lane plugin.
 
     Attributes:
@@ -56,7 +56,7 @@ class TimeLaneExtension:
     )
     type_tag: Optional[str] = attrs.field(default=None)
 
-    @lane_type.validator
+    @lane_type.validator  # type: ignore[reportAttributeAccessIssue]
     def _validate_lane_type(self, attribute, value):
         if not issubclass(value, TimeLane):
             raise ValueError(f"{value} is not a subclass of TimeLane")
