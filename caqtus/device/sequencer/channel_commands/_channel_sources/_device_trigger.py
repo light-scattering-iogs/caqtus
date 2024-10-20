@@ -64,7 +64,7 @@ class DeviceTrigger(ChannelOutput):
                     append,
                     shot_context,
                 )
-                if evaluated_default.units is not None:
+                if evaluated_default.units != dimensionless:
                     raise InvalidValueError(
                         f"Default value for trigger for {fmt.device(target_device)} "
                         f"must be dimensionless, got "
