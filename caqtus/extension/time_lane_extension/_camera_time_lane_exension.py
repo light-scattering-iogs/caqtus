@@ -10,13 +10,13 @@ def create_camera_lane(number_steps: int) -> CameraTimeLane:
     return CameraTimeLane([None] * number_steps)
 
 
-def create_lane_model(lane, name: str) -> TimeLaneModel:
-    model = CameraTimeLaneModel(name)
+def create_lane_model(lane, lane_name: str) -> TimeLaneModel:
+    model = CameraTimeLaneModel(lane_name)
     model.set_lane(lane)
     return model
 
 
-def create_lane_delegate(lane, name: str) -> None:
+def create_lane_delegate(lane, lane_name: str) -> None:
     return None
 
 
