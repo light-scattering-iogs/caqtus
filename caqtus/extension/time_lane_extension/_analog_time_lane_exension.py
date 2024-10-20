@@ -10,13 +10,13 @@ def create_analog_lane(number_steps: int) -> AnalogTimeLane:
     return AnalogTimeLane([Expression("...")] * number_steps)
 
 
-def create_lane_model(lane, name: str) -> TimeLaneModel:
-    model = AnalogTimeLaneModel(name)
+def create_lane_model(lane, lane_name: str) -> TimeLaneModel:
+    model = AnalogTimeLaneModel(lane_name)
     model.set_lane(lane)
     return model
 
 
-def create_lane_delegate(lane, name: str) -> None:
+def create_lane_delegate(lane, lane_name: str) -> None:
     return None
 
 
