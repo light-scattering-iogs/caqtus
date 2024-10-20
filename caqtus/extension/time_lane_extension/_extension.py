@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from typing import Optional
 
 import attrs
@@ -8,10 +7,7 @@ from caqtus.gui.condetrol.timelanes_editor.extension import (
     LaneModelFactory,
     LaneDelegateFactory,
 )
-
-# noinspection PyPep8Naming
-from caqtus.types.timelane import TimeLane
-from caqtus.utils.serialization import JSON
+from caqtus.types.timelane import TimeLane, LaneLoader, LaneDumper
 
 
 def no_lane_delegate_factory(lane: TimeLane, lane_name: str) -> None:
@@ -47,8 +43,8 @@ class TimeLaneExtension[L: TimeLane]:
 
     label: str = attrs.field(converter=str)
     lane_type: type[L] = attrs.field()
-    dumper: Callable[[L], JSON] = attrs.field()
-    loader: Callable[[JSON], L] = attrs.field()
+    dumper: LaneDumper[L] = attrs.field()
+    loader: LaneLoader[L] = attrs.field()
     lane_factory: LaneFactory[L] = attrs.field()
     lane_model_factory: LaneModelFactory[L] = attrs.field()
     lane_delegate_factory: LaneDelegateFactory[L] = attrs.field(

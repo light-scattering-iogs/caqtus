@@ -10,7 +10,7 @@ from ._protocol import DeviceManagerExtensionProtocol
 class DeviceManagerExtension(DeviceManagerExtensionProtocol):
     def __init__(self):
         self._compiler_types: dict[type[DeviceConfiguration], type[DeviceCompiler]] = {}
-        self._device_types: dict[type[DeviceConfiguration], type[Device]] = {}
+        self._device_types: dict[type[DeviceConfiguration], Callable[..., Device]] = {}
         self._controller_types: dict[
             type[DeviceConfiguration], type[DeviceController]
         ] = {}
@@ -24,10 +24,12 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
     ) -> None:
         self._compiler_types[configuration_type] = compiler_type
 
-    def register_device(
+    def register_device[
+        D: Device
+    ](
         self,
-        configuration_type: type[DeviceConfiguration],
-        device_type: type[Device],
+        configuration_type: type[DeviceConfiguration[D]],
+        device_type: Callable[..., D],
     ) -> None:
         self._device_types[configuration_type] = device_type
 

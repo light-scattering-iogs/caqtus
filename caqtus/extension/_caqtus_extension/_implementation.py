@@ -21,14 +21,30 @@ T = TypeVar("T", bound=ExperimentSessionMaker)
 
 @attrs.frozen
 class CaqtusExtension(CaqtusExtensionProtocol):
-    condetrol_extension: CondetrolExtension = attrs.field(factory=CondetrolExtension)
-    device_configurations_serializer: DeviceConfigJSONSerializer = attrs.field(
+    _condetrol_extension: CondetrolExtension = attrs.field(factory=CondetrolExtension)
+    _device_configurations_serializer: DeviceConfigJSONSerializer = attrs.field(
         factory=DeviceConfigJSONSerializer
     )
-    time_lane_serializer: TimeLaneSerializer = attrs.field(factory=TimeLaneSerializer)
-    device_manager_extension: DeviceManagerExtension = attrs.field(
+    _time_lane_serializer: TimeLaneSerializer = attrs.field(factory=TimeLaneSerializer)
+    _device_manager_extension: DeviceManagerExtension = attrs.field(
         factory=DeviceManagerExtension
     )
+
+    @property
+    def condetrol_extension(self) -> CondetrolExtension:
+        return self._condetrol_extension
+
+    @property
+    def device_configurations_serializer(self) -> DeviceConfigJSONSerializer:
+        return self._device_configurations_serializer
+
+    @property
+    def time_lane_serializer(self) -> TimeLaneSerializer:
+        return self._time_lane_serializer
+
+    @property
+    def device_manager_extension(self) -> DeviceManagerExtension:
+        return self._device_manager_extension
 
     def __attrs_post_init__(self):
         self.condetrol_extension.lane_extension.set_lane_serializer(

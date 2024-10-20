@@ -1,7 +1,6 @@
 from collections.abc import Callable
-from typing import TypeVar, Optional, NewType, TypedDict
+from typing import Optional, NewType, TypedDict
 
-from caqtus.utils import serialization
 from caqtus.utils.serialization import (
     JSON,
     is_valid_json_dict,
@@ -12,25 +11,30 @@ from ._protocol import TimeLaneSerializerProtocol
 from ..timelane import TimeLane, TimeLanes
 from ...expression import Expression
 
-L = TypeVar("L", bound=TimeLane)
-
 Tag = NewType("Tag", str)
-Dumper = Callable[[L], JsonDict]
-Loader = Callable[[JsonDict], L]
+
+
+type LaneDumper[L: TimeLane] = Callable[[L], JsonDict]
+"""A function that serializes a time lane to a JSON dictionary."""
+
+type LaneLoader[L: TimeLane] = Callable[[JsonDict], L]
+"""A function that constructs a time lane from a JSON dictionary."""
 
 converter = copy_converter()
 
 
 class TimeLaneSerializer(TimeLaneSerializerProtocol):
     def __init__(self):
-        self.dumpers: dict[type, tuple[Dumper, Tag]] = {}
-        self.loaders: dict[Tag, Loader] = {}
+        self.dumpers: dict[type, tuple[LaneDumper, Tag]] = {}
+        self.loaders: dict[Tag, LaneLoader] = {}
 
-    def register_time_lane(
+    def register_time_lane[
+        L: TimeLane
+    ](
         self,
         lane_type: type[L],
-        dumper: Dumper[L],
-        loader: Loader[L],
+        dumper: LaneDumper[L],
+        loader: LaneLoader[L],
         type_tag: Optional[str] = None,
     ) -> None:
         if type_tag is None:
@@ -64,7 +68,7 @@ class TimeLaneSerializer(TimeLaneSerializerProtocol):
             raise error from None
         return loader(data)
 
-    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JsonDict:
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> JsonDict:
         return dict(
             step_names=converter.unstructure(time_lanes.step_names, list[str]),
             step_durations=converter.unstructure(

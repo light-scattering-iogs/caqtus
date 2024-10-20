@@ -1,7 +1,9 @@
+from ._implementation import TimeLaneSerializer, LaneLoader, LaneDumper
 from ._protocol import TimeLaneSerializerProtocol
-from ._implementation import TimeLaneSerializer
 
 __all__ = [
     "TimeLaneSerializerProtocol",
     "TimeLaneSerializer",
+    "LaneLoader",
+    "LaneDumper",
 ]

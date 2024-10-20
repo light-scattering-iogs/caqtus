@@ -9,7 +9,16 @@ from caqtus.types.timelane._serializer import TimeLaneSerializerProtocol
 
 
 class CaqtusExtensionProtocol(Protocol):
-    condetrol_extension: CondetrolExtensionProtocol
-    device_configurations_serializer: DeviceConfigJSONSerializerProtocol
-    time_lane_serializer: TimeLaneSerializerProtocol
-    device_manager_extension: DeviceManagerExtensionProtocol
+    @property
+    def condetrol_extension(self) -> CondetrolExtensionProtocol: ...
+
+    @property
+    def device_configurations_serializer(
+        self,
+    ) -> DeviceConfigJSONSerializerProtocol: ...
+
+    @property
+    def time_lane_serializer(self) -> TimeLaneSerializerProtocol: ...
+
+    @property
+    def device_manager_extension(self) -> DeviceManagerExtensionProtocol: ...
