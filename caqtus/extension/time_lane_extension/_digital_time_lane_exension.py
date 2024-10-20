@@ -12,13 +12,13 @@ def create_digital_lane(number_steps: int) -> DigitalTimeLane:
     return DigitalTimeLane([False] * number_steps)
 
 
-def create_lane_model(lane, name: str) -> TimeLaneModel:
-    model = DigitalTimeLaneModel(name)
+def create_lane_model(lane, lane_name: str) -> TimeLaneModel:
+    model = DigitalTimeLaneModel(lane_name)
     model.set_lane(lane)
     return model
 
 
-def create_lane_delegate(lane, name: str) -> DigitalTimeLaneDelegate:
+def create_lane_delegate(lane, lane_name: str) -> DigitalTimeLaneDelegate:
     return DigitalTimeLaneDelegate()
 
 
