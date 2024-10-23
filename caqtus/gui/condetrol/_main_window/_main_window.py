@@ -104,7 +104,9 @@ class CondetrolWindowHandler:
                 self.main_window.signal_exception_while_running_sequence(exception)
                 return
 
-            while await anyio.to_thread.run_sync(procedure.is_running_sequence):
+            while await anyio.to_thread.run_sync(  # noqa: ASYNC110
+                procedure.is_running_sequence
+            ):
                 await anyio.sleep(50e-3)
 
         self.is_running_sequence = False
@@ -212,7 +214,7 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
 
         self.display_error(
             "An error occurred while running a sequence.",
-            recoverable,
+            TracebackSummary.from_exception(recoverable),
         )
 
     def open_device_configurations_editor(self) -> None:
@@ -240,7 +242,7 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
                         device_configuration
                     )
 
-    def closeEvent(self, event):
+    def closeEvent(self, event):  # noqa: N802
         self.save_window()
         super().closeEvent(event)
 
@@ -299,8 +301,8 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         QtWidgets.QMessageBox.about(
             self,
             "Condetrol",
-            "<p><i>Condetrol</i> is a graphical user interface to edit and launch cold atom "
-            "experiments.</p>"
+            "<p><i>Condetrol</i> is a graphical user interface to edit and launch"
+            " cold atom experiments.</p>"
             f"<p><i>caqtus-suite</i> version: {__version__}</p>"
             f"<p>Platform: {platform.platform()}</p>",
         )
