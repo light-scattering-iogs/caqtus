@@ -58,9 +58,7 @@ class CondetrolWindowHandler:
                 parameters = await session.get_global_parameters()
             if parameters != self.main_window.global_parameters_editor.get_parameters():
                 self.main_window.global_parameters_editor.set_parameters(parameters)
-                self.main_window.sequence_widget.set_available_parameter_names(
-                    parameters.names()
-                )
+                self.main_window.sequence_widget.update_global_parameters(parameters)
             await anyio.sleep(0.2)
 
     def start_sequence(self, path: PureSequencePath):
@@ -282,7 +280,7 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         with self.session_maker() as session:
             session.set_global_parameters(parameters)
             logger.info(f"Global parameters written to storage: {parameters}")
-        self.sequence_widget.set_available_parameter_names(parameters.names())
+        self.sequence_widget.update_global_parameters(parameters)
 
     def signal_exception_while_running_sequence(self, exception: Exception):
         # This is a bit ugly because on_procedure_exception runs a dialog, which

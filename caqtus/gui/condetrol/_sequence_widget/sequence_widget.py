@@ -147,6 +147,15 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self._exception_dialog = ExceptionDialog(self)
 
+    def update_global_parameters(self, parameters: ParameterNamespace) -> None:
+        """Update the table of parameters that the editor uses.
+
+        Whenever the global parameters change externally, this method must be called to
+        reflect the change.
+        """
+
+        self.set_available_parameter_names(parameters.names())
+
     def set_available_parameter_names(
         self, parameter_names: Set[DottedVariableName]
     ) -> None:
