@@ -93,6 +93,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         with self.session_maker() as session:
             device_configurations = dict(session.default_device_configurations)
+            self._global_parameters = session.get_global_parameters()
 
         self._state: _State = _SequenceNotSetState()
         self._state_lock = anyio.Lock()
@@ -154,7 +155,10 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         reflect the change.
         """
 
+        self._global_parameters = parameters
         self.set_available_parameter_names(parameters.names())
+        if isinstance(self._state, _SequenceNotSetState | _SequenceEditableState):
+            self.parameters_editor.set_parameters(parameters)
 
     def set_available_parameter_names(
         self, parameter_names: Set[DottedVariableName]
@@ -193,6 +197,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 self.start_sequence_action.setEnabled(False)
                 self.interrupt_sequence_action.setEnabled(False)
                 self.warning_action.setVisible(False)
+                self.parameters_editor.set_parameters(self._global_parameters)
             case _SequenceSetState(
                 iterations=iterations,
                 time_lanes=time_lanes,
@@ -209,15 +214,14 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     self.interrupt_sequence_action.setEnabled(False)
                     self.time_lanes_editor.set_read_only(False)
                     self.iteration_editor.set_read_only(False)
-                    self.tabWidget.setTabEnabled(0, False)
                     self.warning_action.setVisible(False)
+                    self.parameters_editor.set_parameters(self._global_parameters)
                 elif isinstance(new_state, _SequenceNotEditableState):
                     self.start_sequence_action.setEnabled(False)
                     self.interrupt_sequence_action.setEnabled(False)
                     self.time_lanes_editor.set_read_only(True)
                     self.iteration_editor.set_read_only(True)
                     self.parameters_editor.set_parameters(new_state.parameters)
-                    self.tabWidget.setTabEnabled(0, True)
                     if isinstance(new_state, _SequenceCrashedState):
                         self.warning_action.setVisible(True)
                     else:
