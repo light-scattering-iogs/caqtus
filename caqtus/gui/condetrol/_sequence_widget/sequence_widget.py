@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Set
-from typing import Optional, Literal
+from typing import Optional, Literal, assert_never
 
 import anyio
 import attrs
@@ -224,6 +224,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                         self.warning_action.setVisible(False)
 
                 self.setVisible(True)
+            case _:
+                assert_never(new_state)
         self._state = new_state
 
     def _on_warning_action_triggered(self) -> None:
@@ -298,17 +300,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 self._state = attrs.evolve(self._state, time_lanes=time_lanes)
 
 
-class _State:
+@attrs.frozen
+class _SequenceNotSetState:
     pass
 
 
 @attrs.frozen
-class _SequenceNotSetState(_State):
-    pass
-
-
-@attrs.frozen
-class _SequenceSetState(_State):
+class _SequenceSetState:
     sequence_path: PureSequencePath
     sequence_state: State
 
@@ -329,6 +327,9 @@ class _SequenceCrashedState(_SequenceNotEditableState):
 @attrs.frozen
 class _SequenceEditableState(_SequenceSetState):
     pass
+
+
+type _State = _SequenceNotSetState | _SequenceSetState
 
 
 async def _query_state_async(
