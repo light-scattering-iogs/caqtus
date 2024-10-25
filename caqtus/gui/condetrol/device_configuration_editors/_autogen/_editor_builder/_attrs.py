@@ -3,7 +3,7 @@ from typing import Optional, override
 import attrs
 from PySide6.QtWidgets import QWidget, QFormLayout
 
-from ._editor_builder import EditorBuilder
+from ._editor_builder import EditorBuilder, EditorBuildingError
 from .._value_editor import ValueEditor
 
 
@@ -14,10 +14,13 @@ def build_editor_for_attrs_class[
     attribute_editors = {}
     for field in fields:
         if field.type is None:
-            raise ValueError(
-                f"No type specified for field {field.name} for class {cls}"
+            raise AttributeEditorBuildingError(cls, field) from ValueError(
+                "No type specified"
             )
-        attribute_editors[field.name] = builder.build_editor(field.type)
+        try:
+            attribute_editors[field.name] = builder.build_editor(field.type)
+        except EditorBuildingError as e:
+            raise AttributeEditorBuildingError(cls, field) from e
 
     class AttrsEditor(ValueEditor[T]):
         @override
@@ -66,3 +69,9 @@ def prettify_snake_case(name: str) -> str:
 
 def attr_to_editor_name(name: str) -> str:
     return f"editor_{name}"
+
+
+class AttributeEditorBuildingError(EditorBuildingError):
+    def __init__(self, cls: type[attrs.AttrsInstance], attribute: attrs.Attribute):
+        msg = f"Could not build editor for attribute '{attribute.name}' of {cls}"
+        super().__init__(msg)
