@@ -16,6 +16,12 @@ class EditorBuilder:
         try:
             return self._type_editors[type_]
         except KeyError:
+            import attrs
+
+            from ._attrs import build_editor_for_attrs_class
+
+            if attrs.has(type_):
+                return build_editor_for_attrs_class(type_, self)
             raise TypeNotRegisteredError(
                 f"Type {type_} is not registered for the editor builder"
             ) from None
@@ -26,6 +32,9 @@ class EditorBuilder:
         """Specify an editor to use when encountering a given type."""
 
         self._type_editors[type_] = editor_type
+
+    def build_editor[T](self, type_: type[T]) -> type[ValueEditor[T]]:
+        return self.build_editor_for_type(type_)
 
 
 class TypeNotRegisteredError(ValueError):
