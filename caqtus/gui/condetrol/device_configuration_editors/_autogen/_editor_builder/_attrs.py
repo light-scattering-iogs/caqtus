@@ -36,9 +36,9 @@ def build_editor_for_attrs_class[
 
         # TODO: Figure out why pyright report this method as an incompatible override
         @override
-        def get_value(self) -> T:  # type: ignore[reportIncompatibleMethodOverride]
+        def read_value(self) -> T:  # type: ignore[reportIncompatibleMethodOverride]
             attribute_values = {
-                name: editor.get_value() for name, editor in self._editors.items()
+                name: editor.read_value() for name, editor in self._editors.items()
             }
             return cls(**attribute_values)
 

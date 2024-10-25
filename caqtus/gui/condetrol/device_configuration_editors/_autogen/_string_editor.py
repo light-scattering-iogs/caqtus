@@ -10,7 +10,7 @@ class StringEditor(ValueEditor[str]):
         self.line_edit = QLineEdit(parent)
         self.line_edit.setText(value)
 
-    def get_value(self) -> str:
+    def read_value(self) -> str:
         return self.line_edit.text()
 
     def set_editable(self, editable: bool) -> None:

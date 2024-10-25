@@ -38,4 +38,4 @@ def test_attrs_class(qtbot: QtBot):
     widget = editor.widget()
     qtbot.add_widget(widget)
     editor.set_editable(False)
-    assert editor.get_value() == initial_value
+    assert editor.read_value() == initial_value

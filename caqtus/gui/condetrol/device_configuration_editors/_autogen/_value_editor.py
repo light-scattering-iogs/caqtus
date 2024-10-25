@@ -19,7 +19,7 @@ class ValueEditor[T](abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_value(self) -> T:
+    def read_value(self) -> T:
         """Return the current value displayed in the editor."""
 
         raise NotImplementedError
