@@ -37,5 +37,8 @@ def test_attrs_class(qtbot: QtBot):
     editor = MyClassEditor(initial_value)
     widget = editor.widget()
     qtbot.add_widget(widget)
-    editor.set_editable(False)
-    assert editor.read_value() == initial_value
+    editor.set_editable(True)
+    editor_channel_0 = getattr(editor, "editor_channel_0")  # noqa: B009
+    assert isinstance(editor_channel_0, StringEditor)
+    editor_channel_0.widget().setText("check")
+    assert editor.read_value() == MyClass("check", "test")

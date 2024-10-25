@@ -23,28 +23,29 @@ def build_editor_for_attrs_class[
         @override
         def __init__(self, value: T, parent: Optional[QWidget] = None) -> None:
             self._widget = QWidget(parent)
-            self._editors = {
-                field.name: attribute_editors[field.name](
-                    getattr(value, field.name), None
-                )
-                for field in fields
-            }
+
             layout = QFormLayout()
             self._widget.setLayout(layout)
-            for label, editor in self._editors.items():
-                layout.addRow(prettify_snake_case(label), editor.widget())
+            for field in fields:
+                editor = attribute_editors[field.name](getattr(value, field.name, None))
+                setattr(self, attr_to_editor_name(field.name), editor)
+                layout.addRow(prettify_snake_case(field.name), editor.widget())
 
         # TODO: Figure out why pyright report this method as an incompatible override
         @override
         def read_value(self) -> T:  # type: ignore[reportIncompatibleMethodOverride]
-            attribute_values = {
-                name: editor.read_value() for name, editor in self._editors.items()
-            }
+            attribute_values = {}
+            for field in fields:
+                editor = getattr(self, attr_to_editor_name(field.name))
+                assert isinstance(editor, ValueEditor)
+                attribute_values[field.name] = editor.read_value()
             return cls(**attribute_values)
 
         @override
         def set_editable(self, editable: bool) -> None:
-            for editor in self._editors.values():
+            for field in fields:
+                editor = getattr(self, attr_to_editor_name(field.name))
+                assert isinstance(editor, ValueEditor)
                 editor.set_editable(editable)
 
         @override
@@ -61,3 +62,7 @@ def prettify_snake_case(name: str) -> str:
         return " ".join(words)
     else:
         return name
+
+
+def attr_to_editor_name(name: str) -> str:
+    return f"editor_{name}"
