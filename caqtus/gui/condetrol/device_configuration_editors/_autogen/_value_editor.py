@@ -26,7 +26,10 @@ class ValueEditor[T](abc.ABC):
 
     @abc.abstractmethod
     def set_editable(self, editable: bool) -> None:
-        """Set whether the editor is editable or not."""
+        """Set whether the editor is editable or not.
+
+        When initialized, the editor is editable.
+        """
 
         raise NotImplementedError
 
