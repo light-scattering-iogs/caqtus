@@ -1,4 +1,5 @@
 import ast
+import contextvars
 import re
 from collections.abc import Mapping
 from functools import cached_property
@@ -16,17 +17,16 @@ from ..variable_name import DottedVariableName, VariableName
 
 EXPRESSION_REGEX = re.compile(".*")
 
+expression_builtins: contextvars.ContextVar[Mapping[str, Any]] = contextvars.ContextVar(
+    "expression_builtins", default={}
+)
+"""A context variable holding the built-in names used when evaluating an expression.
 
-def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
-    x = t / period
-    x = x - numpy.floor(x)
-    is_high = x < duty_cycle
-    result = numpy.where(is_high, high, low)
-    return result
+It is possible to override the builtins by setting this value to different builtins
+before expressions are evaluated.
+"""
 
-
-#: Built-in functions and constants available in expressions.
-BUILTINS: Mapping[str, Any] = {
+DEFAULT_BUILTINS: Mapping[str, Any] = {
     "abs": numpy.abs,
     "arccos": numpy.arccos,
     "arcsin": numpy.arcsin,
@@ -49,12 +49,15 @@ BUILTINS: Mapping[str, Any] = {
     "sqrt": numpy.sqrt,
     "tan": numpy.tan,
     "tanh": numpy.tanh,
-    "square_wave": square_wave,
     "max": max,
     "min": min,
     "Enabled": True,
     "Disabled": False,
 } | {str(name): value for name, value in units.items()}
+"""Default built-in functions and constants available in expressions."""
+
+
+expression_builtins.set(DEFAULT_BUILTINS)
 
 
 class Expression:
@@ -86,6 +89,12 @@ class Expression:
         """The string representation of the expression."""
 
         return self._body
+
+    @property
+    def builtins(self) -> Mapping[str, Any]:
+        """Return the builtins values defined in the expression."""
+
+        return expression_builtins.get()
 
     def __repr__(self) -> str:
         return f"Expression('{self.body}')"
@@ -119,10 +128,12 @@ class Expression:
 
         variables = set()
 
+        builtins = self.builtins
+
         class FindNameVisitor(ast.NodeVisitor):
             def visit_Name(self, node: ast.Name):  # noqa: N802
                 if isinstance(node.ctx, ast.Load):
-                    if node.id not in BUILTINS:
+                    if node.id not in builtins:
                         variables.add(VariableName(node.id))
 
         FindNameVisitor().visit(self._ast)
@@ -147,7 +158,7 @@ class Expression:
 
     def _evaluate(self, variables: Mapping[str, Any]) -> Any:
         try:
-            value = eval(self._code, {"__builtins__": BUILTINS}, variables)
+            value = eval(self._code, {"__builtins__": self.builtins}, variables)
         except Exception as error:
             raise EvaluationError(
                 f"Could not evaluate {fmt.expression(self)}"
