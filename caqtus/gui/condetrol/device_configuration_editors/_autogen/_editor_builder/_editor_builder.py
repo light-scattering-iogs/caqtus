@@ -1,4 +1,4 @@
-from ._value_editor import ValueEditor
+from .._value_editor import ValueEditor
 
 
 class EditorBuilder:
