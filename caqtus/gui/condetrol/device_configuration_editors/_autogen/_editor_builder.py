@@ -23,6 +23,8 @@ class EditorBuilder:
     def register_editor_for_type[
         T
     ](self, type_: type[T], editor_type: type[ValueEditor[T]]) -> None:
+        """Specify an editor to use when encountering a given type."""
+
         self._type_editors[type_] = editor_type
 
 
