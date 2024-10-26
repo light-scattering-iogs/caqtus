@@ -11,6 +11,11 @@ def build_editor_for_attrs_class[
     T: attrs.AttrsInstance
 ](cls: type[T], builder: EditorBuilder) -> type[ValueEditor[T]]:
     fields: tuple[attrs.Attribute] = attrs.fields(cls)
+
+    if any(isinstance(field.type, str) for field in fields):
+        # PEP 563 annotations - need to be resolved.
+        attrs.resolve_types(cls)
+
     attribute_editors = {}
     for field in fields:
         if field.type is None:
