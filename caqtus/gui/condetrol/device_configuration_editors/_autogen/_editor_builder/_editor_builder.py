@@ -33,14 +33,17 @@ class EditorBuilder:
 
         self._type_editors[type_] = editor_type
 
-    def build_editor[T](self, type_: type[T]) -> type[ValueEditor[T]]:
+    def build_editor(self, type_: type) -> type[ValueEditor]:
         """Construct a gui class to edit value of a given type.
 
         Raises:
             EditorBuilding error if something goes wrong.
         """
 
-        return self.build_editor_for_type(type_)
+        if isinstance(type_, type):
+            return self.build_editor_for_type(type_)
+        else:
+            raise EditorBuildingError(f"Cannot build editor for {type_}")
 
 
 class EditorBuildingError(Exception):
