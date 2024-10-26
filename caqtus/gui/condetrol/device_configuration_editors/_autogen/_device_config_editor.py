@@ -49,7 +49,7 @@ def build_device_configuration_editor[
         that can be used to edit configurations with type `config_type`.
     """
 
-    config_editor_type = builder.build_editor_for_type(config_type)
+    config_editor_type = builder.build_editor(config_type)
     return functools.partial(
         GeneratedConfigEditor, config_editor_type=config_editor_type
     )

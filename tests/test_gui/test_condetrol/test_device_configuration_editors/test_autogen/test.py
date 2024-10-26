@@ -12,20 +12,20 @@ from caqtus.gui.condetrol.device_configuration_editors._autogen import (
 
 def test_dispatch_simple_type():
     builder = EditorBuilder()
-    builder.register_editor_for_type(str, StringEditor)
-    assert builder.build_editor_for_type(str) == StringEditor
+    builder.register_editor(str, StringEditor)
+    assert builder.build_editor(str) == StringEditor
 
 
 def test_not_registered_type():
     builder = EditorBuilder()
     with pytest.raises(TypeNotRegisteredError):
-        builder.build_editor_for_type(str)
+        builder.build_editor(str)
 
 
 def test_attrs_class(qtbot: QtBot):
     builder = EditorBuilder()
-    builder.register_editor_for_type(str, StringEditor)
-    builder.register_editor_for_type(int, IntegerEditor)
+    builder.register_editor(str, StringEditor)
+    builder.register_editor(int, IntegerEditor)
 
     @attrs.define
     class MyClass:
@@ -49,8 +49,8 @@ def test_attrs_class(qtbot: QtBot):
 
 def test_nested_class(qtbot: QtBot):
     builder = EditorBuilder()
-    builder.register_editor_for_type(str, StringEditor)
-    builder.register_editor_for_type(int, IntegerEditor)
+    builder.register_editor(str, StringEditor)
+    builder.register_editor(int, IntegerEditor)
 
     @attrs.define
     class Child:
@@ -69,5 +69,3 @@ def test_nested_class(qtbot: QtBot):
     qtbot.add_widget(widget)
     editor.set_editable(True)
     assert editor.read_value() == initial_value
-    widget.show()
-    qtbot.stop()
