@@ -8,7 +8,7 @@ def renamed_exception_group(message: str):
     try:
         yield
     except ExceptionGroup as e:
-        raise ExceptionGroup(message, e.exceptions) from None
+        raise ExceptionGroup(message, e.exceptions) from e.__cause__
 
 
 @contextlib.asynccontextmanager
