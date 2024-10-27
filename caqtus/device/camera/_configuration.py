@@ -12,8 +12,8 @@ class CameraConfiguration[C: Camera](DeviceConfiguration[C]):
     """Contains the necessary information about a camera.
 
     Attributes:
-        roi: The region of interest to keep for the images taken by the camera for all
-            acquisitions.
+        roi: The rectangular region of interest to keep for the images taken by the
+            camera.
     """
 
     roi: RectangularROI = attrs.field(

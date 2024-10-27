@@ -16,7 +16,7 @@ class OrcaQuestCameraConfiguration(CameraConfiguration):
     """
 
     camera_number: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
-    roi = CameraConfiguration.roi
+    roi: RectangularROI = CameraConfiguration.roi
 
 
 def test(qtbot: QtBot):

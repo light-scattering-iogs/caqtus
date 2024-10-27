@@ -12,9 +12,9 @@ class RectangularROI(ROI):
 
     Attributes:
         x: Horizontal coordinate of the left column of the roi, in pixels.
-        width: Width of the roi, in pixels.
+        width: Number of columns in the roi.
         y: Vertical coordinate of the bottom row of the roi, in pixels.
-        height: Height of the roi, in pixels.
+        height: Number of rows in the roi.
     """
 
     x: int = attrs.field(

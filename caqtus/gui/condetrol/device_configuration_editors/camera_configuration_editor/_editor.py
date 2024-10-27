@@ -86,7 +86,7 @@ class RectangularROIEditor(QWidget):
 
         self._width_spinbox = QSpinBox(self)
         width_label = QLabel("Width")
-        width_label.setToolTip("Width of the roi, in pixels.")
+        width_label.setToolTip("Number of columns in the roi.")
         layout.addRow(width_label, self._width_spinbox)
         self._width_spinbox.setRange(1, self._max_width)
         self._width_spinbox.setValue(self._max_width)
@@ -102,7 +102,7 @@ class RectangularROIEditor(QWidget):
 
         self._height_spinbox = QSpinBox(self)
         height_label = QLabel("Height")
-        height_label.setToolTip("Height of the roi, in pixels.")
+        height_label.setToolTip("Number of rows in the roi.")
         layout.addRow(height_label, self._height_spinbox)
         self._height_spinbox.setRange(1, self._max_height)
         self._height_spinbox.setValue(self._max_height)
