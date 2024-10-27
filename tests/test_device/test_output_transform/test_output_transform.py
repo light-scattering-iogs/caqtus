@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from caqtus.device.configuration import get_converter
+from caqtus.device.configuration import get_structure_hook, get_unstructure_hook
 from caqtus.device.output_transform import (
     LinearInterpolation,
     evaluate,
@@ -11,7 +11,8 @@ from caqtus.device.output_transform._output_mapping import interpolate
 from caqtus.types.expression import Expression
 from caqtus.types.units import Quantity, Unit, VOLT, dimensionless, AMPERE, DECIBEL
 
-converter = get_converter()
+structure_output = get_structure_hook(EvaluableOutput)
+unstructure_output = get_unstructure_hook(EvaluableOutput)
 
 
 @pytest.fixture
@@ -64,7 +65,7 @@ def test_interpolation_db():
 def test_linear_interpolation_serialization():
     output = LinearInterpolation(Expression("0.5 V"), ((0, 0), (1, 1)), "V", "V")
 
-    unstructured = converter.unstructure(output, EvaluableOutput)
+    unstructured = unstructure_output(output)
     assert unstructured == {
         "input_": "0.5 V",
         "measured_data_points": ((0, 0), (1, 1)),
@@ -72,7 +73,7 @@ def test_linear_interpolation_serialization():
         "output_points_unit": "V",
         "type": "LinearInterpolation",
     }
-    structured = converter.structure(unstructured, EvaluableOutput)  # type: ignore
+    structured = structure_output(unstructured)  # type: ignore
 
     assert structured == output
 
@@ -80,9 +81,9 @@ def test_linear_interpolation_serialization():
 def test_expression_serialization():
     output = Expression("0.5 V")
 
-    unstructured = converter.unstructure(output, EvaluableOutput)
+    unstructured = unstructure_output(output)
     assert unstructured == "0.5 V"
 
-    structured = converter.structure(unstructured, EvaluableOutput)  # type: ignore
+    structured = structure_output(unstructured)  # type: ignore
 
     assert structured == output
