@@ -44,9 +44,14 @@ class DeviceConfigurationEditorType[C: DeviceConfiguration](Protocol):
     ) -> GeneratedConfigEditor[C]: ...
 
 
+_builder = EditorBuilder()
+
+
 def build_device_configuration_editor[
     C: DeviceConfiguration
-](config_type: type[C], builder: EditorBuilder) -> DeviceConfigurationEditorType[C]:
+](
+    config_type: type[C], builder: EditorBuilder = _builder
+) -> DeviceConfigurationEditorType[C]:
     """Builds a device configuration editor for the given configuration type.
 
     Args:
@@ -62,9 +67,6 @@ def build_device_configuration_editor[
     return functools.partial(
         GeneratedConfigEditor, config_editor_type=config_editor_type
     )
-
-
-_builder = EditorBuilder()
 
 
 class DeviceServerNameEditor(ValueEditor[Optional[DeviceServerName]]):

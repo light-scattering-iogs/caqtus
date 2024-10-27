@@ -1,9 +1,10 @@
+from typing import reveal_type
+
 import attrs
 from pytestqt.qtbot import QtBot
 
 from caqtus.device.camera import CameraConfiguration
 from caqtus.gui.condetrol.device_configuration_editors._autogen import (
-    get_editor_builder,
     build_device_configuration_editor,
 )
 from caqtus.types.image import Width, Height
@@ -13,12 +14,15 @@ from caqtus.types.image.roi import RectangularROI
 @attrs.define
 class OrcaQuestCameraConfiguration(CameraConfiguration):
     camera_number: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
+    roi = CameraConfiguration.roi
+
+
+reveal_type(OrcaQuestCameraConfiguration.roi)
 
 
 def test(qtbot: QtBot):
-    editor_type = build_device_configuration_editor(
-        OrcaQuestCameraConfiguration, get_editor_builder()
-    )
+
+    editor_type = build_device_configuration_editor(OrcaQuestCameraConfiguration)
 
     config = OrcaQuestCameraConfiguration(
         camera_number=0,
