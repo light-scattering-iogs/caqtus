@@ -37,7 +37,8 @@ def test_attrs_class(qtbot: QtBot):
 
     initial_value = MyClass(42, "abc", "test")
 
-    editor = MyClassEditor(initial_value)
+    editor = MyClassEditor()
+    editor.set_value(initial_value)
     widget = editor.widget()
     qtbot.add_widget(widget)
     editor.set_editable(False)
@@ -64,7 +65,8 @@ def test_nested_class(qtbot: QtBot):
     initial_value = Parent(name="Julia", child=Child(age=8))
 
     ParentEditor = builder.build_editor(Parent)  # noqa: N806
-    editor = ParentEditor(initial_value)
+    editor = ParentEditor()
+    editor.set_value(initial_value)
     widget = editor.widget()
     qtbot.add_widget(widget)
     editor.set_editable(True)

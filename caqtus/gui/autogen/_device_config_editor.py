@@ -30,7 +30,8 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
         editor_factory: EditorFactory[C],
     ) -> None:
         super().__init__()
-        self._editor = editor_factory(config)
+        self._editor = editor_factory()
+        self._editor.set_value(config)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._editor.widget())
@@ -93,9 +94,11 @@ def build_device_configuration_editor[
 
 
 class DeviceServerNameEditor(ValueEditor[Optional[DeviceServerName]]):
-    def __init__(self, value: Optional[DeviceServerName]) -> None:
+    def __init__(self) -> None:
         self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText("None")
+
+    def set_value(self, value: Optional[DeviceServerName]) -> None:
         if value:
             self.line_edit.setText(value)
         else:
@@ -116,8 +119,10 @@ class DeviceServerNameEditor(ValueEditor[Optional[DeviceServerName]]):
 
 
 class RectangularROIEditor(ValueEditor[RectangularROI]):
-    def __init__(self, value: RectangularROI) -> None:
-        self._widget = RectangularROIWidget(value.original_width, value.original_height)
+    def __init__(self) -> None:
+        self._widget = RectangularROIWidget(100, 100)
+
+    def set_value(self, value: RectangularROI) -> None:
         self._widget.set_roi(value)
 
     def read_value(self) -> RectangularROI:

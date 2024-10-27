@@ -6,7 +6,7 @@ from .._value_editor import ValueEditor
 # TODO: Use PEP 747 if accepted
 type TypeExpr[T] = typing.Any
 
-type EditorFactory[T] = Callable[[T], ValueEditor[T]]
+type EditorFactory[T] = Callable[[], ValueEditor[T]]
 """A function that can be used to create an editor for a value."""
 
 

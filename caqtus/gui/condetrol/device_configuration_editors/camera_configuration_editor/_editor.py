@@ -118,6 +118,10 @@ class RectangularROIEditor(QWidget):
 
         self._max_width = roi.original_width
         self._max_height = roi.original_height
+        self._x_spinbox.setRange(0, self._max_width)
+        self._y_spinbox.setRange(0, self._max_height)
+        self._width_spinbox.setRange(0, self._max_width)
+        self._height_spinbox.setRange(0, self._max_height)
 
         # We first set x and y coordinates to 0 to have the full allowed range for
         # width and height spinboxes, otherwise the range would be limited by the

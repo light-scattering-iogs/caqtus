@@ -56,18 +56,25 @@ def build_attrs_class_editor[
 
     class AttrsEditor(ValueEditor[T]):
         @override
-        def __init__(self, value: T) -> None:
+        def __init__(self) -> None:
             self._widget = QWidget()
 
             layout = QFormLayout()
             self._widget.setLayout(layout)
             for field in fields:
-                editor = attribute_editors[field.name](getattr(value, field.name, None))
+                editor = attribute_editors[field.name]()
                 setattr(self, attr_to_editor_name(field.name), editor)
                 label = QLabel(prettify_snake_case(field.name))
                 if field.name in attribute_docstrings:
                     label.setToolTip(attribute_docstrings[field.name])
                 layout.addRow(label, editor.widget())
+
+        @override
+        def set_value(self, value: T) -> None:
+            for field in fields:
+                editor = getattr(self, attr_to_editor_name(field.name))
+                assert isinstance(editor, ValueEditor)
+                editor.set_value(getattr(value, field.name))
 
         # TODO: Figure out why pyright report this method as an incompatible override
         @override

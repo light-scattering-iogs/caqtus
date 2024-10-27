@@ -46,5 +46,4 @@ def test(qtbot: QtBot):
 
     qtbot.addWidget(editor)
     editor.show()
-    qtbot.stop()
     assert editor.get_configuration() == config

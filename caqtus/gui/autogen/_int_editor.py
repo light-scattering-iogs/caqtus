@@ -15,8 +15,6 @@ class IntegerEditor(ValueEditor[int]):
 
     def __init__(
         self,
-        value: int,
-        *,
         min_value=0,
         max_value=999,
         prefix: str = "",
@@ -24,15 +22,21 @@ class IntegerEditor(ValueEditor[int]):
     ) -> None:
         self.spin_box = QSpinBox()
         self.spin_box.setRange(min_value, max_value)
-        if not min_value <= value <= max_value:
-            raise ValueError(
-                f"Value {value} is outside the editor range [{min_value}, {max_value}]"
-            )
-        self.spin_box.setValue(value)
+        self._min_value = min_value
+        self._max_value = max_value
+
         if prefix:
             self.spin_box.setPrefix(prefix)
         if suffix:
             self.spin_box.setSuffix(suffix)
+
+    def set_value(self, value: int) -> None:
+        if not self._min_value <= value <= self._max_value:
+            raise ValueError(
+                f"Value {value} is outside the editor range "
+                f"[{self._min_value}, {self._max_value}]"
+            )
+        self.spin_box.setValue(value)
 
     def read_value(self) -> int:
         return self.spin_box.value()

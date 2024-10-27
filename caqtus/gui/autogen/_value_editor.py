@@ -1,21 +1,17 @@
 import abc
-from typing import Optional
 
 from PySide6.QtWidgets import QWidget
 
 
 class ValueEditor[T](abc.ABC):
-    """Allows to edit a value of type T.
-
-    Args:
-        value: The initial value to edit.
-            Once initialized, the value can only be changed by the user through the
-            widget.
-        parent: The parent widget of the editor.
-    """
+    """Allows to edit a value of type T."""
 
     @abc.abstractmethod
-    def __init__(self, value: T, parent: Optional[QWidget] = None) -> None:
+    def __init__(self) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_value(self, value: T) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod

@@ -1,16 +1,13 @@
-from typing import Optional
-
-from PySide6.QtWidgets import QWidget, QLineEdit
+from PySide6.QtWidgets import QLineEdit
 
 from caqtus.types.expression import Expression
 from ._value_editor import ValueEditor
 
 
 class ExpressionEditor(ValueEditor[Expression]):
-    def __init__(self, value: Expression, parent: Optional[QWidget] = None) -> None:
-        self._line_edit = QLineEdit(parent)
+    def __init__(self) -> None:
+        self._line_edit = QLineEdit()
         self._line_edit.setPlaceholderText("Variable or math expression")
-        self.set_value(value)
 
     def set_value(self, value: Expression) -> None:
         self._line_edit.setText(str(value))

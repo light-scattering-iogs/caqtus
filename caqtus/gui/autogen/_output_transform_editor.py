@@ -1,26 +1,22 @@
-from typing import Optional
-
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QComboBox,
     QStackedWidget,
-    QLineEdit,
     QLabel,
     QSizePolicy,
 )
 
+from caqtus.device.output_transform import EvaluableOutput
+from caqtus.types.expression import Expression
+from ._expression_editor import ExpressionEditor
 from ._value_editor import ValueEditor
-from ...device.output_transform import EvaluableOutput
-from ...types.expression import Expression
 
 
 class OutputTransformEditor(ValueEditor[EvaluableOutput]):
-    def __init__(
-        self, value: EvaluableOutput, parent: Optional[QWidget] = None
-    ) -> None:
-        self._widget = QWidget(parent)
+    def __init__(self) -> None:
+        self._widget = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         self._widget.setLayout(layout)
@@ -30,12 +26,11 @@ class OutputTransformEditor(ValueEditor[EvaluableOutput]):
         layout.addWidget(self._combo_box)
         layout.setAlignment(self._combo_box, Qt.AlignmentFlag.AlignTop)
 
-        self._expression = QLineEdit()
-        self._expression.setPlaceholderText("A variable or a mathematical expression")
+        self._expression_editor = ExpressionEditor()
 
         self._tree = QLabel("Not implemented")
         self._stacked_widget = QStackedWidget()
-        self._stacked_widget.addWidget(self._expression)
+        self._stacked_widget.addWidget(self._expression_editor.widget())
         self._stacked_widget.addWidget(self._tree)
         self._combo_box.currentIndexChanged.connect(
             self._stacked_widget.setCurrentIndex
@@ -45,12 +40,12 @@ class OutputTransformEditor(ValueEditor[EvaluableOutput]):
         self._stacked_widget.setSizePolicy(
             QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         )
-        self.set_value(value)
+        self._combo_box.setCurrentIndex(0)
 
     def set_value(self, value: EvaluableOutput) -> None:
         if isinstance(value, Expression):
             self._combo_box.setCurrentIndex(0)
-            self._expression.setText(str(value))
+            self._expression_editor.set_value(value)
         else:
             self._combo_box.setCurrentIndex(1)
 
@@ -62,6 +57,6 @@ class OutputTransformEditor(ValueEditor[EvaluableOutput]):
 
     def read_value(self) -> EvaluableOutput:
         if self._combo_box.currentIndex() == 0:
-            return Expression(self._expression.text())
+            return self._expression_editor.read_value()
         else:
             raise NotImplementedError("Tree output transform not implemented")
