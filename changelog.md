@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Possibility to override the builtins values used when evaluating expressions.
 - Module `caqtus.gui.autogen` to help generate UI for a device configuration.
 
+### Changed
+
+- Simplify handling of units during sequence compilation
+
 ## [6.13.0] - 2024-10-17
 
 ### Added
