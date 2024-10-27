@@ -122,23 +122,23 @@ def interpolate[
         key=lambda x: x[0],
     )
 
-    input_points = Quantity(
+    base_input_values = Quantity(
         [point[0] for point in sorted_points], input_values.units
     ).to_base_units()
-    output_points = Quantity(
+    base_output_values = Quantity(
         [point[1] for point in sorted_points], output_values.units
     ).to_base_units()
 
     output_magnitude = np.interp(
-        x=values.to_unit(input_values.units).magnitude,
-        xp=input_points.magnitude,
-        fp=output_points.magnitude,
+        x=values.to_unit(base_input_values.units).magnitude,
+        xp=base_input_values.magnitude,
+        fp=base_output_values.magnitude,
     )
     if is_scalar_quantity(values):
-        return Quantity(float(output_magnitude), output_points.units).to_unit(
+        return Quantity(float(output_magnitude), base_output_values.units).to_unit(
             output_values.units
         )
     else:
-        return Quantity[FloatArray1D](output_magnitude, output_points.units).to_unit(
-            output_values.units
-        )
+        return Quantity[FloatArray1D](
+            output_magnitude, base_output_values.units
+        ).to_unit(output_values.units)

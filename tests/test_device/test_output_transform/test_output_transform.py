@@ -7,9 +7,9 @@ from caqtus.device.output_transform import (
     converter,
     EvaluableOutput,
 )
-from caqtus.device.output_transform._output_mapping import Interpolator
+from caqtus.device.output_transform._output_mapping import interpolate
 from caqtus.types.expression import Expression
-from caqtus.types.units import Quantity, Unit
+from caqtus.types.units import Quantity, Unit, VOLT, dimensionless, AMPERE, DECIBEL
 
 
 @pytest.fixture
@@ -18,14 +18,13 @@ def variables():
 
 
 def test_expression_value():
-    assert evaluate(Expression("1 V"), {}) == Quantity(1, "V")
+    assert evaluate(Expression("1 V"), {}) == 1 * VOLT
 
 
 def test_expression_value_db(variables):
     evaluated = evaluate(Expression("0 dB"), {})
-    assert isinstance(evaluated, Quantity)
-    assert evaluated.units == Unit("dimensionless")
-    assert evaluated.magnitude == 1
+    assert isinstance(evaluated, float)
+    assert evaluated == 1
 
 
 def test_expression_value_dbm(variables):
@@ -37,17 +36,27 @@ def test_expression_value_dbm(variables):
 
 
 def test_interpolation():
-    interpolator = Interpolator([(0, 0), (1, 2)], "A", "V")
-    assert interpolator(Quantity(0.5, "A")) == Quantity(1, "V")
-    assert interpolator(Quantity(-0.5, "A")) == Quantity(0, "V")
-    assert interpolator(Quantity(1.5, "A")) == Quantity(2, "V")
+    input_values = Quantity([0, 1], AMPERE)
+    output_values = Quantity([0, 2], VOLT)
+    assert interpolate(Quantity(0.5, AMPERE), input_values, output_values) == Quantity(
+        1, VOLT
+    )
+    assert interpolate(Quantity(-0.5, AMPERE), input_values, output_values) == Quantity(
+        0, VOLT
+    )
+    assert interpolate(Quantity(1.5, AMPERE), input_values, output_values) == Quantity(
+        2, VOLT
+    )
 
 
 def test_interpolation_db():
-    interpolator = Interpolator([(0, 0), (10, 1)], "dB", "V")
-    computed = interpolator((1 + 10) / 2)
+    input_values = Quantity([0, 10], DECIBEL)
+    output_values = Quantity([0, 1], VOLT)
+    computed = interpolate(
+        Quantity((1 + 10) / 2, dimensionless), input_values, output_values
+    )
     assert isinstance(computed, Quantity)
-    assert np.allclose(computed.to("V").magnitude, 0.5)
+    assert np.allclose(computed.to(VOLT).magnitude, 0.5)
 
 
 def test_linear_interpolation_serialization():

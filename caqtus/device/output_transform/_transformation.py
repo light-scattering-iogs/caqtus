@@ -47,6 +47,8 @@ def evaluate(
     """Evaluates the input and returns the result as a parameter.
 
     If the evaluated input is a quantity, it is converted to its base units.
+    If the output is dimensionless, only the magnitude is returned and the unit is
+    stripped.
     """
 
     if isinstance(input_, Transformation):

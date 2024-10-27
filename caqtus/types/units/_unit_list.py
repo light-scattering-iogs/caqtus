@@ -12,3 +12,4 @@ MEGAHERTZ = Unit("MHz")
 DECIBEL = Unit("dB")
 
 VOLT = Unit("V")
+AMPERE = Unit("A")

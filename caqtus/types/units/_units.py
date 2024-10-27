@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from typing import NewType, SupportsFloat
 from typing import overload, Generic
 
+import numpy as np
 import pint._typing
 import pint.facets
 import pint.facets.nonmultiplicative.objects
@@ -93,6 +94,14 @@ class Quantity(
         result = super().to(unit)
         assert isinstance(result, Quantity)
         return result
+
+    @property
+    def magnitude(self) -> M:
+        mag = super().magnitude
+        if isinstance(mag, np.ndarray):
+            return mag.astype(float)  # type: ignore[reportReturnType]
+        else:
+            return float(mag)  # type: ignore[reportReturnType]
 
 
 def is_quantity(value) -> TypeIs[Quantity]:
