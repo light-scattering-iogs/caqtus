@@ -11,10 +11,10 @@ class RectangularROI(ROI):
     """Rectangular region of interest inside an image.
 
     Attributes:
-        x: horizontal coordinate of the left column of the roi.
-        width: width of the roi.
-        y: vertical coordinate of the bottom row of the roi.
-        height: height of the roi.
+        x: Horizontal coordinate of the left column of the roi, in pixels.
+        width: Width of the roi, in pixels.
+        y: Vertical coordinate of the bottom row of the roi, in pixels.
+        height: Height of the roi, in pixels.
     """
 
     x: int = attrs.field(

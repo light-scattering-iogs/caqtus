@@ -49,7 +49,9 @@ dependencies = [
     "qtawesome>=1.3.0",
     "pyqtgraph>=0.13.4",
     "matplotlib>=3.8.3",
-    "setuptools"
+    "setuptools",
+    "docstring_parser",
+    "docstring-inheritance>=2.2.1",
 ]
 
 [project.urls]

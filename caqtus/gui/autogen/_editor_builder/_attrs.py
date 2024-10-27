@@ -1,7 +1,9 @@
+import inspect
 from typing import Optional, override
 
 import attrs
-from PySide6.QtWidgets import QWidget, QFormLayout
+import docstring_parser
+from PySide6.QtWidgets import QWidget, QFormLayout, QLabel
 
 from ._editor_builder import EditorBuilder, EditorBuildingError
 from .._value_editor import ValueEditor
@@ -13,6 +15,14 @@ def build_editor_for_attrs_class[
     ValueEditor[T]
 ]:
     """Build an editor for attrs class.
+
+    This function will build a form editor with a list of widgets for the attributes of
+    the class.
+
+    The label for each widget is the name of the attribute, prettified by removing
+    underscores and capitalizing the first letter of the first word.
+
+    The tooltip of this label is the docstring of the attribute.
 
     Args:
         cls: The attrs class to build the editor for.
@@ -27,6 +37,8 @@ def build_editor_for_attrs_class[
     if any(isinstance(field.type, str) for field in fields):
         # PEP 563 annotations - need to be resolved.
         attrs.resolve_types(cls)
+
+    attribute_docstrings = extract_attribute_docstrings(cls)
 
     attribute_editors = {}
     for field in fields:
@@ -51,7 +63,10 @@ def build_editor_for_attrs_class[
             for field in fields:
                 editor = attribute_editors[field.name](getattr(value, field.name, None))
                 setattr(self, attr_to_editor_name(field.name), editor)
-                layout.addRow(prettify_snake_case(field.name), editor.widget())
+                label = QLabel(prettify_snake_case(field.name))
+                if field.name in attribute_docstrings:
+                    label.setToolTip(attribute_docstrings[field.name])
+                layout.addRow(label, editor.widget())
 
         # TODO: Figure out why pyright report this method as an incompatible override
         @override
@@ -88,6 +103,32 @@ def prettify_snake_case(name: str) -> str:
 
 def attr_to_editor_name(name: str) -> str:
     return f"editor_{name}"
+
+
+def extract_attribute_docstrings(cls: type) -> dict[str, str]:
+    """Extract docstrings of attributes from a class.
+
+    Args:
+        cls: The class to extract the docstrings from.
+
+    Returns:
+        A dictionary mapping attribute names to their docstrings.
+
+        Not all attributes may have docstrings, so the dictionary may not contain all
+        attributes, or may be empty.
+    """
+
+    docstring = inspect.getdoc(cls)
+
+    if docstring:
+        parsed = docstring_parser.parse(docstring)
+        return {
+            param.arg_name: param.description
+            for param in parsed.params
+            if param.description is not None
+        }
+    else:
+        return {}
 
 
 class AttributeEditorBuildingError(EditorBuildingError):

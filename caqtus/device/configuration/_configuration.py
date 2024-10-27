@@ -11,6 +11,7 @@ from typing import (
 )
 
 import attrs
+import docstring_inheritance
 
 from caqtus.device.runtime import Device
 
@@ -19,8 +20,16 @@ DeviceServerName = NewType("DeviceServerName", str)
 DeviceType = TypeVar("DeviceType", bound=Device)
 
 
+class Meta(abc.ABCMeta, docstring_inheritance.GoogleDocstringInheritanceInitMeta):
+    pass
+
+
 @attrs.define
-class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
+class DeviceConfiguration(
+    abc.ABC,
+    Generic[DeviceType],
+    metaclass=Meta,
+):
     """Contains static information about a device.
 
     This is an abstract class, generic in :data:`DeviceType` that stores the information
@@ -39,8 +48,6 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     Attributes:
         remote_server: Indicates the name of the computer on which the device should be
             instantiated.
-            If None, the device should be instantiated in the local process controlling
-            the experiment.
     """
 
     remote_server: Optional[DeviceServerName] = attrs.field()

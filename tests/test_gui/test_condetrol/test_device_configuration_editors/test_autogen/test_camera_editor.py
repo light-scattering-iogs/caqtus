@@ -1,5 +1,3 @@
-from typing import reveal_type
-
 import attrs
 from pytestqt.qtbot import QtBot
 
@@ -11,11 +9,14 @@ from caqtus.types.image.roi import RectangularROI
 
 @attrs.define
 class OrcaQuestCameraConfiguration(CameraConfiguration):
+    """Contains the necessary information about an Orca Quest  Hamamatsu camera.
+
+    Attributes:
+        camera_number: The number by which to identify the camera.
+    """
+
     camera_number: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
     roi = CameraConfiguration.roi
-
-
-reveal_type(OrcaQuestCameraConfiguration.roi)
 
 
 def test(qtbot: QtBot):
@@ -38,4 +39,5 @@ def test(qtbot: QtBot):
 
     qtbot.addWidget(editor)
     editor.show()
+    qtbot.stop()
     assert editor.get_configuration() == config

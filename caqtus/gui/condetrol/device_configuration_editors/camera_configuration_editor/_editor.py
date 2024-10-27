@@ -1,6 +1,6 @@
 from typing import Optional
 
-from PySide6.QtWidgets import QWidget, QSpinBox, QFormLayout
+from PySide6.QtWidgets import QWidget, QSpinBox, QFormLayout, QLabel
 
 from caqtus.device.camera import CameraConfigurationType
 from caqtus.types.image import Width, Height
@@ -75,22 +75,35 @@ class RectangularROIEditor(QWidget):
         self.setLayout(layout)
 
         self._x_spinbox = QSpinBox(self)
-        layout.addRow("X", self._x_spinbox)
+
+        x_label = QLabel("X")
+        x_label.setToolTip(
+            "Horizontal coordinate of the left column of the roi, in pixels."
+        )
+        layout.addRow(x_label, self._x_spinbox)
         self._x_spinbox.setRange(0, 0)
         self._x_spinbox.setValue(0)
 
         self._width_spinbox = QSpinBox(self)
-        layout.addRow("Width", self._width_spinbox)
+        width_label = QLabel("Width")
+        width_label.setToolTip("Width of the roi, in pixels.")
+        layout.addRow(width_label, self._width_spinbox)
         self._width_spinbox.setRange(1, self._max_width)
         self._width_spinbox.setValue(self._max_width)
 
         self._y_spinbox = QSpinBox(self)
-        layout.addRow("Y", self._y_spinbox)
+        y_label = QLabel("Y")
+        y_label.setToolTip(
+            "Vertical coordinate of the bottom row of the roi, in pixels."
+        )
+        layout.addRow(y_label, self._y_spinbox)
         self._y_spinbox.setRange(0, 0)
         self._y_spinbox.setValue(0)
 
         self._height_spinbox = QSpinBox(self)
-        layout.addRow("Height", self._height_spinbox)
+        height_label = QLabel("Height")
+        height_label.setToolTip("Height of the roi, in pixels.")
+        layout.addRow(height_label, self._height_spinbox)
         self._height_spinbox.setRange(1, self._max_height)
         self._height_spinbox.setValue(self._max_height)
 
