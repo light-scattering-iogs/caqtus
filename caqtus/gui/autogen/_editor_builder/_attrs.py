@@ -1,18 +1,18 @@
 import inspect
-from typing import Optional, override
+from typing import override
 
 import attrs
 import docstring_parser
 from PySide6.QtWidgets import QWidget, QFormLayout, QLabel
 
-from ._editor_builder import EditorBuilder, EditorBuildingError
+from ._editor_builder import EditorBuilder, EditorBuildingError, EditorFactory
 from .._value_editor import ValueEditor
 
 
 def build_editor_for_attrs_class[
     T: attrs.AttrsInstance
-](cls: type[T], builder: EditorBuilder, **attr_editors: type[ValueEditor]) -> type[
-    ValueEditor[T]
+](cls: type[T], builder: EditorBuilder, **attr_editors: EditorFactory) -> EditorFactory[
+    T
 ]:
     """Build an editor for attrs class.
 
@@ -55,8 +55,8 @@ def build_editor_for_attrs_class[
 
     class AttrsEditor(ValueEditor[T]):
         @override
-        def __init__(self, value: T, parent: Optional[QWidget] = None) -> None:
-            self._widget = QWidget(parent)
+        def __init__(self, value: T) -> None:
+            self._widget = QWidget()
 
             layout = QFormLayout()
             self._widget.setLayout(layout)

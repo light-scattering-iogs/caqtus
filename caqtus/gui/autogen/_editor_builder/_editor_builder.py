@@ -1,9 +1,13 @@
 import typing
+from collections.abc import Callable
 
 from .._value_editor import ValueEditor
 
 # TODO: Use PEP 747 if accepted
 type TypeExpr[T] = typing.Any
+
+type EditorFactory[T] = Callable[[T], ValueEditor[T]]
+"""A function that can be used to create an editor for a value."""
 
 
 class EditorBuilder:
@@ -14,11 +18,11 @@ class EditorBuilder:
     """
 
     def __init__(self) -> None:
-        self._type_editors: dict[TypeExpr, type[ValueEditor]] = {}
+        self._type_editors: dict[TypeExpr, EditorFactory] = {}
 
     def register_editor[
         T
-    ](self, type_: TypeExpr[T], editor_type: type[ValueEditor[T]]) -> None:
+    ](self, type_: TypeExpr[T], editor_type: EditorFactory) -> None:
         """Specify an editor to use when encountering a given type.
 
         When the method :meth:`build_editor` is called with this type, this editor
@@ -30,7 +34,7 @@ class EditorBuilder:
 
         self._type_editors[type_] = editor_type
 
-    def build_editor(self, type_: TypeExpr) -> type[ValueEditor]:
+    def build_editor(self, type_: TypeExpr) -> EditorFactory:
         """Construct a gui class to edit value of a given type.
 
         This method dispatches the type passed as argument to the editor registered

@@ -12,7 +12,7 @@ from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_edit
     RectangularROIEditor as RectangularROIWidget,
 )
 from caqtus.types.image.roi import RectangularROI
-from ._editor_builder import EditorBuilder
+from ._editor_builder import EditorBuilder, EditorFactory
 from ._int_editor import IntegerEditor
 from ._output_transform_editor import OutputTransformEditor
 from ._string_editor import StringEditor
@@ -27,10 +27,10 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
         config: C,
         parent: Optional[QWidget] = None,
         *,
-        config_editor_type: type[ValueEditor[C]],
+        config_editor_type: EditorFactory[C],
     ) -> None:
         super().__init__(parent)
-        self._editor = config_editor_type(config, self)
+        self._editor = config_editor_type(config)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._editor.widget())
@@ -44,7 +44,7 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
         self._editor.set_editable(editable)
 
 
-class DeviceConfigurationEditorType[C: DeviceConfiguration](Protocol):
+class DeviceConfigurationEditorFactory[C: DeviceConfiguration](Protocol):
     def __call__(
         self, config: C, parent: Optional[QWidget] = None
     ) -> GeneratedConfigEditor[C]: ...
@@ -57,7 +57,7 @@ def build_device_configuration_editor[
     C: DeviceConfiguration
 ](
     config_type: type[C], builder: EditorBuilder = _builder
-) -> DeviceConfigurationEditorType[C]:
+) -> DeviceConfigurationEditorFactory[C]:
     """Builds a device configuration editor for the given configuration type.
 
     Args:
