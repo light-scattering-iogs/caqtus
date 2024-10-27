@@ -18,4 +18,3 @@ def test_output_transform_editor(qtbot):
     editor = editor_type(device)
     editor.show()
     qtbot.addWidget(editor)
-    qtbot.stop()
