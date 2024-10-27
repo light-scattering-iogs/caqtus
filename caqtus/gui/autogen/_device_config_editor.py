@@ -15,6 +15,8 @@ from ._editor_builder import EditorBuilder
 from ._int_editor import IntegerEditor
 from ._string_editor import StringEditor
 from ._value_editor import ValueEditor
+from ._output_transform_editor import OutputTransformEditor
+from ...device.output_transform import EvaluableOutput
 
 
 class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]):
@@ -120,6 +122,7 @@ _builder.register_editor(str, StringEditor)
 _builder.register_editor(int, IntegerEditor)
 _builder.register_editor(Optional[DeviceServerName], DeviceServerNameEditor)
 _builder.register_editor(RectangularROI, RectangularROIEditor)
+_builder.register_editor(EvaluableOutput, OutputTransformEditor)
 
 
 def get_editor_builder() -> EditorBuilder:
