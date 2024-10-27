@@ -18,11 +18,9 @@ class EditorBuilder:
     """
 
     def __init__(self) -> None:
-        self._type_editors: dict[TypeExpr, EditorFactory] = {}
+        self._editor_factories: dict[TypeExpr, EditorFactory] = {}
 
-    def register_editor[
-        T
-    ](self, type_: TypeExpr[T], editor_type: EditorFactory) -> None:
+    def register_editor[T](self, type_: TypeExpr[T], factory: EditorFactory) -> None:
         """Specify an editor to use when encountering a given type.
 
         When the method :meth:`build_editor` is called with this type, this editor
@@ -32,7 +30,7 @@ class EditorBuilder:
             If an editor is already registered for this type, it will be overwritten.
         """
 
-        self._type_editors[type_] = editor_type
+        self._editor_factories[type_] = factory
 
     def build_editor(self, type_: TypeExpr) -> EditorFactory:
         """Construct a gui class to edit value of a given type.
@@ -49,7 +47,7 @@ class EditorBuilder:
         """
 
         try:
-            return self._type_editors[type_]
+            return self._editor_factories[type_]
         except KeyError:
             import attrs
 
