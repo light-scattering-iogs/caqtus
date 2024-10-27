@@ -19,6 +19,7 @@ from ._transformation import (
     evaluable_output_validator,
 )
 
+# We need to register subclasses once they have been imported and defined.
 cattrs.strategies.include_subclasses(
     Transformation,
     converter=converter,
@@ -26,7 +27,7 @@ cattrs.strategies.include_subclasses(
         cattrs.strategies.configure_tagged_union, tag_name="type"
     ),
 )
-converter.register_structure_hook(EvaluableOutput, structure_evaluable_output)
+
 
 __all__ = [
     "Transformation",
@@ -35,4 +36,5 @@ __all__ = [
     "EvaluableOutput",
     "converter",
     "evaluable_output_validator",
+    "structure_evaluable_output",
 ]

@@ -79,6 +79,7 @@ def test_expression_serialization():
     output = Expression("0.5 V")
 
     unstructured = converter.unstructure(output, EvaluableOutput)
+    assert unstructured == "0.5 V"
 
     structured = converter.structure(unstructured, EvaluableOutput)  # type: ignore
 
