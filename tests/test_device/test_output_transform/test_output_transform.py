@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from caqtus.device.configuration import get_converter
 from caqtus.device.output_transform import (
     LinearInterpolation,
     evaluate,
@@ -9,8 +10,6 @@ from caqtus.device.output_transform import (
 from caqtus.device.output_transform._output_mapping import interpolate
 from caqtus.types.expression import Expression
 from caqtus.types.units import Quantity, Unit, VOLT, dimensionless, AMPERE, DECIBEL
-
-from caqtus.converter import get_converter
 
 converter = get_converter()
 

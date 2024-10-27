@@ -3,6 +3,7 @@ from ._configuration import (
     DeviceServerName,
     DeviceConfigType,
 )
+from ._converter import get_converter
 from ._parameter import DeviceParameter
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "DeviceParameter",
     "DeviceServerName",
     "DeviceConfigType",
+    "get_converter",
 ]
