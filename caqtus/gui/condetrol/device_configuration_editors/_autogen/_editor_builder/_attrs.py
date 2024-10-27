@@ -9,7 +9,19 @@ from .._value_editor import ValueEditor
 
 def build_editor_for_attrs_class[
     T: attrs.AttrsInstance
-](cls: type[T], builder: EditorBuilder) -> type[ValueEditor[T]]:
+](cls: type[T], builder: EditorBuilder, **attr_editors: type[ValueEditor]) -> type[
+    ValueEditor[T]
+]:
+    """Build an editor for attrs class.
+
+    Args:
+        cls: The attrs class to build the editor for.
+        builder: The editor builder used to build editors for the class attributes.
+        **attr_editors: If a named argument corresponds to one of the attributes,
+            the editor passed for this argument will be used instead of using the
+            builder.
+    """
+
     fields: tuple[attrs.Attribute] = attrs.fields(cls)
 
     if any(isinstance(field.type, str) for field in fields):
@@ -18,6 +30,8 @@ def build_editor_for_attrs_class[
 
     attribute_editors = {}
     for field in fields:
+        if field.name in attr_editors:
+            attribute_editors[field.name] = attr_editors[field.name]
         if field.type is None:
             raise AttributeEditorBuildingError(cls, field) from ValueError(
                 "No type specified"
