@@ -2,7 +2,7 @@ import attrs
 import pytest
 from pytestqt.qtbot import QtBot
 
-from caqtus.gui.condetrol.device_configuration_editors._autogen import (
+from caqtus.gui.autogen import (
     EditorBuilder,
     StringEditor,
     TypeNotRegisteredError,

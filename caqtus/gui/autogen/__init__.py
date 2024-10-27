@@ -1,4 +1,4 @@
-"""Automatically generates editors for device configurations."""
+"""Automatically generates GUI components for attrs classes."""
 
 from ._device_config_editor import build_device_configuration_editor, get_editor_builder
 from ._editor_builder import (

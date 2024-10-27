@@ -2,7 +2,7 @@ from pytestqt.qtbot import QtBot
 
 from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration import DeviceServerName
-from caqtus.gui.condetrol.device_configuration_editors._autogen import (
+from caqtus.gui.autogen import (
     build_device_configuration_editor,
     get_editor_builder,
 )

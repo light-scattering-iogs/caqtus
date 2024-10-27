@@ -7,12 +7,14 @@ from PySide6.QtWidgets import QWidget, QLineEdit, QVBoxLayout
 from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration import DeviceServerName
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
+from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_editor import (  # noqa E501
+    RectangularROIEditor as RectangularROIWidget,
+)
 from caqtus.types.image.roi import RectangularROI
 from ._editor_builder import EditorBuilder
 from ._int_editor import IntegerEditor
 from ._string_editor import StringEditor
 from ._value_editor import ValueEditor
-from ..camera_configuration_editor import RectangularROIEditor as RectangularROIWidget
 
 
 class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]):
@@ -56,10 +58,13 @@ def build_device_configuration_editor[
 
     Args:
         config_type: The type of configuration to construct the editor for.
+            If it is an attrs class, the editor build will contain a list of editors
+            for each attribute of the class.
         builder: Used to build editors for the fields of the configuration.
 
     Returns:
-        An automatically generated class of type :class:`DeviceConfigurationEditor`
+        An automatically generated class of type
+        :class:`~caqtus.gui.condetrol.device_configuration_editors.DeviceConfigurationEditor`
         that can be used to edit configurations with type `config_type`.
     """
 
