@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QWidget, QLineEdit, QVBoxLayout
 
 from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration import DeviceServerName
+from caqtus.device.output_transform import EvaluableOutput
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_editor import (  # noqa E501
     RectangularROIEditor as RectangularROIWidget,
@@ -13,10 +14,11 @@ from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_edit
 from caqtus.types.image.roi import RectangularROI
 from ._editor_builder import EditorBuilder
 from ._int_editor import IntegerEditor
+from ._output_transform_editor import OutputTransformEditor
 from ._string_editor import StringEditor
 from ._value_editor import ValueEditor
-from ._output_transform_editor import OutputTransformEditor
-from ...device.output_transform import EvaluableOutput
+from ._expression_editor import ExpressionEditor
+from ...types.expression import Expression
 
 
 class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]):
@@ -123,6 +125,7 @@ _builder.register_editor(int, IntegerEditor)
 _builder.register_editor(Optional[DeviceServerName], DeviceServerNameEditor)
 _builder.register_editor(RectangularROI, RectangularROIEditor)
 _builder.register_editor(EvaluableOutput, OutputTransformEditor)
+_builder.register_editor(Expression, ExpressionEditor)
 
 
 def get_editor_builder() -> EditorBuilder:
@@ -131,7 +134,8 @@ def get_editor_builder() -> EditorBuilder:
     The editor builder returned knows how to handle:
 
         - Device server name
-        - Camera ROI
+        - :class:`~caqtus.types.image.roi.RectangularROI`
+        - :class:`~caqtus.types.expression.Expression`
     """
 
     return copy.deepcopy(_builder)
