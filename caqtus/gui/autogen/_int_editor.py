@@ -1,6 +1,4 @@
-from typing import Optional
-
-from PySide6.QtWidgets import QWidget, QSpinBox
+from PySide6.QtWidgets import QSpinBox
 
 from ._value_editor import ValueEditor
 
@@ -9,12 +7,11 @@ class IntegerEditor(ValueEditor[int]):
     def __init__(
         self,
         value: int,
-        parent: Optional[QWidget] = None,
         *,
         min_value=0,
         max_value=999,
     ) -> None:
-        self.spin_box = QSpinBox(parent)
+        self.spin_box = QSpinBox()
         self.spin_box.setRange(min_value, max_value)
         if not min_value <= value <= max_value:
             raise ValueError(

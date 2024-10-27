@@ -9,7 +9,7 @@ from ._editor_builder import EditorBuilder, EditorBuildingError, EditorFactory
 from .._value_editor import ValueEditor
 
 
-def build_editor_for_attrs_class[
+def build_attrs_class_editor[
     T: attrs.AttrsInstance
 ](cls: type[T], builder: EditorBuilder, **attr_editors: EditorFactory) -> EditorFactory[
     T
@@ -44,6 +44,7 @@ def build_editor_for_attrs_class[
     for field in fields:
         if field.name in attr_editors:
             attribute_editors[field.name] = attr_editors[field.name]
+            continue
         if field.type is None:
             raise AttributeEditorBuildingError(cls, field) from ValueError(
                 "No type specified"

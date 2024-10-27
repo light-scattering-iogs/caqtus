@@ -51,10 +51,10 @@ class EditorBuilder:
         except KeyError:
             import attrs
 
-            from ._attrs import build_editor_for_attrs_class
+            from ._attrs import build_attrs_class_editor
 
             if attrs.has(type_):
-                return build_editor_for_attrs_class(type_, self)
+                return build_attrs_class_editor(type_, self)
             raise TypeNotRegisteredError(
                 f"No editor is registered to handle {type_}"
             ) from None

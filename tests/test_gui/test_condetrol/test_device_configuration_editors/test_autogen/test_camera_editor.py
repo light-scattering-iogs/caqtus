@@ -1,8 +1,13 @@
+import functools
+
 import attrs
 from pytestqt.qtbot import QtBot
 
 from caqtus.device.camera import CameraConfiguration
-from caqtus.gui.autogen import build_device_configuration_editor
+from caqtus.gui.autogen import (
+    build_device_configuration_editor,
+    IntegerEditor,
+)
 from caqtus.types.image import Width, Height
 from caqtus.types.image.roi import RectangularROI
 
@@ -20,8 +25,10 @@ class OrcaQuestCameraConfiguration(CameraConfiguration):
 
 
 def test(qtbot: QtBot):
-
-    editor_type = build_device_configuration_editor(OrcaQuestCameraConfiguration)
+    editor_type = build_device_configuration_editor(
+        OrcaQuestCameraConfiguration,
+        camera_number=functools.partial(IntegerEditor, min_value=0, max_value=99),
+    )
 
     config = OrcaQuestCameraConfiguration(
         camera_number=0,
@@ -39,4 +46,5 @@ def test(qtbot: QtBot):
 
     qtbot.addWidget(editor)
     editor.show()
+    qtbot.stop()
     assert editor.get_configuration() == config
