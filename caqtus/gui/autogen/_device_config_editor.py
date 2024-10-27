@@ -2,7 +2,7 @@ import copy
 import functools
 from typing import Optional, Protocol
 
-from PySide6.QtWidgets import QWidget, QLineEdit, QVBoxLayout
+from PySide6.QtWidgets import QLineEdit, QVBoxLayout
 
 from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration import DeviceServerName
@@ -13,11 +13,11 @@ from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_edit
 )
 from caqtus.types.image.roi import RectangularROI
 from ._editor_builder import EditorBuilder, EditorFactory
+from ._expression_editor import ExpressionEditor
 from ._int_editor import IntegerEditor
 from ._output_transform_editor import OutputTransformEditor
 from ._string_editor import StringEditor
 from ._value_editor import ValueEditor
-from ._expression_editor import ExpressionEditor
 from ...types.expression import Expression
 
 
@@ -25,12 +25,11 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
     def __init__(
         self,
         config: C,
-        parent: Optional[QWidget] = None,
         *,
-        config_editor_type: EditorFactory[C],
+        editor_factory: EditorFactory[C],
     ) -> None:
-        super().__init__(parent)
-        self._editor = config_editor_type(config)
+        super().__init__()
+        self._editor = editor_factory(config)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._editor.widget())
@@ -44,10 +43,8 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
         self._editor.set_editable(editable)
 
 
-class DeviceConfigurationEditorFactory[C: DeviceConfiguration](Protocol):
-    def __call__(
-        self, config: C, parent: Optional[QWidget] = None
-    ) -> GeneratedConfigEditor[C]: ...
+class DeviceConfigEditorFactory[C: DeviceConfiguration](Protocol):
+    def __call__(self, config: C) -> GeneratedConfigEditor[C]: ...
 
 
 _builder = EditorBuilder()
@@ -55,9 +52,9 @@ _builder = EditorBuilder()
 
 def build_device_configuration_editor[
     C: DeviceConfiguration
-](
-    config_type: type[C], builder: EditorBuilder = _builder
-) -> DeviceConfigurationEditorFactory[C]:
+](config_type: type[C], builder: EditorBuilder = _builder) -> DeviceConfigEditorFactory[
+    C
+]:
     """Builds a device configuration editor for the given configuration type.
 
     Args:
@@ -72,17 +69,15 @@ def build_device_configuration_editor[
         that can be used to edit configurations with type `config_type`.
     """
 
-    config_editor_type = builder.build_editor(config_type)
+    config_editor_factory = builder.build_editor(config_type)
     return functools.partial(
-        GeneratedConfigEditor, config_editor_type=config_editor_type
+        GeneratedConfigEditor, editor_factory=config_editor_factory
     )
 
 
 class DeviceServerNameEditor(ValueEditor[Optional[DeviceServerName]]):
-    def __init__(
-        self, value: Optional[DeviceServerName], parent: Optional[QWidget] = None
-    ) -> None:
-        self.line_edit = QLineEdit(parent)
+    def __init__(self, value: Optional[DeviceServerName]) -> None:
+        self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText("None")
         if value:
             self.line_edit.setText(value)
@@ -104,10 +99,8 @@ class DeviceServerNameEditor(ValueEditor[Optional[DeviceServerName]]):
 
 
 class RectangularROIEditor(ValueEditor[RectangularROI]):
-    def __init__(self, value: RectangularROI, parent: Optional[QWidget] = None) -> None:
-        self._widget = RectangularROIWidget(
-            value.original_width, value.original_height, parent
-        )
+    def __init__(self, value: RectangularROI) -> None:
+        self._widget = RectangularROIWidget(value.original_width, value.original_height)
         self._widget.set_roi(value)
 
     def read_value(self) -> RectangularROI:
