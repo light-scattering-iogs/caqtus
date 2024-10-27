@@ -8,11 +8,11 @@ from caqtus.device.remote.rpc import RPCClient
 from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
 )
-from caqtus.formatter import fmt
-from caqtus.types.recoverable_exceptions import ConnectionFailedError
 from caqtus.experiment_control.sequence_execution._async_utils import (
     task_group_with_error_message,
 )
+from caqtus.formatter import fmt, device
+from caqtus.types.recoverable_exceptions import ConnectionFailedError
 
 
 @contextlib.asynccontextmanager
@@ -40,7 +40,9 @@ async def create_devices(
             device_config = device_configs[device_name]
             device_type = device_types[device_name]
             if device_config.remote_server is None:
-                raise NotImplementedError
+                raise NotImplementedError(
+                    f"Can't have no remote server for {device(device_name)}"
+                )
             client = rpc_clients[device_name]
             proxy_type = device_manager_extension.get_proxy_type(device_config)
             device_proxy = proxy_type(client, device_type, **init_params)
