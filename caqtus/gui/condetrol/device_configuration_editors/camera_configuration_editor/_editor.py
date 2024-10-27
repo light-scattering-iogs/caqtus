@@ -140,3 +140,9 @@ class RectangularROIEditor(QWidget):
 
     def _on_height_value_changed(self, height: int) -> None:
         self._y_spinbox.setRange(0, self._max_height - height)
+
+    def set_editable(self, editable: bool) -> None:
+        self._x_spinbox.setReadOnly(not editable)
+        self._y_spinbox.setReadOnly(not editable)
+        self._width_spinbox.setReadOnly(not editable)
+        self._height_spinbox.setReadOnly(not editable)

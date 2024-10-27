@@ -7,8 +7,12 @@ from PySide6.QtWidgets import QWidget, QLineEdit, QVBoxLayout
 from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration import DeviceServerName
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
+from caqtus.types.image.roi import RectangularROI
 from ._editor_builder import EditorBuilder
+from ._int_editor import IntegerEditor
+from ._string_editor import StringEditor
 from ._value_editor import ValueEditor
+from ..camera_configuration_editor import RectangularROIEditor as RectangularROIWidget
 
 
 class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]):
@@ -29,6 +33,9 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
     # TODO: Understand why need to silence pyright
     def get_configuration(self) -> C:  # type: ignore[reportIncompatibleMethodOverride]
         return self._editor.read_value()
+
+    def set_editable(self, editable: bool) -> None:
+        self._editor.set_editable(editable)
 
 
 class DeviceConfigurationEditorType[C: DeviceConfiguration](Protocol):
@@ -85,7 +92,27 @@ class DeviceServerNameEditor(ValueEditor[Optional[DeviceServerName]]):
         return self.line_edit
 
 
+class RectangularROIEditor(ValueEditor[RectangularROI]):
+    def __init__(self, value: RectangularROI, parent: Optional[QWidget] = None) -> None:
+        self._widget = RectangularROIWidget(
+            value.original_width, value.original_height, parent
+        )
+        self._widget.set_roi(value)
+
+    def read_value(self) -> RectangularROI:
+        return self._widget.get_roi()
+
+    def set_editable(self, editable: bool) -> None:
+        self._widget.set_editable(editable)
+
+    def widget(self) -> RectangularROIWidget:
+        return self._widget
+
+
+_builder.register_editor(str, StringEditor)
+_builder.register_editor(int, IntegerEditor)
 _builder.register_editor(Optional[DeviceServerName], DeviceServerNameEditor)
+_builder.register_editor(RectangularROI, RectangularROIEditor)
 
 
 def get_editor_builder() -> EditorBuilder:
@@ -94,6 +121,7 @@ def get_editor_builder() -> EditorBuilder:
     The editor builder returned knows how to handle:
 
         - Device server name
+        - Camera ROI
     """
 
     return copy.deepcopy(_builder)
