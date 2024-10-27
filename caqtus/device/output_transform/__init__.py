@@ -6,10 +6,6 @@ This module contains classes that can be used to construct complex tree structur
 represent user defined transformations.
 """
 
-import functools
-
-import cattrs.strategies
-
 from ._converter import converter, structure_evaluable_output
 from ._output_mapping import LinearInterpolation
 from ._transformation import (
@@ -17,15 +13,6 @@ from ._transformation import (
     evaluate,
     EvaluableOutput,
     evaluable_output_validator,
-)
-
-# We need to register subclasses once they have been imported and defined.
-cattrs.strategies.include_subclasses(
-    Transformation,
-    converter=converter,
-    union_strategy=functools.partial(
-        cattrs.strategies.configure_tagged_union, tag_name="type"
-    ),
 )
 
 

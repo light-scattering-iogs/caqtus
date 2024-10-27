@@ -4,12 +4,15 @@ import pytest
 from caqtus.device.output_transform import (
     LinearInterpolation,
     evaluate,
-    converter,
     EvaluableOutput,
 )
 from caqtus.device.output_transform._output_mapping import interpolate
 from caqtus.types.expression import Expression
 from caqtus.types.units import Quantity, Unit, VOLT, dimensionless, AMPERE, DECIBEL
+
+from caqtus.converter import get_converter
+
+converter = get_converter()
 
 
 @pytest.fixture

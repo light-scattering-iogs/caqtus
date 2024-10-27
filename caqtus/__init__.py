@@ -10,6 +10,7 @@ from . import (
     shot_compilation,
     types,
     utils,
+    converter,
 )
 
 
@@ -23,4 +24,5 @@ __all__ = [
     "shot_compilation",
     "types",
     "utils",
+    "converter",
 ]

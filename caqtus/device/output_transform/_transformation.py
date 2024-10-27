@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Mapping
-from typing import Any, Union, assert_type
+from typing import Any, Union, assert_type, TypeAlias
 
 import attrs
 
@@ -34,7 +34,7 @@ type OutputValue = float | int | bool | Quantity[float, BaseUnit]
 If the value is a quantity, it must be a scalar and expressed in base units.
 """
 
-type EvaluableOutput = Union[Expression, Transformation]
+EvaluableOutput: TypeAlias = Union[Expression, Transformation]
 """Defines an operation that can be evaluated to an output value.
 
 Evaluable object can be used in the :func:`evaluate` function.
