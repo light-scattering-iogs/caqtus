@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [6.14.1] - 2024-10-27
+## [6.15.0] - 2024-10-29
+
+### Added
+
+- Support for `caqtus.types.expression.Expression` when generating an editor for a
+  device configuration
+- Possibility to override some attribute editors when generating an editor for an attrs
+  class
 
 ### Fixed
 
-- Generated UI for device configuration supports expression.
+- Give better error message when no remote server is set for a device
 
 ## [6.14.0] - 2024-10-27
 
