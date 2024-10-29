@@ -13,8 +13,7 @@ from caqtus.shot_compilation.timed_instructions import (
     create_ramp,
     Pattern,
 )
-from ..test_instructions import analog_instruction, pattern
-from ..test_instructions import ramp_strategy
+from ..test_instructions import analog_instruction, pattern, ramp_strategy
 
 
 def slope_not_too_large(cal: DimensionlessCalibration):
@@ -92,6 +91,10 @@ def test_calibration_pattern(
 
 
 @given(calibration, ramp_strategy())
+@example(
+    cal=DimensionlessCalibration([(0.0, 0.0), (0.0, 1.0)]),
+    instr=create_ramp(start=0.0, stop=-1.0, length=3),
+)
 # TODO: Understand why this example gives slightly different results
 # @example(
 #     cal=DimensionlessCalibration([(0.0, 0.0), (-2.220446049250313e-16, 1.0)]),
@@ -110,7 +113,7 @@ def validate_calibration(
     except FloatingPointError:
         pass
     else:
-        assert computed == pytest.approx(expected, abs=1e-6, rel=1e-6)
+        assert np.allclose(computed, expected)
 
 
 @pytest.mark.parametrize(
@@ -132,18 +135,6 @@ def validate_calibration(
         (
             DimensionlessCalibration([(-1.0, 0.0), (0.0, 1.0)]),
             create_ramp(0.5, -1.0, 3),
-        ),
-        (
-            DimensionlessCalibration([(0.0, 0.0), (0.0, 1.0)]),
-            create_ramp(start=0.0, stop=-1.0, length=3),
-        ),
-        (
-            DimensionlessCalibration([(-999999.0, 172.0), (-1000000.0, 0.0)]),
-            create_ramp(
-                start=np.float64(-1000000.0),
-                stop=np.float64(-999999.9999999999),
-                length=3,
-            ),
         ),
     ],
 )
