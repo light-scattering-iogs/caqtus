@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.types.expression import Expression
-from ._delegate import TimeLaneDelegate
+from .._delegate import TimeLaneDelegate
 
 
 class DigitalTimeLaneDelegate(TimeLaneDelegate):

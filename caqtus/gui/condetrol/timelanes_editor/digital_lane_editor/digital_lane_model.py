@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QMenu
 
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import DigitalTimeLane, Step
-from .model import ColoredTimeLaneModel
+from ..model import ColoredTimeLaneModel
 
 _DEFAULT_INDEX = QModelIndex()
 
