@@ -2,7 +2,7 @@ from typing import Protocol, Optional, TypeVar
 
 from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.utils import serialization
-from .. import TimeLaneDelegate
+from .._delegate import TimeLaneDelegate
 from ..model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)
