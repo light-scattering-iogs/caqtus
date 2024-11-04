@@ -1,4 +1,4 @@
-""""""
+"""Defines types to be used for extending Condetrol with new lanes."""
 
 from ._implementation import (
     CondetrolLaneExtension,
