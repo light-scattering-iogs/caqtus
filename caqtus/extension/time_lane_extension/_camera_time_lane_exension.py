@@ -1,5 +1,5 @@
 from caqtus.gui.condetrol.timelanes_editor import TimeLaneModel
-from caqtus.gui.condetrol.timelanes_editor.camera_lane_model import CameraTimeLaneModel
+from caqtus.gui.condetrol.timelanes_editor.camera_lane_editor import CameraTimeLaneModel
 from caqtus.types.timelane import CameraTimeLane
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON

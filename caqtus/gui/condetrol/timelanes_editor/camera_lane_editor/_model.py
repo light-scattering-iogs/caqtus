@@ -6,8 +6,8 @@ from PySide6.QtGui import QPalette
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel
 from caqtus.types.timelane import CameraTimeLane, TakePicture, Step
-from .model import TimeLaneModel
-from .._icons import get_icon
+from caqtus.gui.condetrol.timelanes_editor.model import TimeLaneModel
+from caqtus.gui.condetrol._icons import get_icon
 
 _DEFAULT_INDEX = QModelIndex()
 
