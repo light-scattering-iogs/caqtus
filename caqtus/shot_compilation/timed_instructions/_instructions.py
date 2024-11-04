@@ -4,7 +4,6 @@ import abc
 import bisect
 import collections
 import itertools
-import math
 from collections.abc import Sequence
 from typing import (
     NewType,
@@ -531,24 +530,17 @@ class Repeated[T: np.generic](TimedInstruction[T]):
         start, stop, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
+
         length = len(self._instruction)
-        first_repetition = math.ceil(start / length)
-        last_repetition = math.floor(stop / length)
-        if first_repetition > last_repetition:
-            return self._instruction[
-                start - first_repetition * length : stop - first_repetition * length
-            ]
-        else:
-            previous_repetition = math.floor(start / length)
-            prepend = self._instruction[
-                start
-                - previous_repetition
-                * length : (first_repetition - previous_repetition)
-                * length
-            ]
-            middle = self._instruction * (last_repetition - first_repetition)
-            append = self._instruction[: stop - last_repetition * length]
-            return prepend + middle + append
+
+        slice_length = stop - start
+        q, r = divmod(slice_length, length)
+        local_start = start % length
+
+        rearranged_instruction = (
+            self._instruction[local_start:] + self._instruction[:local_start]
+        )
+        return rearranged_instruction * q + rearranged_instruction[:r]
 
     def _get_field(self, field: str) -> TimedInstruction:
         return Repeated(self._repetitions, self._instruction[field])

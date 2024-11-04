@@ -9,5 +9,5 @@ def test_shifted_loops():
     instr_2 = extra + 10_000 * pulse
 
     merged = merge_instructions(instr_1=instr_1, instr_2=instr_2)
-    assert merged["instr_1"] == instr_1
-    assert merged["instr_2"] == instr_2
+    assert merged["instr_1"].to_pattern() == instr_1.to_pattern()
+    assert merged["instr_2"].to_pattern() == instr_2.to_pattern()
