@@ -1,4 +1,5 @@
-from caqtus.gui.condetrol.timelanes_editor import TimeLaneModel, AnalogTimeLaneModel
+from caqtus.gui.condetrol.timelanes_editor import TimeLaneModel
+from caqtus.gui.condetrol.timelanes_editor.analog_lane_editor import AnalogTimeLaneModel
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import AnalogTimeLane
 from caqtus.utils import serialization

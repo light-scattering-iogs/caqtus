@@ -4,9 +4,9 @@ from PySide6.QtCore import QObject, QModelIndex, Qt, QPersistentModelIndex
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu
 
+from caqtus.gui.condetrol.timelanes_editor.model import ColoredTimeLaneModel
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import AnalogTimeLane, Ramp, Step
-from .model import ColoredTimeLaneModel
 
 _DEFAULT_INDEX = QModelIndex()
 
