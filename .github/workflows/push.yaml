@@ -25,9 +25,7 @@ jobs:
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: hatch run linter $ALL_CHANGED_FILES
-        shell: bash
       - name: Run check types
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: hatch run check-types $ALL_CHANGED_FILES
-        shell: bash
