@@ -73,6 +73,7 @@ include = ["caqtus/"]
 exclude = ["*.ui"]
 
 [tool.hatch.envs.default]
+path = ".hatch"
 dependencies = [
     "black>=24.3.0",
     "ruff>=0.6.4",
