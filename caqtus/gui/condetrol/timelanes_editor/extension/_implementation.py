@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Callable
-from typing import Optional, Protocol, TypeVar, Any
+from typing import Optional, Protocol, TypeVar
 
 from PySide6.QtWidgets import QStyledItemDelegate
 
@@ -32,7 +32,7 @@ class LaneModelFactory[L: TimeLane](Protocol):
         self,
         lane: L,
         lane_name: str,
-    ) -> TimeLaneModel[L, Any]:
+    ) -> TimeLaneModel[L]:
         """Create a delegate for the lane passed as argument."""
         ...
 
