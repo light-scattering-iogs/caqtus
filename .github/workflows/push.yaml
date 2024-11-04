@@ -23,5 +23,9 @@ jobs:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }} # Only run on changed files
       - name: Install Hatch
         uses: pypa/hatch@install
-      - name: Run lint
-        run: hatch run lint ${{ steps.changed-files.outputs.all_changed_files }}
+      - name: Run linter
+        run: hatch run linter ${{ steps.changed-files.outputs.all_changed_files }}
+        shell: bash
+      - name: Run check types
+        run: hatch run check-types ${{ steps.changed-files.outputs.all_changed_files }}
+        shell: bash

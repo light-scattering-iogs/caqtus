@@ -88,7 +88,8 @@ dependencies = [
 ]
 
 [tool.hatch.envs.default.scripts]
-lint = ["ruff check {args:.}", "pyright {args:.}"]
+linter = ["ruff check {args:.}"]
+check-types = ["pyright {args:.}"]
 
 
 [tool.hatch.envs.test]
