@@ -22,4 +22,4 @@ class AddLaneDialog(QDialog, Ui_AddLaneDialog):
 
     def set_lane_types(self, lane_types: Iterable[str]) -> None:
         self.lane_type_combobox.clear()
-        self.lane_type_combobox.addItems(lane_types)
+        self.lane_type_combobox.addItems(list(lane_types))
