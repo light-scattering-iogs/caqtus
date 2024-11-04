@@ -1,6 +1,6 @@
 from typing import override
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QModelIndex
 from PySide6.QtWidgets import (
     QWidget,
     QPushButton,
@@ -13,7 +13,7 @@ from .._delegate import TimeLaneDelegate
 
 class DigitalTimeLaneDelegate(TimeLaneDelegate):
     @override
-    def createEditor(self, parent, option, index) -> QWidget:
+    def createEditor(self, parent, option, index: QModelIndex) -> QWidget:
         cell_value = index.data(Qt.ItemDataRole.EditRole)
         if isinstance(cell_value, bool):
             return CheckedButton(parent)
