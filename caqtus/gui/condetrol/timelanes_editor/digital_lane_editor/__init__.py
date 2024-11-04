@@ -1,4 +1,6 @@
-from .digital_lane_delegate import DigitalTimeLaneDelegate
-from .digital_lane_model import DigitalTimeLaneModel
+"""Contains components to edit a digital time lane."""
+
+from ._delegate import DigitalTimeLaneDelegate
+from ._model import DigitalTimeLaneModel
 
 __all__ = ["DigitalTimeLaneModel", "DigitalTimeLaneDelegate"]
