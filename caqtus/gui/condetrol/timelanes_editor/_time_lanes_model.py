@@ -14,12 +14,12 @@ from PySide6.QtWidgets import QMenu
 
 from caqtus.gui.qtutil import qabc as qabc
 from caqtus.types.timelane import TimeLanes, TimeLane
+from ._time_lane_model import TimeLaneModel
 from ._time_step_model import (
     TimeStepNameModel,
     TimeStepDurationModel,
 )
 from .extension import CondetrolLaneExtensionProtocol
-from .model import TimeLaneModel
 
 _DEFAULT_MODEL_INDEX = QModelIndex()
 

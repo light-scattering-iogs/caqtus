@@ -3,11 +3,11 @@ from typing import Optional, Any, assert_never
 from PySide6.QtCore import QObject, QModelIndex, Qt, QPersistentModelIndex
 from PySide6.QtGui import QPalette
 
+from caqtus.gui.condetrol._icons import get_icon
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel
 from caqtus.types.timelane import CameraTimeLane, TakePicture, Step
-from caqtus.gui.condetrol.timelanes_editor.model import TimeLaneModel
-from caqtus.gui.condetrol._icons import get_icon
+from .._time_lane_model import TimeLaneModel
 
 _DEFAULT_INDEX = QModelIndex()
 

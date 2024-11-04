@@ -8,7 +8,7 @@ from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.types.timelane._serializer import TimeLaneSerializer
 from caqtus.utils import serialization
 from ._protocol import CondetrolLaneExtensionProtocol
-from ..model import TimeLaneModel
+from .._time_lane_model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)
 
