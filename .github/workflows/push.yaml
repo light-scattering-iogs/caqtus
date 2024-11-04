@@ -21,11 +21,17 @@ jobs:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }} # Only run on changed files
       - name: Install Hatch
         uses: pypa/hatch@install
+      - id: changed-python-files
+        uses: tj-actions/changed-files@v36
+        with:
+          files: '*.py'
       - name: Run linter
+        if: steps.changed-python-files.outputs.any_changed == 'true'
         env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        run: hatch run linter $ALL_CHANGED_FILES
+          CHANGED_PYTHON_FILES: ${{ steps.changed-python-files.outputs.all_changed_files }}
+        run: hatch run linter $CHANGED_PYTHON_FILES
       - name: Run check types
+        if: steps.changed-python-files.outputs.any_changed == 'true'
         env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        run: hatch run check-types $ALL_CHANGED_FILES
+          CHANGED_PYTHON_FILES: ${{ steps.changed-python-files.outputs.all_changed_files }}
+        run: hatch run check-types $CHANGED_PYTHON_FILES
