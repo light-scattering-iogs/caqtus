@@ -1,10 +1,8 @@
 import abc
 import copy
-import functools
 from typing import Optional, Any, TypeVar, Generic, TYPE_CHECKING
 
 from PySide6.QtCore import (
-    QAbstractTableModel,
     QObject,
     QModelIndex,
     QAbstractListModel,
@@ -16,159 +14,18 @@ from PySide6.QtGui import QAction, QBrush, QColor, QFont
 from PySide6.QtWidgets import QMenu, QColorDialog
 
 import caqtus.gui.qtutil.qabc as qabc
-from caqtus.types.expression import Expression
-from caqtus.types.timelane import TimeLanes, TimeLane
+from caqtus.types.timelane import TimeLane, Step
 
 if TYPE_CHECKING:
-    from .extension import CondetrolLaneExtensionProtocol
-
-
-class TimeStepNameModel(QAbstractListModel):
-    def __init__(self, parent: Optional[QObject] = None):
-        super().__init__(parent)
-        self._names: list[str] = []
-
-    def set_names(self, names: list[str]):
-        self.beginResetModel()
-        self._names = copy.deepcopy(names)
-        self.endResetModel()
-
-    def get_names(self) -> list[str]:
-        return copy.deepcopy(self._names)
-
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return len(self._names)
-
-    def data(
-        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
-    ):
-        if not index.isValid():
-            return None
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            return self._names[index.row()]
-        if role == Qt.ItemDataRole.TextAlignmentRole:
-            return Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
-
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
-        if not index.isValid():
-            return False
-        if role == Qt.ItemDataRole.EditRole:
-            if not isinstance(value, str):
-                raise TypeError(f"Expected str, got {type(value)}")
-            self._names[index.row()] = value
-            self.dataChanged.emit(index, index)
-            return True
-        return False
-
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        if not index.isValid():
-            return Qt.ItemFlag.NoItemFlags
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
-
-    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row <= self.rowCount()):
-            return False
-        self.beginInsertRows(parent, row, row)
-        self._names.insert(row, f"Step {row}")
-        self.endInsertRows()
-        return True
-
-    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row < self.rowCount()):
-            return False
-        self.beginRemoveRows(parent, row, row)
-        del self._names[row]
-        self.endRemoveRows()
-        return True
-
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole:
-            if orientation == Qt.Orientation.Horizontal:
-                return "Step names"
-            elif orientation == Qt.Orientation.Vertical:
-                return section
-        elif role == Qt.ItemDataRole.FontRole:
-            font = QFont()
-            font.setBold(True)
-            return font
-
-
-class TimeStepDurationModel(QAbstractListModel):
-    def __init__(self, parent: Optional[QObject] = None):
-        super().__init__(parent)
-        self._durations: list[Expression] = []
-
-    def set_durations(self, durations: list[Expression]):
-        self.beginResetModel()
-        self._durations = copy.deepcopy(durations)
-        self.endResetModel()
-
-    def get_duration(self) -> list[Expression]:
-        return copy.deepcopy(self._durations)
-
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return len(self._durations)
-
-    def data(
-        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
-    ):
-        if not index.isValid():
-            return None
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            return self._durations[index.row()].body
-        if role == Qt.ItemDataRole.TextAlignmentRole:
-            return Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
-
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
-        if not index.isValid():
-            return False
-        if role == Qt.ItemDataRole.EditRole:
-            if not isinstance(value, str):
-                raise TypeError(f"Expected str, got {type(value)}")
-            self._durations[index.row()] = Expression(value)
-            self.dataChanged.emit(index, index)
-            return True
-        return False
-
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        if not index.isValid():
-            return Qt.ItemFlag.NoItemFlags
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
-
-    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row <= self.rowCount()):
-            return False
-        self.beginInsertRows(parent, row, row)
-        self._durations.insert(row, Expression("..."))
-        self.endInsertRows()
-        return True
-
-    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row < self.rowCount()):
-            return False
-        self.beginRemoveRows(parent, row, row)
-        del self._durations[row]
-        self.endRemoveRows()
-        return True
-
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole:
-            if orientation == Qt.Orientation.Horizontal:
-                return "Step durations"
-            elif orientation == Qt.Orientation.Vertical:
-                return section
-        elif role == Qt.ItemDataRole.FontRole:
-            font = QFont()
-            font.setBold(True)
-            return font
-
+    pass
 
 T = TypeVar("T")
 L = TypeVar("L", bound=TimeLane)
-O = TypeVar("O", bound=Any)
+
+_DEFAULT_INDEX = QModelIndex()
 
 
-class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
+class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
     """An abstract list model to represent a time lane.
 
     This class inherits from :class:`PySide6.QtCore.QAbstractListModel` and can be
@@ -183,6 +40,10 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
     The :meth:`get_cell_context_actions` method can be overridden to add context menu
     actions to the cells in the lane.
     """
+
+    # Ignore some lint rules for this file as PySide6 models have a lot of camelCase
+    # methods.
+    # ruff: noqa: N802
 
     def __init__(self, name: str, lane: L, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -201,15 +62,13 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         self._lane = copy.deepcopy(lane)
         self.endResetModel()
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent=_DEFAULT_INDEX) -> int:
         """Return the number of steps in the lane."""
 
         return len(self._lane)
 
     @abc.abstractmethod
-    def data(
-        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
-    ) -> Any:
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole) -> Any:
         """Return the data for the given index and role.
 
         See :meth:`PySide6.QtCore.QAbstractItemModel.data` for more information.
@@ -230,8 +89,8 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         self,
         section: int,
         orientation: Qt.Orientation,
-        role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
-    ):
+        role=Qt.ItemDataRole.DisplayRole,
+    ) -> Any:
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 return self._name
@@ -242,7 +101,7 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
             font.setBold(True)
             return font
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+    def flags(self, index) -> Qt.ItemFlag:
         """Return the flags for the given index.
 
         By default, the flags are set to `ItemIsEnabled`, `ItemIsEditable`, and
@@ -258,24 +117,24 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         )
 
     @abc.abstractmethod
-    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+    def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         raise NotImplementedError
 
-    def insert_value(self, row: int, value: T) -> bool:
+    def insert_value(self, row: int, value: Any) -> bool:
         if not (0 <= row <= len(self._lane)):
             return False
         self.beginInsertRows(QModelIndex(), row, row)
         if row == len(self._lane):
             self._lane.append(value)
         else:
-            start, stop = self._lane.get_bounds(row)
+            start, stop = self._lane.get_bounds(Step(row))
             self._lane.insert(row, value)
             if start < row < stop:
                 self._lane[start : stop + 1] = self._lane[start]
         self.endInsertRows()
         return True
 
-    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+    def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         if not (0 <= row < len(self._lane)):
             return False
         self.beginRemoveRows(parent, row, row)
@@ -289,14 +148,14 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         return [break_span_action]
 
     def span(self, index) -> QSize:
-        start, stop = self._lane.get_bounds(index.row())
+        start, stop = self._lane.get_bounds(Step(index.row()))
         if index.row() == start:
             return QSize(1, stop - start)
         else:
             return QSize(1, 1)
 
     def break_span(self, index: QModelIndex) -> bool:
-        start, stop = self._lane.get_bounds(index.row())
+        start, stop = self._lane.get_bounds(Step(index.row()))
         value = self._lane[index.row()]
         for i in range(start, stop):
             self._lane[i] = value
@@ -326,7 +185,7 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         self.endResetModel()
 
 
-class ColoredTimeLaneModel(TimeLaneModel[L, O], metaclass=qabc.QABCMeta):
+class ColoredTimeLaneModel(TimeLaneModel[L], metaclass=qabc.QABCMeta):
     """A time lane model that can be colored.
 
     Instances of this class can be used to color the cells in a lane.
@@ -334,7 +193,7 @@ class ColoredTimeLaneModel(TimeLaneModel[L, O], metaclass=qabc.QABCMeta):
     can be used to color the cells in the lane.
     """
 
-    def __init__(self, name: str, lane: TimeLane, parent: Optional[QObject] = None):
+    def __init__(self, name: str, lane: L, parent: Optional[QObject] = None):
         super().__init__(name, lane, parent)
         self._brush: Optional[QBrush] = None
 
@@ -345,9 +204,7 @@ class ColoredTimeLaneModel(TimeLaneModel[L, O], metaclass=qabc.QABCMeta):
             self._brush = None
 
     @abc.abstractmethod
-    def data(
-        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
-    ) -> Any:
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         """Returns its brush for the `Qt.ItemDataRole.ForegroundRole` role."""
 
         if not index.isValid():
@@ -360,7 +217,7 @@ class ColoredTimeLaneModel(TimeLaneModel[L, O], metaclass=qabc.QABCMeta):
         self,
         section: int,
         orientation: Qt.Orientation,
-        role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
+        role: int = Qt.ItemDataRole.DisplayRole,
     ):
         if role == Qt.ItemDataRole.ForegroundRole:
             return self._brush
@@ -404,294 +261,3 @@ class ColoredTimeLaneModel(TimeLaneModel[L, O], metaclass=qabc.QABCMeta):
             return True
 
         return super().setHeaderData(section, orientation, value, role)
-
-
-class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
-    def __init__(
-        self,
-        extension: "CondetrolLaneExtensionProtocol",
-        parent: Optional[QObject] = None,
-    ):
-        super().__init__(parent)
-        self._step_names_model = TimeStepNameModel(self)
-        self._step_durations_model = TimeStepDurationModel(self)
-        self._lane_models: list[TimeLaneModel] = []
-        self._extension = extension
-
-        self._step_names_model.dataChanged.connect(self.on_step_names_data_changed)
-        self._step_durations_model.dataChanged.connect(
-            self.on_step_durations_data_changed
-        )
-        self._read_only = False
-
-    def set_read_only(self, read_only: bool) -> None:
-        self._read_only = read_only
-
-    def is_read_only(self) -> bool:
-        return self._read_only
-
-    def on_step_names_data_changed(
-        self,
-        top_left: QModelIndex,
-        bottom_right: QModelIndex,
-        roles: list[Qt.ItemDataRole],
-    ):
-        self.dataChanged.emit(
-            self.index(0, top_left.row()), self.index(0, bottom_right.row())
-        )
-
-    def on_step_durations_data_changed(
-        self,
-        top_left: QModelIndex,
-        bottom_right: QModelIndex,
-        roles: list[Qt.ItemDataRole],
-    ):
-        self.dataChanged.emit(
-            self.index(1, top_left.row()), self.index(1, bottom_right.row())
-        )
-
-    def set_timelanes(self, timelanes: TimeLanes):
-        # Don't check if read only, because we need to update the content of the editor
-        # even if it is readonly when swapping sequences.
-        new_models = []
-        for index, (name, lane) in enumerate(timelanes.lanes.items()):
-            lane_model = self.create_lane_model(name, lane)
-            new_models.append(lane_model)
-
-        self.beginResetModel()
-        self._step_names_model.set_names(timelanes.step_names)
-        self._step_durations_model.set_durations(timelanes.step_durations)
-        self._lane_models.clear()
-        self._lane_models.extend(new_models)
-        self.endResetModel()
-
-    def create_lane_model(self, name: str, lane: TimeLane) -> TimeLaneModel:
-        lane_model = self._extension.get_lane_model(lane, name)
-        lane_model.setParent(self)
-        lane_model.set_lane(lane)
-        lane_model.dataChanged.connect(
-            # For some reason, functools.partial does not work here, but lambda does.
-            # functools.partial(
-            #     self.on_lane_model_data_changed, lane_model=lane_model
-            # )
-            lambda top_left, bottom_right: self.on_lane_model_data_changed(
-                top_left, bottom_right, lane_model
-            )
-        )
-        lane_model.headerDataChanged.connect(
-            functools.partial(self.on_lane_header_data_changed, lane_model=lane_model)
-        )
-        return lane_model
-
-    def on_lane_model_data_changed(
-        self,
-        top_left: QModelIndex,
-        bottom_right: QModelIndex,
-        lane_model: TimeLaneModel,
-    ):
-        lane_index = self._lane_models.index(lane_model)
-        self.dataChanged.emit(
-            self.index(lane_index + 2, top_left.row()),
-            self.index(lane_index + 2, bottom_right.row()),
-        )
-
-    def on_lane_header_data_changed(
-        self,
-        orientation: Qt.Orientation,
-        first: int,
-        last: int,
-        lane_model: TimeLaneModel,
-    ):
-        lane_index = self._lane_models.index(lane_model)
-        if orientation == Qt.Orientation.Horizontal:
-            self.headerDataChanged.emit(
-                Qt.Orientation.Vertical,
-                lane_index + 2,
-                lane_index + 2,
-            )
-
-    def insert_time_lane(
-        self, name: str, timelane: TimeLane, index: Optional[int] = None
-    ):
-        if self._read_only:
-            return
-        if index is None:
-            index = len(self._lane_models)
-        if not (0 <= index <= len(self._lane_models)):
-            raise IndexError(f"Index {index} is out of range")
-        if len(timelane) != self.columnCount():
-            raise ValueError(
-                f"Length of time lane ({len(timelane)}) does not match "
-                f"number of columns ({self.columnCount()})"
-            )
-        already_used_names = {
-            model.headerData(0, Qt.Orientation.Horizontal)
-            for model in self._lane_models
-        }
-        if name in already_used_names:
-            raise ValueError(f"Name {name} is already used")
-        lane_model = self.create_lane_model(name, timelane)
-        self.beginInsertRows(QModelIndex(), index, index)
-        self._lane_models.insert(index, lane_model)
-        self.endInsertRows()
-
-    def get_lane(self, index: int) -> TimeLane:
-        return self._lane_models[index].get_lane()
-
-    def get_lane_name(self, index: int) -> str:
-        return self._lane_models[index].headerData(0, Qt.Orientation.Horizontal)
-
-    def get_timelanes(self) -> TimeLanes:
-        return TimeLanes(
-            step_names=self._step_names_model.get_names(),
-            step_durations=self._step_durations_model.get_duration(),
-            lanes={
-                model.headerData(0, Qt.Orientation.Horizontal): model.get_lane()
-                for model in self._lane_models
-            },
-        )
-
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        count = self._step_names_model.rowCount()
-        assert count == self._step_durations_model.rowCount()
-        assert all(model.rowCount() == count for model in self._lane_models), [
-            model.rowCount() for model in self._lane_models
-        ]
-        return count
-
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return len(self._lane_models) + 2
-
-    def data(self, index, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole):
-        if not index.isValid():
-            return None
-        return self._map_to_source(index).data(role)
-
-    def setData(self, index, value, role: Qt.ItemDataRole = Qt.ItemDataRole.EditRole):
-        if self._read_only:
-            return False
-        if not index.isValid():
-            return False
-        mapped_index = self._map_to_source(index)
-        return mapped_index.model().setData(mapped_index, value, role)
-
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        if not index.isValid():
-            return Qt.ItemFlag.NoItemFlags
-        mapped_index = self._map_to_source(index)
-        flags = mapped_index.model().flags(mapped_index)
-        if self._read_only:
-            flags &= ~Qt.ItemFlag.ItemIsEditable
-            flags &= ~Qt.ItemFlag.ItemIsDropEnabled
-        return flags
-
-    def headerData(
-        self,
-        section: int,
-        orientation: Qt.Orientation,
-        role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
-    ):
-        if orientation == Qt.Orientation.Horizontal:
-            if role == Qt.ItemDataRole.DisplayRole:
-                return f"Step {section}"
-        elif orientation == Qt.Orientation.Vertical:
-            if section == 0:
-                return self._step_names_model.headerData(
-                    0, Qt.Orientation.Horizontal, role
-                )
-            elif section == 1:
-                return self._step_durations_model.headerData(
-                    0, Qt.Orientation.Horizontal, role
-                )
-            else:
-                return self._lane_models[section - 2].headerData(
-                    0, Qt.Orientation.Horizontal, role
-                )
-
-    def insertColumn(self, column, parent: QModelIndex = QModelIndex()) -> bool:
-        if self._read_only:
-            return False
-        if not (0 <= column <= self.columnCount()):
-            return False
-        self.beginInsertColumns(parent, column, column)
-        self._step_names_model.insertRow(column)
-        self._step_durations_model.insertRow(column)
-        for lane_model in self._lane_models:
-            lane_model.insertRow(column)
-        self.endInsertColumns()
-        self.modelReset.emit()
-
-        return True
-
-    def removeColumn(self, column, parent: QModelIndex = QModelIndex()) -> bool:
-        if self._read_only:
-            return False
-        if not (0 <= column < self.columnCount()):
-            return False
-        self.beginRemoveColumns(parent, column, column)
-        self._step_names_model.removeRow(column)
-        self._step_durations_model.removeRow(column)
-        for lane_model in self._lane_models:
-            lane_model.removeRow(column)
-        self.endRemoveColumns()
-        self.modelReset.emit()
-        return True
-
-    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if self._read_only:
-            return False
-        if not (2 <= row < self.rowCount()):
-            return False
-        self.beginRemoveRows(parent, row, row)
-        del self._lane_models[row - 2]
-        self.endRemoveRows()
-
-    def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
-        if not index.isValid():
-            return []
-        if self._read_only:
-            return []
-        if index.row() >= 2:
-            return self._lane_models[index.row() - 2].get_cell_context_actions(
-                self._map_to_source(index)
-            )
-        else:
-            return []
-
-    def get_lane_header_context_actions(self, lane_index: int) -> list[QAction | QMenu]:
-        if not 0 <= lane_index < len(self._lane_models):
-            return []
-        if self._read_only:
-            return []
-        return self._lane_models[lane_index].get_header_context_actions()
-
-    def span(self, index):
-        if not index.isValid():
-            return QSize(1, 1)
-        if index.row() >= 2:
-            mapped_index = self._map_to_source(index)
-            span = self._lane_models[index.row() - 2].span(mapped_index)
-            return QSize(span.height(), span.width())
-        return QSize(1, 1)
-
-    def expand_step(self, step: int, lane_index: int, start: int, stop: int):
-        if self._read_only:
-            return
-        lane_model = self._lane_models[lane_index]
-        lane_model.expand_step(step, start, stop)
-
-    def _map_to_source(self, index: QModelIndex) -> QModelIndex:
-        assert index.isValid()
-        assert self.hasIndex(index.row(), index.column())
-        if index.row() == 0:
-            return self._step_names_model.index(index.column(), 0)
-        elif index.row() == 1:
-            return self._step_durations_model.index(index.column(), 0)
-        else:
-            return self._lane_models[index.row() - 2].index(index.column(), 0)
-
-    def simplify(self) -> None:
-        self.beginResetModel()
-        for lane_model in self._lane_models:
-            lane_model.simplify()
-        self.endResetModel()

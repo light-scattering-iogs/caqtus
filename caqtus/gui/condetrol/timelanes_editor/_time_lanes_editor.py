@@ -24,7 +24,7 @@ from caqtus.types.timelane import TimeLanes, TimeLane
 from ._delegate import TimeLaneDelegate
 from .add_lane_dialog import AddLaneDialog
 from .extension import CondetrolLaneExtensionProtocol
-from .model import TimeLanesModel
+from ._time_lanes_model import TimeLanesModel
 
 
 class TimeLanesEditor(QWidget):
