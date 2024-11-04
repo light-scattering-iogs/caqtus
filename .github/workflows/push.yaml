@@ -23,7 +23,7 @@ jobs:
         uses: pypa/hatch@install
       - name: Run linter
         env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files-specific.outputs.all_changed_files }}
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: hatch run linter ${ALL_CHANGED_FILES}
         shell: bash
       - name: Run check types
