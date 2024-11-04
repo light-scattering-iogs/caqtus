@@ -1,15 +1,18 @@
 from typing import Optional, Any, assert_never
 
-from PySide6.QtCore import QObject, QModelIndex, Qt
+from PySide6.QtCore import QObject, QModelIndex, Qt, QPersistentModelIndex
 from PySide6.QtGui import QAction, QBrush, QPalette
 from PySide6.QtWidgets import QMenu
 
 from caqtus.types.expression import Expression
-from caqtus.types.timelane import DigitalTimeLane
+from caqtus.types.timelane import DigitalTimeLane, Step
 from .model import ColoredTimeLaneModel
 
+_DEFAULT_INDEX = QModelIndex()
 
-class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane, None]):
+
+class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane]):
+    # ruff: noqa: N802
     def __init__(self, name: str, parent: Optional[QObject] = None):
         lane = DigitalTimeLane([False])
         super().__init__(name, lane, parent)
@@ -19,9 +22,7 @@ class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane, None]):
             color = QPalette().text().color()
             self._brush = QBrush(color)
 
-    def data(
-        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
-    ):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         value = self._lane[index.row()]
@@ -41,13 +42,11 @@ class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane, None]):
         else:
             return super().data(index, role)
 
-    def setData(
-        self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
-    ):
+    def setData(self, index, value: Any, role: int = Qt.ItemDataRole.EditRole):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
-            start, stop = self._lane.get_bounds(index.row())
+            start, stop = self._lane.get_bounds(Step(index.row()))
             if isinstance(value, bool):
                 self._lane[start:stop] = value
                 self.dataChanged.emit(index, index)
@@ -60,7 +59,9 @@ class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane, None]):
                 raise TypeError(f"Invalid type for value: {type(value)}")
         return False
 
-    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+    def insertRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> bool:
         return self.insert_value(row, False)
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
