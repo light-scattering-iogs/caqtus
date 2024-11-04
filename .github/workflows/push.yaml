@@ -24,8 +24,10 @@ jobs:
       - name: Run linter
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        run: hatch run linter ${ALL_CHANGED_FILES}
+        run: hatch run linter $ALL_CHANGED_FILES
         shell: bash
       - name: Run check types
-        run: hatch run check-types ${ALL_CHANGED_FILES}
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: hatch run check-types $ALL_CHANGED_FILES
         shell: bash
