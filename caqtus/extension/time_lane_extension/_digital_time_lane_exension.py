@@ -2,8 +2,9 @@ from caqtus.types.timelane import DigitalTimeLane
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 from ._extension import TimeLaneExtension
-from ...gui.condetrol.timelanes_editor import TimeLaneModel, DigitalTimeLaneModel
-from ...gui.condetrol.timelanes_editor.digital_lane_delegate import (
+from ...gui.condetrol.timelanes_editor import TimeLaneModel
+from ...gui.condetrol.timelanes_editor.digital_lane_editor import (
+    DigitalTimeLaneModel,
     DigitalTimeLaneDelegate,
 )
 

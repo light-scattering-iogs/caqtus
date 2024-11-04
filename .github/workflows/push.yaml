@@ -1,8 +1,6 @@
 name: Push
 run-name: ${{ github.actor }} triggered ${{ github.event_name }} on ${{ github.ref }}
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 jobs:
@@ -11,14 +9,29 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Set up python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-      - name: Install Hatch
-        run: pipx install hatch
       - id: changed-files
         uses: tj-actions/changed-files@v36
       - uses: pre-commit/action@v3.0.1
         with:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }} # Only run on changed files
+      - name: Install Hatch
+        uses: pypa/hatch@install
+      - id: changed-python-files
+        uses: tj-actions/changed-files@v36
+        with:
+          files: "**.py"
+      - name: Run linter
+        if: steps.changed-python-files.outputs.any_changed == 'true'
+        env:
+          CHANGED_PYTHON_FILES: ${{ steps.changed-python-files.outputs.all_changed_files }}
+        run: hatch run linter $CHANGED_PYTHON_FILES
+      - name: Run check types
+        if: steps.changed-python-files.outputs.any_changed == 'true'
+        env:
+          CHANGED_PYTHON_FILES: ${{ steps.changed-python-files.outputs.all_changed_files }}
+        run: hatch run check-types $CHANGED_PYTHON_FILES

@@ -1,19 +1,19 @@
-from PySide6.QtCore import QModelIndex, Qt
+from typing import override
+
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget,
-    QStyleOptionViewItem,
     QPushButton,
     QLineEdit,
 )
 
 from caqtus.types.expression import Expression
-from ._delegate import TimeLaneDelegate
+from .._delegate import TimeLaneDelegate
 
 
 class DigitalTimeLaneDelegate(TimeLaneDelegate):
-    def createEditor(
-        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> QWidget:
+    @override
+    def createEditor(self, parent, option, index) -> QWidget:
         cell_value = index.data(Qt.ItemDataRole.EditRole)
         if isinstance(cell_value, bool):
             return CheckedButton(parent)
@@ -22,27 +22,29 @@ class DigitalTimeLaneDelegate(TimeLaneDelegate):
         else:
             raise TypeError(f"Invalid type for value: {type(cell_value)}")
 
-    def setEditorData(self, editor: QWidget, index: QModelIndex):
+    @override
+    def setEditorData(self, editor, index):
         cell_value = index.data(Qt.ItemDataRole.EditRole)
         if isinstance(cell_value, bool):
-            editor: CheckedButton
+            assert isinstance(editor, CheckedButton)
             # We invert the value saved in the model because then when the user open
             # the editor, the button will already have changed its state, and they
             # don't have to click it a second time to change the value.
             editor.setChecked(not cell_value)
         elif isinstance(cell_value, Expression):
-            editor: QLineEdit
+            assert isinstance(editor, QLineEdit)
             editor.setText(str(cell_value))
         else:
             raise TypeError(f"Invalid type for value: {type(cell_value)}")
 
+    @override
     def setModelData(self, editor, model, index):
         cell_value = index.data(Qt.ItemDataRole.EditRole)
         if isinstance(cell_value, bool):
-            editor: CheckedButton
+            assert isinstance(editor, CheckedButton)
             model.setData(index, editor.isChecked(), Qt.ItemDataRole.EditRole)
         elif isinstance(cell_value, Expression):
-            editor: QLineEdit
+            assert isinstance(editor, QLineEdit)
             model.setData(index, Expression(editor.text()), Qt.ItemDataRole.EditRole)
         else:
             raise TypeError(f"Invalid type for value: {type(cell_value)}")
@@ -54,7 +56,8 @@ class CheckedButton(QPushButton):
         self.setCheckable(True)
         self.toggled.connect(self.on_toggled)
 
-    def setChecked(self, a0: bool) -> None:
+    @override
+    def setChecked(self, a0: bool) -> None:  # type: ignore[reportIncompatibleMethodOverride]
         super().setChecked(a0)
         self.on_toggled(a0)
 

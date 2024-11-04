@@ -1,9 +1,9 @@
-from typing import Protocol, Optional, Any, TypeVar
+from typing import Protocol, Optional, TypeVar
 
 from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.utils import serialization
-from .. import TimeLaneDelegate
-from ..model import TimeLaneModel
+from .._delegate import TimeLaneDelegate
+from .._time_lane_model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)
 
@@ -29,7 +29,7 @@ class CondetrolLaneExtensionProtocol(Protocol):
 
         ...
 
-    def get_lane_model(self, lane: L, name: str) -> TimeLaneModel[L, Any]:
+    def get_lane_model(self, lane: L, name: str) -> TimeLaneModel[L]:
         """Return the model for the given lane.
 
         This method is called when a lane needs to be displayed.

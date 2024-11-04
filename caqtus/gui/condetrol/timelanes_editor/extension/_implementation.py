@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Callable
-from typing import Optional, Protocol, TypeVar, Any
+from typing import Optional, Protocol, TypeVar
 
 from PySide6.QtWidgets import QStyledItemDelegate
 
@@ -8,7 +8,7 @@ from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.types.timelane._serializer import TimeLaneSerializer
 from caqtus.utils import serialization
 from ._protocol import CondetrolLaneExtensionProtocol
-from ..model import TimeLaneModel
+from .._time_lane_model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)
 
@@ -32,7 +32,7 @@ class LaneModelFactory[L: TimeLane](Protocol):
         self,
         lane: L,
         lane_name: str,
-    ) -> TimeLaneModel[L, Any]:
+    ) -> TimeLaneModel[L]:
         """Create a delegate for the lane passed as argument."""
         ...
 

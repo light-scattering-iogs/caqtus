@@ -1,16 +1,19 @@
 from typing import Optional, Any, assert_never
 
-from PySide6.QtCore import QObject, QModelIndex, Qt
+from PySide6.QtCore import QObject, QModelIndex, Qt, QPersistentModelIndex
 from PySide6.QtGui import QPalette
 
-from caqtus.types.timelane import CameraTimeLane, TakePicture
+from caqtus.gui.condetrol._icons import get_icon
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel
-from .model import TimeLaneModel
-from .._icons import get_icon
+from caqtus.types.timelane import CameraTimeLane, TakePicture, Step
+from .._time_lane_model import TimeLaneModel
+
+_DEFAULT_INDEX = QModelIndex()
 
 
-class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
+class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane]):
+    # ruff: noqa: N802
     def __init__(self, name: str, parent: Optional[QObject] = None):
         lane = CameraTimeLane([None])
         super().__init__(name, lane, parent)
@@ -19,7 +22,7 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
         color = palette.text().color()
         self._icon = get_icon("camera", color=color)
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         value = self._lane[index.row()]
@@ -47,13 +50,11 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
         else:
             return None
 
-    def setData(
-        self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
-    ):
+    def setData(self, index, value: Any, role: int = Qt.ItemDataRole.EditRole):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
-            start, stop = self._lane.get_bounds(index.row())
+            start, stop = self._lane.get_bounds(Step(index.row()))
             if isinstance(value, str):
                 if value == "":
                     self._lane[start:stop] = None
@@ -67,5 +68,7 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
                 raise TypeError(f"Invalid type for value: {type(value)}")
         return False
 
-    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+    def insertRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> bool:
         return self.insert_value(row, None)
