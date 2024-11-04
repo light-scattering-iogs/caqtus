@@ -16,7 +16,7 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
       - name: Install Hatch
-        run: pipx install hatch
+        uses: pypa/hatch@install
       - id: changed-files
         uses: tj-actions/changed-files@v36
       - uses: pre-commit/action@v3.0.1
