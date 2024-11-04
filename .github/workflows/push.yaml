@@ -24,7 +24,7 @@ jobs:
       - id: changed-python-files
         uses: tj-actions/changed-files@v36
         with:
-          files: '*.py'
+          files: "**.py"
       - name: Run linter
         if: steps.changed-python-files.outputs.any_changed == 'true'
         env:
