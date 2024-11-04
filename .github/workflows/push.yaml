@@ -1,8 +1,6 @@
 name: Push
 run-name: ${{ github.actor }} triggered ${{ github.event_name }} on ${{ github.ref }}
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 jobs:
@@ -24,8 +22,10 @@ jobs:
       - name: Install Hatch
         uses: pypa/hatch@install
       - name: Run linter
-        run: hatch run linter ${{ steps.changed-files.outputs.all_changed_files }}
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files-specific.outputs.all_changed_files }}
+        run: hatch run linter $ALL_CHANGED_FILES
         shell: bash
       - name: Run check types
-        run: hatch run check-types ${{ steps.changed-files.outputs.all_changed_files }}
+        run: hatch run check-types $ALL_CHANGED_FILES
         shell: bash
