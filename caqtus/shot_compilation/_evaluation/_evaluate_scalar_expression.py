@@ -7,6 +7,8 @@ from caqtus.types.parameter import Parameter
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus_parsing import parse
+from ._constants import CONSTANTS
+from ._exceptions import UndefinedParameterError
 
 type Scalar = int | bool | float | Quantity[float]
 
@@ -25,12 +27,30 @@ def evaluate_scalar_expression(
     """
 
     ast = parse(str(expression))
-    return evaluate_expression(ast)
+    return evaluate_expression(ast, parameters)
 
 
-def evaluate_expression(expression: nodes.Expression) -> Scalar:
+def evaluate_expression(
+    expression: nodes.Expression, parameters: Mapping[DottedVariableName, Parameter]
+) -> Scalar:
     match expression:
         case int() | float():
             return expression
+        case nodes.Variable() as variable:
+            return evaluate_scalar_variable(variable, parameters)
         case _:  # pragma: no cover
             assert_never(expression)
+
+
+def evaluate_scalar_variable(
+    variable: nodes.Variable, parameters: Mapping[DottedVariableName, Parameter]
+) -> Scalar:
+    name = variable.name
+    if name in parameters:
+        # We can use str as key instead of DottedVariableName because they have the
+        # same hash.
+        return parameters[name]  # type: ignore[reportArgumentType]
+    elif name in CONSTANTS:
+        return CONSTANTS[name]
+    else:
+        raise UndefinedParameterError(f"Parameter {name} is not defined.")
