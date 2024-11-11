@@ -33,3 +33,11 @@ def test_divide():
 
     result = evaluate_scalar_expression(expr, parameters)
     assert result == 12 / 13
+
+
+def test_power():
+    expr = Expression("a ** b")
+    parameters = {DottedVariableName("a"): 2, DottedVariableName("b"): 3}
+
+    result = evaluate_scalar_expression(expr, parameters)
+    assert result == 8

@@ -10,7 +10,7 @@ from caqtus.types.units import Quantity, is_scalar_quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus_parsing import parse
 from ._constants import CONSTANTS
-from ._exceptions import UndefinedParameterError
+from ._exceptions import UndefinedParameterError, InvalidOperationError
 
 type Scalar = int | bool | float | Quantity[float]
 
@@ -44,7 +44,8 @@ def evaluate_expression(
             nodes.Add()
             | nodes.Subtract()
             | nodes.Multiply()
-            | nodes.Divide() as binary_operator
+            | nodes.Divide()
+            | nodes.Power() as binary_operator
         ):
             return evaluate_binary_operator(binary_operator, parameters)
         case _:  # pragma: no cover
@@ -80,6 +81,12 @@ def evaluate_binary_operator(
             result = left * right
         case nodes.Divide():
             result = left / right
+        case nodes.Power(exponent):
+            if not isinstance(right, (int, float)):
+                raise InvalidOperationError(
+                    f"The exponent {exponent} must be a real number."
+                )
+            result = left**right
         case _:  # pragma: no cover
             assert_never(binary_operator)
     if not is_scalar(result):
