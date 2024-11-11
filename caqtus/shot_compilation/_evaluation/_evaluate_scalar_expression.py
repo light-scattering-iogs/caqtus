@@ -1,4 +1,7 @@
+import functools
+import operator
 from collections.abc import Mapping
+from collections.abc import Sequence
 from typing import assert_never, Any
 
 from typing_extensions import TypeIs
@@ -8,11 +11,16 @@ import caqtus_parsing.nodes as nodes
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter
 from caqtus.types.recoverable_exceptions import EvaluationError
-from caqtus.types.units import Quantity, is_scalar_quantity
+from caqtus.types.units import Quantity, is_scalar_quantity, Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus_parsing import parse, InvalidSyntaxError
 from ._constants import CONSTANTS
-from ._exceptions import UndefinedParameterError, InvalidOperationError
+from ._exceptions import (
+    UndefinedParameterError,
+    InvalidOperationError,
+    UndefinedUnitError,
+)
+from ._units import units
 
 type Scalar = int | bool | float | Quantity[float]
 
@@ -61,6 +69,8 @@ def evaluate_expression(
             return evaluate_binary_operator(binary_operator, parameters)
         case nodes.Plus() | nodes.Minus() as unary_operator:
             return evaluate_unary_operator(unary_operator, parameters)
+        case nodes.Quantity():
+            return evaluate_quantity(expression)
         case _:  # pragma: no cover
             assert_never(expression)
 
@@ -126,6 +136,34 @@ def evaluate_unary_operator(
             "A unary operation between scalars should return a scalar."
         )
     return result
+
+
+def evaluate_quantity(quantity: nodes.Quantity) -> Quantity[float]:
+    magnitude = quantity.magnitude
+
+    multiplicative_units = evaluate_units(quantity.multiplicative_units)
+
+    if not quantity.divisional_units:
+        return Quantity(magnitude, multiplicative_units)
+    else:
+        divisive_units = evaluate_units(quantity.divisional_units)
+        total_units = multiplicative_units / divisive_units
+        assert isinstance(total_units, Unit)
+        return Quantity(magnitude, total_units)
+
+
+@functools.lru_cache
+def evaluate_units(unit_nodes: Sequence[nodes.UnitTerm]) -> Unit:
+    assert unit_nodes
+    accumulated_units = []
+    for unit_term in unit_nodes:
+        try:
+            base = units[unit_term.unit]
+        except KeyError:
+            raise UndefinedUnitError(f"Unit {unit_term.unit} is not defined.")
+        exponent = unit_term.exponent or 1
+        accumulated_units.append(base**exponent)
+    return functools.reduce(operator.mul, accumulated_units)
 
 
 def is_scalar(value: Any) -> TypeIs[Scalar]:

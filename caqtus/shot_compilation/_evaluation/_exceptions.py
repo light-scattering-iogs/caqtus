@@ -7,3 +7,7 @@ class UndefinedParameterError(EvaluationError):
 
 class InvalidOperationError(EvaluationError):
     """Indicates that an invalid operation was attempted."""
+
+
+class UndefinedUnitError(EvaluationError):
+    """Indicates that a unit was not defined in an expression."""
