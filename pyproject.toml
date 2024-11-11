@@ -52,7 +52,7 @@ dependencies = [
     "setuptools",
     "docstring_parser",
     "docstring-inheritance>=2.2.1",
-    "caqtus-parsing>=0.2.0",
+    "caqtus-parsing>=0.3.0",
 ]
 
 [project.urls]
