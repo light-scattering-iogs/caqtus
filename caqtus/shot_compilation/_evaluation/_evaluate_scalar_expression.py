@@ -48,6 +48,8 @@ def evaluate_expression(
             | nodes.Power() as binary_operator
         ):
             return evaluate_binary_operator(binary_operator, parameters)
+        case nodes.Plus() | nodes.Minus() as unary_operator:
+            return evaluate_unary_operator(unary_operator, parameters)
         case _:  # pragma: no cover
             assert_never(expression)
 
@@ -92,6 +94,25 @@ def evaluate_binary_operator(
     if not is_scalar(result):
         raise AssertionError(
             "A binary operation between scalars should return a scalar."
+        )
+    return result
+
+
+def evaluate_unary_operator(
+    unary_operator: nodes.UnaryOperator,
+    parameters: Mapping[DottedVariableName, Parameter],
+) -> Scalar:
+    operand = evaluate_expression(unary_operator.operand, parameters)
+    match unary_operator:
+        case nodes.Plus():
+            result = operand
+        case nodes.Minus():
+            result = -operand
+        case _:  # pragma: no cover
+            assert_never(unary_operator)
+    if not is_scalar(result):
+        raise AssertionError(
+            "A unary operation between scalars should return a scalar."
         )
     return result
 
