@@ -1,5 +1,8 @@
+import pytest
+
 from caqtus.shot_compilation._evaluation import evaluate_scalar_expression
 from caqtus.types.expression import Expression
+from caqtus.types.recoverable_exceptions import EvaluationError
 from caqtus.types.variable_name import DottedVariableName
 
 
@@ -41,3 +44,10 @@ def test_power():
 
     result = evaluate_scalar_expression(expr, parameters)
     assert result == 8
+
+
+def test_power_quantity():
+    expr = Expression("1**5 MHz")
+
+    with pytest.raises(EvaluationError):
+        evaluate_scalar_expression(expr, {})
