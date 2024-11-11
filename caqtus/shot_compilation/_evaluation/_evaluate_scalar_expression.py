@@ -3,12 +3,14 @@ from typing import assert_never, Any
 
 from typing_extensions import TypeIs
 
+import caqtus.formatter as fmt
 import caqtus_parsing.nodes as nodes
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter
+from caqtus.types.recoverable_exceptions import EvaluationError
 from caqtus.types.units import Quantity, is_scalar_quantity
 from caqtus.types.variable_name import DottedVariableName
-from caqtus_parsing import parse
+from caqtus_parsing import parse, InvalidSyntaxError
 from ._constants import CONSTANTS
 from ._exceptions import UndefinedParameterError, InvalidOperationError
 
@@ -26,10 +28,19 @@ def evaluate_scalar_expression(
 
     Returns:
         The result of the evaluation.
+
+    Raises:
+        EvaluationError: if an error occurred during evaluation, with the reason for the
+            error as the exception cause.
     """
 
-    ast = parse(str(expression))
-    return evaluate_expression(ast, parameters)
+    try:
+        ast = parse(str(expression))
+        return evaluate_expression(ast, parameters)
+    except (EvaluationError, InvalidSyntaxError) as error:
+        raise EvaluationError(
+            f"An error occurred while evaluating the {fmt.expression(expression)}."
+        ) from error
 
 
 def evaluate_expression(
@@ -86,7 +97,7 @@ def evaluate_binary_operator(
         case nodes.Power(exponent):
             if not isinstance(right, (int, float)):
                 raise InvalidOperationError(
-                    f"The exponent {exponent} must be a real number."
+                    f"The exponent {exponent} must be a real number, not {right}."
                 )
             result = left**right
         case _:  # pragma: no cover

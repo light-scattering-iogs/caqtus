@@ -1,8 +1,4 @@
-from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableException
-
-
-class EvaluationError(RecoverableException):
-    """An error that occurred while evaluating an expression."""
+from caqtus.types.recoverable_exceptions import EvaluationError
 
 
 class UndefinedParameterError(EvaluationError):

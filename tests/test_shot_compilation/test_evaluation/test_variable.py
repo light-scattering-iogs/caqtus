@@ -2,10 +2,10 @@ import pytest
 
 from caqtus.shot_compilation._evaluation import (
     evaluate_scalar_expression,
-    UndefinedParameterError,
 )
 from caqtus.shot_compilation._evaluation._constants import CONSTANTS
 from caqtus.types.expression import Expression
+from caqtus.types.recoverable_exceptions import EvaluationError
 from caqtus.types.variable_name import DottedVariableName
 
 
@@ -31,7 +31,7 @@ def test_undefined_parameter():
     expr = Expression("a")
     parameters = {}
 
-    with pytest.raises(UndefinedParameterError):
+    with pytest.raises(EvaluationError):
         evaluate_scalar_expression(expr, parameters)
 
 
