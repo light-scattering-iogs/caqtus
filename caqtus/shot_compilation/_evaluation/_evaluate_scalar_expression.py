@@ -32,5 +32,5 @@ def evaluate_expression(expression: nodes.Expression) -> Scalar:
     match expression:
         case int() | float():
             return expression
-        case _:
+        case _:  # pragma: no cover
             assert_never(expression)
