@@ -90,7 +90,9 @@ def evaluate_binary_operator(
         case _:  # pragma: no cover
             assert_never(binary_operator)
     if not is_scalar(result):
-        raise AssertionError("Adding two scalars should result in a scalar.")
+        raise AssertionError(
+            "A binary operation between scalars should return a scalar."
+        )
     return result
 
 
