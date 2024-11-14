@@ -1,26 +1,26 @@
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import assert_never
 
 import numpy as np
 
-import caqtus.formatter as fmt
 from caqtus.shot_compilation.timed_instructions import (
     TimedInstruction,
     Pattern,
     concatenate,
 )
 from caqtus.types.expression import Expression
-from caqtus.types.recoverable_exceptions import InvalidTypeError
+from caqtus.types.parameter import Parameter
 from caqtus.types.timelane import DigitalTimeLane
+from caqtus.types.variable_name import DottedVariableName
+from .._evaluation import evaluate_time_dependent_digital_expression
 from ..timing import Time, number_ticks
-from ...types.variable_name import DottedVariableName
 
 
 def compile_digital_lane(
     lane: DigitalTimeLane,
     step_start_times: Sequence[Time],
     time_step: Time,
-    parameters: Mapping[DottedVariableName, Any],
+    parameters: Mapping[DottedVariableName, Parameter],
 ) -> TimedInstruction[np.bool_]:
     """Compile a digital lane into a sequence of instructions.
 
@@ -47,23 +47,19 @@ def compile_digital_lane(
             step_start_times[start], step_start_times[stop], time_step
         )
         if isinstance(cell_value, bool):
-            instructions.append(get_constant_instruction(cell_value, length))
+            instructions.append(Pattern([cell_value]) * length)
         elif isinstance(cell_value, Expression):
-            value = cell_value.evaluate(parameters)
-            if not isinstance(value, bool):
-                raise InvalidTypeError(
-                    f"{fmt.expression(cell_value)} does not evaluate to "
-                    f"{fmt.type_(bool)}, but to {fmt.type_(type(value))}",
-                )
-            instructions.append(get_constant_instruction(value, length))
-
+            values = evaluate_time_dependent_digital_expression(
+                cell_value,
+                parameters,
+                step_start_times[start],
+                step_start_times[stop],
+                time_step,
+            )
+            instructions.append(values)
         else:
-            raise NotImplementedError(f"Unexpected value {cell_value} in digital lane")
+            assert_never(cell_value)
     return concatenate(*instructions)
-
-
-def get_constant_instruction(value: bool, length: int) -> TimedInstruction[np.bool_]:
-    return Pattern([value]) * length
 
 
 #
