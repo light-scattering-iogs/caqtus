@@ -28,3 +28,18 @@ def test_fractional_units():
 
     result = evaluate_scalar_expression(expr, parameters)
     assert result == Quantity(12.5, Unit("MHz/V"))
+
+
+def test_degree():
+    expr = Expression("180°")
+    parameters = {}
+
+    result = evaluate_scalar_expression(expr, parameters)
+    assert result == Quantity(180, Unit("°"))
+
+
+def test_percent():
+    expr = Expression("50%")
+
+    result = evaluate_scalar_expression(expr, {})
+    assert result == 0.5

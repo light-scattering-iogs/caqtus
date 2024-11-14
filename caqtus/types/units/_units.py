@@ -156,7 +156,7 @@ POWER_UNITS = {
     "dBm",
 }
 
-DIMENSIONLESS_UNITS = {"dB"}
+DIMENSIONLESS_UNITS = {"dB", "percent", "%"}
 
 CURRENT_UNITS = {"A", "mA"}
 
@@ -164,7 +164,7 @@ VOLTAGE_UNITS = {"V", "mV"}
 
 DISTANCE_UNITS = {"m", "mm", "µm", "um", "nm"}
 
-DEGREE_UNITS = {"deg", "rad"}
+ANGLE_UNITS = {"deg", "°", "rad"}
 
 UNITS = (
     TIME_UNITS
@@ -174,7 +174,7 @@ UNITS = (
     | CURRENT_UNITS
     | VOLTAGE_UNITS
     | DISTANCE_UNITS
-    | DEGREE_UNITS
+    | ANGLE_UNITS
 )
 
 
