@@ -198,7 +198,7 @@ thomson_cross_section = 8 / 3 * π * r_e ** 2 = σ_e = sigma_e
 
 # Angle
 turn = 2 * π * radian = _ = revolution = cycle = circle
-degree = π / 180 * radian = deg = arcdeg = arcdegree = angular_degree
+degree = π / 180 * radian = deg = arcdeg = arcdegree = angular_degree = °
 arcminute = degree / 60 = arcmin = arc_minute = angular_minute
 arcsecond = arcminute / 60 = arcsec = arc_second = angular_second
 milliarcsecond = 1e-3 * arcsecond = mas
