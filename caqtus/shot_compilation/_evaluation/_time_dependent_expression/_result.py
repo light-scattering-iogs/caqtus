@@ -34,7 +34,7 @@ class QuantityResult:
     final_value: float = attrs.field()
     unit: BaseUnit = attrs.field()
 
-    @unit.validator
+    @unit.validator  # type: ignore[reportAttributeAccessIssue]
     def _validate_unit(self, attribute, value):
         if not is_in_base_units(value):
             raise AssertionError(f"Unit {value} is not in base units.")
