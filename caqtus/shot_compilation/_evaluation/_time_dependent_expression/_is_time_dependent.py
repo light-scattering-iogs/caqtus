@@ -22,7 +22,7 @@ def is_time_dependent(expression: nodes.Expression) -> bool:
             right_time_dependent = is_time_dependent(binary_operator.right)
             return left_time_dependent or right_time_dependent
         case nodes.Plus() | nodes.Minus() as unary_operator:
-            return is_time_dependent(unary_operator.expression)
+            return is_time_dependent(unary_operator.operand)
         case nodes.Call():
             return any(is_time_dependent(arg) for arg in expression.args)
         case _:  # pragma: no cover
