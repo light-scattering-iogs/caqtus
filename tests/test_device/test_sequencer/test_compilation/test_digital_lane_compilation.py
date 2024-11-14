@@ -11,12 +11,15 @@ from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import RecoverableException
 from caqtus.types.timelane import DigitalTimeLane, TimeLanes
-from caqtus.types.units import Quantity
+from caqtus.types.units import Quantity, Unit
 from caqtus.types.variable_name import DottedVariableName
 
 
 def into_time(value) -> Time:
     return Time(to_time_step(value) * ns)
+
+
+ms = Unit("ms")
 
 
 def test_0():
@@ -127,12 +130,12 @@ def test_3():
     variables = VariableNamespace(
         {
             "mot_loading": {
-                "duration": Quantity(100, "millisecond"),
+                "duration": Quantity(100, ms),
             },
             "red_mot": {
-                "ramp_duration": Quantity(80, "millisecond"),
+                "ramp_duration": Quantity(80, ms),
             },
-            "exposure": Quantity(30, "millisecond"),
+            "exposure": Quantity(30, ms),
         }
     )
     shot_context = ShotContext(
