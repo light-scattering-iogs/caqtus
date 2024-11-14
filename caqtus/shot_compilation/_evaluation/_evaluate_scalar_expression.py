@@ -20,9 +20,9 @@ from ._exceptions import (
     InvalidOperationError,
     UndefinedUnitError,
 )
+from ._functions import SCALAR_FUNCTIONS
+from ._scalar import Scalar
 from ._units import units
-
-type Scalar = int | bool | float | Quantity[float]
 
 
 def evaluate_scalar_expression(
@@ -47,7 +47,7 @@ def evaluate_scalar_expression(
         return evaluate_expression(ast, parameters)
     except (EvaluationError, InvalidSyntaxError) as error:
         raise EvaluationError(
-            f"An error occurred while evaluating the {fmt.expression(expression)}."
+            f"Could not evaluate {fmt.expression(expression)}."
         ) from error
 
 
@@ -71,6 +71,8 @@ def evaluate_expression(
             return evaluate_unary_operator(unary_operator, parameters)
         case nodes.Quantity():
             return evaluate_quantity(expression)
+        case nodes.Call():
+            return evaluate_function_call(expression, parameters)
         case _:  # pragma: no cover
             assert_never(expression)
 
@@ -87,6 +89,23 @@ def evaluate_scalar_variable(
         return CONSTANTS[name]
     else:
         raise UndefinedParameterError(f"Parameter {name} is not defined.")
+
+
+def evaluate_function_call(
+    function_call: nodes.Call,
+    parameters: Mapping[DottedVariableName, Parameter],
+) -> Scalar:
+    function_name = function_call.function
+    try:
+        # We can use str as key instead of VariableName because they have the
+        # same hash.
+        function = SCALAR_FUNCTIONS[function_name]  # type: ignore[reportArgumentType]
+    except KeyError:
+        raise UndefinedFunctionError(f"Function {function_name} is not defined.")
+    arguments = [
+        evaluate_expression(argument, parameters) for argument in function_call.args
+    ]
+    return function(*arguments)
 
 
 def evaluate_binary_operator(
@@ -168,3 +187,7 @@ def evaluate_units(unit_nodes: Sequence[nodes.UnitTerm]) -> Unit:
 
 def is_scalar(value: Any) -> TypeIs[Scalar]:
     return isinstance(value, (int, bool, float)) or is_scalar_quantity(value)
+
+
+class UndefinedFunctionError(EvaluationError):
+    pass
