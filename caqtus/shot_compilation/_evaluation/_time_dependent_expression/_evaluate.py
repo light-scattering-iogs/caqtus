@@ -4,11 +4,11 @@ import numpy as np
 
 import caqtus.formatter as fmt
 import caqtus_parsing.nodes as nodes
-from caqtus.shot_compilation.timing import Time, number_ticks
+from caqtus.shot_compilation.timing import Time, number_ticks, start_tick, stop_tick
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter
 from caqtus.types.recoverable_exceptions import EvaluationError, InvalidTypeError
-from caqtus.types.units import Quantity
+from caqtus.types.units import Quantity, SECOND
 from caqtus.types.variable_name import DottedVariableName
 from caqtus_parsing import parse, InvalidSyntaxError
 from ._is_time_dependent import is_time_dependent
@@ -21,7 +21,7 @@ from ._result import (
 )
 from .._evaluate_scalar_expression import _evaluate_scalar_ast
 from .._scalar import Scalar
-from ...timed_instructions import Pattern, TimedInstruction
+from ...timed_instructions import Pattern, TimedInstruction, create_ramp
 
 
 def evaluate_time_dependent_digital_expression(
@@ -83,12 +83,45 @@ def _evaluate_ast(
     time_step: Time,
 ) -> EvaluationResult:
     if is_time_dependent(expression):
-        raise NotImplementedError("Can't evaluate expressions that depend on t")
+        return _evaluate_true_time_dependent_ast(
+            expression, parameters, initial_time, final_time, time_step
+        )
     else:
         value = _evaluate_scalar_ast(expression, parameters)
         return embed_scalar_as_time_dependent(
             value, initial_time, final_time, time_step
         )
+
+
+def _evaluate_true_time_dependent_ast(
+    expression: nodes.Expression,
+    parameters: Mapping[DottedVariableName, Parameter],
+    initial_time: Time,
+    final_time: Time,
+    time_step: Time,
+) -> EvaluationResult:
+    match expression:
+        case nodes.Variable(name="t"):
+            return create_time_ramp(initial_time, final_time, time_step)
+        case nodes.Variable() | int() | float() | nodes.Quantity():
+            raise AssertionError(
+                "Don't call this function with not truly time-dependent expressions."
+            )
+        case _:
+            assert_never(expression)
+
+
+def create_time_ramp(t1: Time, t2: Time, time_step: Time) -> QuantityResult:
+    tick_1 = start_tick(t1, time_step)
+    tick_2 = stop_tick(t2, time_step)
+
+    instruction = create_ramp(
+        tick_1 * time_step - t1, tick_2 * time_step - t1, tick_2 - tick_1
+    )  # We subtract the initial time t1 such that t is the local time inside the
+    # expression
+    return QuantityResult(
+        values=instruction, initial_value=float(t1), final_value=float(t2), unit=SECOND
+    )
 
 
 def embed_scalar_as_time_dependent(
