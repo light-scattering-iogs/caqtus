@@ -7,7 +7,7 @@ import caqtus_parsing.nodes as nodes
 from caqtus.shot_compilation.timing import Time, number_ticks
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter
-from caqtus.types.recoverable_exceptions import EvaluationError
+from caqtus.types.recoverable_exceptions import EvaluationError, InvalidTypeError
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus_parsing import parse, InvalidSyntaxError
@@ -21,7 +21,42 @@ from ._result import (
 )
 from .._evaluate_scalar_expression import _evaluate_scalar_ast
 from .._scalar import Scalar
-from ...timed_instructions import Pattern
+from ...timed_instructions import Pattern, TimedInstruction
+
+
+def evaluate_time_dependent_digital_expression(
+    expression: Expression,
+    parameters: Mapping[DottedVariableName, Parameter],
+    initial_time: Time,
+    final_time: Time,
+    time_step: Time,
+) -> TimedInstruction[np.bool]:
+    """Evaluate an expression that depends on time and returns a digital value.
+
+    Args:
+        expression: The expression to evaluate.
+        parameters: The parameters to use in the evaluation.
+        initial_time: The initial time of the evaluation.
+        final_time: The final time of the evaluation.
+        time_step: The time step for discretizing the time, in seconds.
+
+    Returns:
+        A timed instruction representing the digital value of the expression.
+        The length of the instructions corresponds to the number of time steps between
+        the initial and final time.
+
+    Raises:
+        InvalidTypeError: if the expression does not evaluate to a digital value.
+    """
+
+    result = evaluate_time_dependent_expression(
+        expression, parameters, initial_time, final_time, time_step
+    )
+    if not isinstance(result, BoolResult):
+        raise InvalidTypeError(
+            f"{fmt.expression(expression)} does not evaluate to a digital value.",
+        )
+    return result.values
 
 
 def evaluate_time_dependent_expression(
