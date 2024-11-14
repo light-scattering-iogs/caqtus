@@ -56,7 +56,7 @@ def float_to_scalar_function(
         except (ValueError, DimensionalityError):
             raise InvalidTypeError(
                 f"{function.__name__}() expected a number, got {value!r}."
-            )
+            ) from None
         return float(function(converted))
 
     return wrapper

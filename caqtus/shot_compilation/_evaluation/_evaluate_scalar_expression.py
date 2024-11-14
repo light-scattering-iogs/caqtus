@@ -101,7 +101,9 @@ def evaluate_function_call(
         # same hash.
         function = SCALAR_FUNCTIONS[function_name]  # type: ignore[reportArgumentType]
     except KeyError:
-        raise UndefinedFunctionError(f"Function {function_name} is not defined.")
+        raise UndefinedFunctionError(
+            f"Function {function_name} is not defined."
+        ) from None
     arguments = [
         evaluate_expression(argument, parameters) for argument in function_call.args
     ]
@@ -179,7 +181,7 @@ def evaluate_units(unit_nodes: Sequence[nodes.UnitTerm]) -> Unit:
         try:
             base = units[unit_term.unit]
         except KeyError:
-            raise UndefinedUnitError(f"Unit {unit_term.unit} is not defined.")
+            raise UndefinedUnitError(f"Unit {unit_term.unit} is not defined.") from None
         exponent = unit_term.exponent or 1
         accumulated_units.append(base**exponent)
     return functools.reduce(operator.mul, accumulated_units)
