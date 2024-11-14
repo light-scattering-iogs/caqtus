@@ -44,14 +44,14 @@ def evaluate_scalar_expression(
 
     try:
         ast = parse(str(expression))
-        return evaluate_expression(ast, parameters)
+        return _evaluate_scalar_ast(ast, parameters)
     except (EvaluationError, InvalidSyntaxError) as error:
         raise EvaluationError(
             f"Could not evaluate {fmt.expression(expression)}."
         ) from error
 
 
-def evaluate_expression(
+def _evaluate_scalar_ast(
     expression: nodes.Expression, parameters: Mapping[DottedVariableName, Parameter]
 ) -> Scalar:
     match expression:
@@ -105,7 +105,7 @@ def evaluate_function_call(
             f"Function {function_name} is not defined."
         ) from None
     arguments = [
-        evaluate_expression(argument, parameters) for argument in function_call.args
+        _evaluate_scalar_ast(argument, parameters) for argument in function_call.args
     ]
     return function(*arguments)
 
@@ -114,8 +114,8 @@ def evaluate_binary_operator(
     binary_operator: nodes.BinaryOperator,
     parameters: Mapping[DottedVariableName, Parameter],
 ) -> Scalar:
-    left = evaluate_expression(binary_operator.left, parameters)
-    right = evaluate_expression(binary_operator.right, parameters)
+    left = _evaluate_scalar_ast(binary_operator.left, parameters)
+    right = _evaluate_scalar_ast(binary_operator.right, parameters)
     match binary_operator:
         case nodes.Add():
             result = left + right
@@ -144,7 +144,7 @@ def evaluate_unary_operator(
     unary_operator: nodes.UnaryOperator,
     parameters: Mapping[DottedVariableName, Parameter],
 ) -> Scalar:
-    operand = evaluate_expression(unary_operator.operand, parameters)
+    operand = _evaluate_scalar_ast(unary_operator.operand, parameters)
     match unary_operator:
         case nodes.Plus():
             result = operand
