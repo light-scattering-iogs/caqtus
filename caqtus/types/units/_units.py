@@ -143,6 +143,7 @@ dimensionless = Dimensionless(BaseUnit(Unit("dimensionless")))
 TIME_UNITS = {"s", "ms", "µs", "us", "ns"}
 
 FREQUENCY_UNITS = {
+    "mHz",
     "Hz",
     "kHz",
     "MHz",
@@ -153,14 +154,17 @@ FREQUENCY_UNITS = {
 POWER_UNITS = {
     "W",
     "mW",
+    "µW",
+    "uW",
+    "nW",
     "dBm",
 }
 
 DIMENSIONLESS_UNITS = {"dB", "percent", "%"}
 
-CURRENT_UNITS = {"A", "mA"}
+CURRENT_UNITS = {"A", "mA", "µA", "uA", "nA"}
 
-VOLTAGE_UNITS = {"V", "mV"}
+VOLTAGE_UNITS = {"V", "mV", "µV", "uV", "nV"}
 
 DISTANCE_UNITS = {"m", "mm", "µm", "um", "nm"}
 
