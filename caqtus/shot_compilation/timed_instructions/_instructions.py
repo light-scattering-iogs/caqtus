@@ -22,7 +22,6 @@ import numpy.typing as npt
 from typing_extensions import TypeIs, TypeVar
 
 Length = NewType("Length", int)
-NonZeroLength = NewType("NonZeroLength", int)
 Width = NewType("Width", int)
 Depth = NewType("Depth", int)
 
@@ -107,7 +106,7 @@ class Empty(Generic[T]):
 
 class Leaf(Generic[LT, T], abc.ABC):
     @abc.abstractmethod
-    def __len__(self) -> NonZeroLength:
+    def __len__(self) -> Length:
         """Returns the length of the instruction in clock cycles.
 
         This must be a strictly positive integer.
@@ -266,7 +265,7 @@ class Pattern[T: np.generic](Leaf["Pattern", T]):
         if not _has_only_finite_values(self._pattern):
             raise ValueError("Pattern must contain only finite values")
         self._pattern.setflags(write=False)
-        self._length = to_non_zero_length(len(self._pattern))
+        self._length = Length(len(self._pattern))
         assert self._is_canonical()
 
     def _is_canonical(self) -> bool:
@@ -317,7 +316,7 @@ class Pattern[T: np.generic](Leaf["Pattern", T]):
     def as_type[S: np.generic](self, dtype: numpy.dtype[S]) -> Pattern[S]:
         return Pattern.create_without_copy(self._pattern.astype(dtype, copy=False))
 
-    def __len__(self) -> NonZeroLength:
+    def __len__(self) -> Length:
         return self._length
 
     @property
@@ -806,9 +805,3 @@ def is_combined_instruction(instruction: Any) -> TypeIs[CombinedInstruction]:
 
 def is_empty(instruction: CombinedInstruction[Leaf, T] | Empty[T]) -> TypeIs[Empty[T]]:
     return isinstance(instruction, Empty)
-
-
-def to_non_zero_length(length: int) -> NonZeroLength:
-    if length < 1:
-        raise ValueError("Length must be a positive integer")
-    return NonZeroLength(Length(length))
