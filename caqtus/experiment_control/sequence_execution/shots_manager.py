@@ -11,7 +11,6 @@ from typing import TypeVar
 
 import anyio
 import attrs
-import tblib.pickling_support
 from anyio.abc import TaskStatus
 from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 
@@ -355,9 +354,6 @@ class ShotCompilationError(RuntimeError):
     """Error raised when an error occurs while compiling a shot."""
 
     pass
-
-
-tblib.pickling_support.install(ShotCompilationError)
 
 
 @attrs.define

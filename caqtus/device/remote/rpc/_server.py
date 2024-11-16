@@ -12,7 +12,6 @@ import anyio
 import anyio.abc
 import anyio.to_thread
 import attrs
-import tblib.pickling_support
 from anyio.streams.buffered import BufferedByteReceiveStream
 
 from caqtus.utils._tblib import ExceptionPickler
@@ -260,9 +259,6 @@ class RemoteCallError(RemoteError):
 
 class InvalidProxyError(RemoteError):
     pass
-
-
-tblib.pickling_support.install(RemoteError, RemoteCallError, InvalidProxyError)
 
 
 P = ParamSpec("P")
