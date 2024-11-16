@@ -2,32 +2,31 @@ from __future__ import annotations
 
 from typing import (
     SupportsInt,
-    Callable,
     SupportsFloat,
     overload,
 )
 
 import numpy as np
+from typing_extensions import TypeVar
 
 from caqtus.utils._no_public_constructor import NoPublicConstructor
 from ._instructions import (
-    TimedInstruction,
+    Leaf,
     _normalize_slice,
     empty_with_dtype,
     Depth,
     Pattern,
-    Array1D,
     _normalize_index,
     Length,
     Repeated,
-    empty_like,
+    Empty,
 )
 from ._stack import stack, merge_dtypes
 
 
 def create_ramp(
     start: SupportsFloat, stop: SupportsFloat, length: SupportsInt
-) -> TimedInstruction[np.float64]:
+) -> Ramp[np.float64] | Empty[np.float64]:
     """Create a linear ramp between two values.
 
     Args:
@@ -52,12 +51,15 @@ def create_ramp(
     elif length == 0:
         return empty_with_dtype(start.dtype)
     else:
-        return Ramp._create(start, stop, length)
+        return Ramp[np.float64]._create(start, stop, length)
 
 
-class Ramp[T: (np.floating, np.void)](
-    TimedInstruction[T], metaclass=NoPublicConstructor
-):
+T = TypeVar(
+    "T", bound=np.floating | np.void, covariant=True, default=np.float64 | np.void
+)
+
+
+class Ramp(Leaf["Ramp", T], metaclass=NoPublicConstructor):
     """Represents an instruction that linearly ramps between two values.
 
     At index `i`, this instruction takes the value
@@ -135,7 +137,7 @@ class Ramp[T: (np.floating, np.void)](
     def __getitem__(self, item: int) -> T: ...
 
     @overload
-    def __getitem__(self, item: slice) -> TimedInstruction[T]: ...
+    def __getitem__(self, item: slice) -> Ramp[T] | Empty[T]: ...
 
     @overload
     def __getitem__(self, item: str) -> Ramp: ...
@@ -170,7 +172,7 @@ class Ramp[T: (np.floating, np.void)](
             assert isinstance(self._stop, np.floating)
             return self._start + index * (self._stop - self._start) / self._length
 
-    def _get_slice(self, slice_: slice) -> TimedInstruction[T]:
+    def _get_slice(self, slice_: slice) -> Ramp[T] | Empty[T]:
         start_index, stop_index, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
@@ -181,11 +183,11 @@ class Ramp[T: (np.floating, np.void)](
             stop_value = self._get_index(stop_index)
         length = stop_index - start_index
         if length == 0:
-            return empty_like(self)
+            return Empty.like(self)
         else:
             return Ramp._create(start_value, stop_value, stop_index - start_index)
 
-    def _get_channel(self, channel: str) -> TimedInstruction:
+    def _get_channel(self, channel: str) -> Ramp:
         if not np.issubdtype(self.dtype, np.void):
             raise ValueError("Can't get field if dtype is not a structured type.")
         assert self.dtype.names is not None
@@ -197,7 +199,7 @@ class Ramp[T: (np.floating, np.void)](
         stop_value = self._stop[channel]
         return Ramp._create(start_value, stop_value, self._length)
 
-    def as_type[S: np.generic](self, dtype: np.dtype[S]) -> TimedInstruction[S]:
+    def as_type[S: np.generic](self, dtype: np.dtype[S]) -> Ramp[S]:
         start = self._start.astype(dtype)
         if not isinstance(start, (np.floating, np.void)):
             raise TypeError("Can only convert to floating point or structured type.")
@@ -237,19 +239,6 @@ class Ramp[T: (np.floating, np.void)](
             and np.all(self._stop == other._stop)
             and self._length == other._length
         )
-
-    def apply[
-        S: np.generic
-    ](self, func: Callable[[Array1D[T]], Array1D[S]]) -> TimedInstruction[S]:
-        """Map a function element-wise to the ramp.
-
-        Warning:
-            Since an arbitrary function will not necessarily preserve linear ramps, the
-            ramp is explicitly computed before applying the function.
-            This may lead to poor performance and large memory usage for long ramps.
-        """
-
-        return self.to_pattern().apply(func)
 
 
 @stack.register(Ramp, Ramp)
