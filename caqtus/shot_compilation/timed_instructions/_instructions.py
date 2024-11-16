@@ -183,6 +183,10 @@ class Leaf(Generic[LT, T], abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def stack(self, other: Leaf[LT, S]) -> Leaf[LT, np.void]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def __eq__(self, other):
         raise NotImplementedError
 
