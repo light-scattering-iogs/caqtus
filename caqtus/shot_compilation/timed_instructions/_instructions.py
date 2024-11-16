@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import bisect
+import functools
 import heapq
 import itertools
 import math
@@ -350,6 +351,20 @@ class Pattern[T: np.generic](Leaf["Pattern", T]):
     @property
     def array(self) -> Array1D[T]:
         return self._pattern
+
+    def merge(self, other: Leaf[LT, S]) -> Leaf[Pattern, np.void]:
+        other_pattern = other.to_pattern()
+        merged_dtype = merge_dtypes(self.dtype, other.dtype)
+        merged = np.zeros(len(self), dtype=merged_dtype)
+
+        assert self.dtype.names is not None
+        for name in self.dtype.names:
+            merged[name] = self.array[name]  # type: ignore[reportCallIssue]
+
+        assert other.dtype.names is not None
+        for name in other.dtype.names:
+            merged[name] = other_pattern.array[name]  # type: ignore[reportCallIssue]
+        return Pattern.create_without_copy(merged)
 
 
 def _has_only_finite_values[T: np.generic](array: Array1D[T]) -> bool:
@@ -925,10 +940,22 @@ def is_empty(instruction: CombinedInstruction[Leaf, T] | Empty[T]) -> TypeIs[Emp
     return isinstance(instruction, Empty)
 
 
+@functools.lru_cache
 def merge_dtypes(a: np.dtype[np.void], b: np.dtype[np.void]) -> np.dtype[np.void]:
     assert a.names is not None
     assert b.names is not None
-    merged_dtype = np.dtype(
-        [(name, a[name]) for name in a.names] + [(name, b[name]) for name in b.names]
-    )
+    dtypes = [(name, a[name]) for name in a.names] + [
+        (name, b[name]) for name in b.names
+    ]
+    dtypes.sort(key=lambda x: x[0])
+    merged_dtype = np.dtype(dtypes)
     return merged_dtype
+
+
+def merge(
+    a: CombinedInstruction[LT, T], b: CombinedInstruction[LT, S]
+) -> CombinedInstruction[LT, np.void]:
+    if isinstance(a, Leaf):
+        return b.merge(a)
+    else:
+        return a.merge(b)
