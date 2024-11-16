@@ -21,7 +21,13 @@ from ._result import (
 )
 from .._evaluate_scalar_expression import _evaluate_scalar_ast
 from .._scalar import Scalar
-from ...timed_instructions import Pattern, TimedInstruction, create_ramp
+from ...timed_instructions import (
+    Pattern,
+    TimedInstruction,
+    create_ramp,
+    merge_instructions,
+    Repeated,
+)
 
 
 def evaluate_time_dependent_digital_expression(
@@ -158,3 +164,9 @@ def embed_scalar_as_time_dependent(
             )
         case _:
             assert_never(value)
+
+
+def binary_operator(
+    operator, left: TimedInstruction[np.float64], right: TimedInstruction[np.float64]
+) -> TimedInstruction[np.float64]:
+    merged = merge_instructions(left=left, right=right)
