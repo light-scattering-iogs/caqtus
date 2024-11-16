@@ -923,3 +923,12 @@ def is_combined_instruction(instruction: Any) -> TypeIs[CombinedInstruction]:
 
 def is_empty(instruction: CombinedInstruction[Leaf, T] | Empty[T]) -> TypeIs[Empty[T]]:
     return isinstance(instruction, Empty)
+
+
+def merge_dtypes(a: np.dtype[np.void], b: np.dtype[np.void]) -> np.dtype[np.void]:
+    assert a.names is not None
+    assert b.names is not None
+    merged_dtype = np.dtype(
+        [(name, a[name]) for name in a.names] + [(name, b[name]) for name in b.names]
+    )
+    return merged_dtype
