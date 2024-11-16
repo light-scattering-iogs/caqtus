@@ -15,7 +15,6 @@ from typing import (
     Any,
     Generic,
     Self,
-    reveal_type,
 )
 
 import numpy
@@ -757,6 +756,59 @@ class Repeated(Generic[LT, T]):
 
         graph = to_graph(self)
         return graph._repr_mimebundle_(include, exclude)
+
+    def merge(
+        self, other: CombinedInstruction[LT, S]
+    ) -> CombinedInstruction[LT, np.void]:
+        if len(self) != len(other):
+            raise ValueError("Instructions must have the same length")
+        if isinstance(other, Leaf):
+            return self._merge_leaf(other)
+        elif isinstance(other, Concatenated):
+            return self._merge_concatenation(other)
+        elif isinstance(other, Repeated):
+            return self._merge_repeated(other)
+
+    def _merge_leaf(self, other: Leaf[LT, S]) -> CombinedInstruction[LT, np.void]:
+        results = []
+        for rep in range(self.repetitions):
+            start = rep * len(self.instruction)
+            stop = (rep + 1) * len(self.instruction)
+            other_part = other[start:stop]
+            assert not is_empty(other_part)
+            if isinstance(self.instruction, Leaf):
+                merged = other_part.merge(self.instruction)
+            else:
+                merged = self.instruction.merge(other_part)
+            results.append(merged)
+        return _concatenate(*results)
+
+    def _merge_concatenation(
+        self, other: Concatenated[LT, S]
+    ) -> CombinedInstruction[LT, np.void]:
+        return other.merge(self)
+
+    def _merge_repeated(
+        self, other: Repeated[LT, S]
+    ) -> CombinedInstruction[LT, np.void]:
+        lcm = math.lcm(len(self.instruction), len(other.instruction))
+        if lcm == len(self):
+            b_a = _concatenate(*[self.instruction] * self.repetitions)
+            b_b = _concatenate(*[other.instruction] * other.repetitions)
+        else:
+            r_a = lcm // len(self.instruction)
+            b_a = self.instruction * r_a
+            r_b = lcm // len(other.instruction)
+            b_b = other.instruction * r_b
+        assert not is_empty(b_a)
+        assert not is_empty(b_b)
+        if isinstance(b_a, Leaf):
+            block = b_b.merge(b_a)
+        else:
+            block = b_a.merge(b_b)
+        result = block * (len(self) // len(block))
+        assert not is_empty(result)
+        return result
 
 
 def _normalize_index(index: int, length: int) -> int:
