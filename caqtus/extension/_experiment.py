@@ -6,7 +6,6 @@ import warnings
 from collections.abc import Callable
 from typing import Optional, assert_never, Concatenate
 
-import tblib.pickling_support
 from typing_extensions import deprecated
 
 from caqtus.experiment_control.manager import (
@@ -319,8 +318,6 @@ class Experiment:
 
         setup_logs("caqtus.log")
 
-        tblib.pickling_support.install()
-
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
@@ -346,9 +343,6 @@ class Experiment:
         """
 
         setup_logs("experiment_server.log")
-
-        tblib.pickling_support.install()
-
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
@@ -393,8 +387,6 @@ class Experiment:
         """
 
         setup_logs(f"{name}.log")
-
-        tblib.pickling_support.install()
 
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
