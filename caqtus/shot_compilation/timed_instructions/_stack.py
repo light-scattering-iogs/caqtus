@@ -1,6 +1,6 @@
 import numpy as np
 
-from ._instructions import CombinedInstruction, LT
+from ._instructions import CombinedInstruction, LT, merge
 from ._with_name import with_name
 
 
@@ -89,9 +89,9 @@ def _stack_instructions_no_checks(
     if len(instructions) == 1:
         return instructions[0]
     elif len(instructions) == 2:
-        return instructions[0].merge(instructions[1])
+        return merge(instructions[0], (instructions[1]))
     else:
         length = len(instructions) // 2
         sub_block_1 = _stack_instructions_no_checks(*instructions[:length])
         sub_block_2 = _stack_instructions_no_checks(*instructions[length:])
-        return sub_block_1.merge(sub_block_2)
+        return merge(sub_block_1, sub_block_2)
