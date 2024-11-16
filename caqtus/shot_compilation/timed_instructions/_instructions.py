@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import bisect
+import heapq
 import itertools
 import math
 from collections.abc import Sequence
@@ -14,6 +15,7 @@ from typing import (
     Any,
     Generic,
     Self,
+    reveal_type,
 )
 
 import numpy
@@ -183,7 +185,7 @@ class Leaf(Generic[LT, T], abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def stack(self, other: Leaf[LT, S]) -> Leaf[LT, np.void]:
+    def merge(self, other: Leaf[LT, S]) -> Leaf[LT, np.void]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -520,6 +522,66 @@ class Concatenated(Generic[LT, T]):
 
     def __rmul__(self, other: int) -> Repeated[LT, T] | Concatenated[LT, T] | Empty[T]:
         return self.__mul__(other)
+
+    def merge(
+        self, other: CombinedInstruction[LT, S]
+    ) -> CombinedInstruction[LT, np.void]:
+        if len(self) != len(other):
+            raise ValueError("Instructions must have the same length")
+        if isinstance(other, Leaf):
+            return self._merge_leaf(other)
+        elif isinstance(other, Concatenated):
+            return self._merge_concatenation(other)
+        elif isinstance(other, Repeated):
+            return self._merge_repeated(other)
+
+    def _merge_leaf(self, other: Leaf[LT, S]) -> CombinedInstruction[LT, np.void]:
+        results = []
+        for self_part, (start, stop) in zip(
+            self.instructions,
+            itertools.pairwise(self._instruction_bounds),
+            strict=True,
+        ):
+            other_part = other[start:stop]
+            assert not is_empty(other_part)
+            merged = self_part.merge(other_part)
+            results.append(merged)
+        return _concatenate(*results)
+
+    def _merge_repeated(
+        self, other: Repeated[LT, S]
+    ) -> CombinedInstruction[LT, np.void]:
+        results = []
+        for self_part, (start, stop) in zip(
+            self.instructions,
+            itertools.pairwise(self._instruction_bounds),
+            strict=True,
+        ):
+            other_part = other[start:stop]
+            assert not is_empty(other_part)
+            if isinstance(self_part, Leaf):
+                merged = other_part.merge(self_part)
+            else:
+                merged = self_part.merge(other_part)
+            results.append(merged)
+        return _concatenate(*results)
+
+    def _merge_concatenation(
+        self, other: Concatenated[LT, S]
+    ) -> CombinedInstruction[LT, np.void]:
+        new_bounds = heapq.merge(self._instruction_bounds, other._instruction_bounds)
+        results = []
+        for start, stop in itertools.pairwise(new_bounds):
+            self_part = self[start:stop]
+            other_part = other[start:stop]
+            if not is_empty(self_part):
+                assert not is_empty(other_part)
+                if isinstance(self_part, Leaf):
+                    merged = other_part.merge(self_part)
+                else:
+                    merged = self_part.merge(other_part)
+                results.append(merged)
+        return _concatenate(*results)
 
     def _repr_mimebundle_(self, include=None, exclude=None):
         from ._to_graph import to_graph
