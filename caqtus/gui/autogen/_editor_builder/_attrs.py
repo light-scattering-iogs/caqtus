@@ -1,7 +1,6 @@
 import inspect
 import typing
 from collections.abc import Mapping
-from typing import override
 
 import annotated_types
 import attrs
@@ -14,7 +13,7 @@ from .._value_editor import ValueEditor
 def build_attrs_class_editor[
     T: attrs.AttrsInstance
 ](
-    cls: type[T], builder: EditorBuilder, **attr_editors_override: EditorFactory
+    cls: type[T], builder: EditorBuilder, **attr_overrides: AttributeOverride
 ) -> EditorFactory[T]:
     """Build an editor for attrs class.
 
@@ -31,9 +30,9 @@ def build_attrs_class_editor[
     Args:
         cls: The attrs class to build the editor for.
         builder: The editor builder used to build editors for the class attributes.
-        **attr_editors_override: If a named argument corresponds to one of the
-            attributes, the editor passed for this argument will be used instead of
-            using the builder.
+        **attr_overrides: If a named argument corresponds to one of the
+            attributes, the object passed as argument will override the automated ui
+            generation for that attribute.
     """
 
     fields: tuple[attrs.Attribute, ...] = attrs.fields(cls)
@@ -46,20 +45,16 @@ def build_attrs_class_editor[
 
     attribute_editors = {}
     for field in fields:
-        if field.name in attr_editors_override:
-            attribute_editors[field.name] = attr_editors_override[field.name]
-            continue
-        if field.type is None:
-            raise AttributeEditorBuildingError(cls, field) from ValueError(
-                "No type specified"
-            )
         try:
-            attribute_editors[field.name] = builder.build_editor(field.type)
-        except EditorBuildingError as e:
+            attr_editor_factory = get_attribute_editor_factory(
+                field, attr_overrides.get(field.name, None), builder
+            )
+        except Exception as e:
             raise AttributeEditorBuildingError(cls, field) from e
+        attribute_editors[field.name] = attr_editor_factory
 
     class AttrsEditor(ValueEditor[T]):
-        @override
+        @typing.override
         def __init__(self) -> None:
             self._widget = QWidget()
 
@@ -73,7 +68,7 @@ def build_attrs_class_editor[
                     label.setToolTip(attribute_docstrings[field.name])
                 layout.addRow(label, editor.widget())
 
-        @override
+        @typing.override
         def set_value(self, value: T) -> None:
             for field in fields:
                 editor = getattr(self, attr_to_editor_name(field.name))
@@ -81,7 +76,7 @@ def build_attrs_class_editor[
                 editor.set_value(getattr(value, field.name))
 
         # TODO: Figure out why pyright report this method as an incompatible override
-        @override
+        @typing.override
         def read_value(self) -> T:  # type: ignore[reportIncompatibleMethodOverride]
             attribute_values = {}
             for field in fields:
@@ -90,18 +85,39 @@ def build_attrs_class_editor[
                 attribute_values[field.name] = editor.read_value()
             return cls(**attribute_values)
 
-        @override
+        @typing.override
         def set_editable(self, editable: bool) -> None:
             for field in fields:
                 editor = getattr(self, attr_to_editor_name(field.name))
                 assert isinstance(editor, ValueEditor)
                 editor.set_editable(editable)
 
-        @override
+        @typing.override
         def widget(self) -> QWidget:
             return self._widget
 
     return AttrsEditor
+
+
+@attrs.frozen
+class AttributeOverride:
+    editor_factory: EditorFactory | None = None
+    tooltip: str | None = None
+
+
+def get_attribute_editor_factory(
+    attr: attrs.Attribute,
+    override: AttributeOverride | None,
+    builder: EditorBuilder,
+) -> EditorFactory:
+    editor_factory = None
+    if override is not None:
+        editor_factory = override.editor_factory
+    if editor_factory is None:
+        if attr.type is None:
+            raise ValueError("Attribute has no type annotation")
+        editor_factory = builder.build_editor(attr.type)
+    return editor_factory
 
 
 def prettify_snake_case(name: str) -> str:
