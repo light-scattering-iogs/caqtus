@@ -131,6 +131,10 @@ dependencies = [
     "nbsphinx>=0.9.5"
 ]
 
+[tool.hatch.envs.docs.scripts]
+clean = ["doc\\make.bat clean", "rm -r doc\\_autosummary"]
+build = ["doc\\make.bat html"]
+
 [tool.hatch.envs.types]
 dependencies = [
     "mypy>=1.11.0",
