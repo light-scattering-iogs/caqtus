@@ -15,9 +15,7 @@ from caqtus.types.expression import Expression
 from caqtus.types.image.roi import RectangularROI
 from ._editor_builder import EditorBuilder, EditorFactory
 from ._expression_editor import ExpressionEditor
-from ._int_editor import IntegerEditor
 from ._output_transform_editor import OutputTransformEditor
-from ._string_editor import StringEditor
 from ._value_editor import ValueEditor
 
 
@@ -119,8 +117,6 @@ class RectangularROIEditor(ValueEditor[RectangularROI]):
         return self._widget
 
 
-_builder.register_editor(str, StringEditor)
-_builder.register_editor(int, IntegerEditor)
 _builder.register_editor(Optional[DeviceServerName], DeviceServerNameEditor)
 _builder.register_editor(RectangularROI, RectangularROIEditor)
 _builder.register_editor(EvaluableOutput, OutputTransformEditor)
