@@ -7,15 +7,13 @@ import trio
 from caqtus.utils._tblib import ensure_exception_pickling
 
 
-class CustomException(Exception):
+class CustomError(Exception):
     pass
 
 
 @ensure_exception_pickling
 def f():
-    raise RuntimeError("An error occurred") from CustomException(
-        "A custom error occurred"
-    )
+    raise RuntimeError("An error occurred") from CustomError("A custom error occurred")
 
 
 def test_custom_exception_pickling():
@@ -26,7 +24,7 @@ def test_custom_exception_pickling():
 
     dumped = pickle.dumps(exception)
     loaded = pickle.loads(dumped)
-    assert isinstance(loaded.__cause__, CustomException)
+    assert isinstance(loaded.__cause__, CustomError)
 
 
 @pytest.fixture
@@ -38,7 +36,7 @@ async def test_subprocess_exception_pickling(anyio_backend):
     try:
         await anyio.to_process.run_sync(f)
     except RuntimeError as exc:
-        assert isinstance(exc.__cause__, CustomException)
+        assert isinstance(exc.__cause__, CustomError)
 
 
 def test_trio_cancelled_exception_pickling():
