@@ -2,7 +2,6 @@ import copy
 import functools
 from typing import Optional, Protocol
 
-import attrs
 from PySide6.QtWidgets import QLineEdit, QVBoxLayout
 
 from caqtus.device import DeviceConfiguration
@@ -14,7 +13,7 @@ from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_edit
 )
 from caqtus.types.expression import Expression
 from caqtus.types.image.roi import RectangularROI
-from ._editor_builder import EditorBuilder, EditorFactory, build_attrs_class_editor
+from ._editor_builder import EditorBuilder, EditorFactory
 from ._expression_editor import ExpressionEditor
 from ._int_editor import IntegerEditor
 from ._output_transform_editor import OutputTransformEditor
@@ -57,7 +56,6 @@ def build_device_configuration_editor[
 ](
     config_type: type[C],
     builder: EditorBuilder = _builder,
-    **attrs_override: EditorFactory,
 ) -> DeviceConfigEditorFactory[C]:
     """Builds a device configuration editor for the given configuration type.
 
@@ -66,10 +64,6 @@ def build_device_configuration_editor[
             If it is an attrs class, the editor build will contain a list of editors
             for each attribute of the class.
         builder: Used to build editors for the fields of the configuration.
-        **attrs_override: If the configuration type is an attrs class, and a named
-            argument matches one of its attribute, the editor factory passed as argument
-            will be used instead of looking up the editor builder for a corresponding
-            type.
 
     Returns:
         An automatically generated class of type
@@ -77,17 +71,7 @@ def build_device_configuration_editor[
         that can be used to edit configurations with type `config_type`.
     """
 
-    if attrs_override:
-        if not attrs.has(config_type):
-            raise ValueError(
-                "The configuration type must be an attrs class if "
-                "overriding attributes."
-            )
-        config_editor_factory = build_attrs_class_editor(
-            config_type, builder, **attrs_override
-        )
-    else:
-        config_editor_factory = builder.build_editor(config_type)
+    config_editor_factory = builder.build_editor(config_type)
     return functools.partial(
         GeneratedConfigEditor, editor_factory=config_editor_factory
     )

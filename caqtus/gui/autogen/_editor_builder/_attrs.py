@@ -1,6 +1,8 @@
-import inspect
+from __future__ import annotations
+
+import functools
 import typing
-from collections.abc import Mapping
+from collections.abc import Sequence
 
 import annotated_types
 import attrs
@@ -41,68 +43,103 @@ def build_attrs_class_editor[
         # PEP 563 annotations - need to be resolved.
         attrs.resolve_types(cls)
 
-    attribute_docstrings = extract_attribute_documentations(cls)
-
-    attribute_editors = {}
+    attr_ui_infos = []
     for field in fields:
+        override = attr_overrides.get(field.name, None)
         try:
-            attr_editor_factory = get_attribute_editor_factory(
-                field, attr_overrides.get(field.name, None), builder
-            )
+            label = get_attribute_label(field, override)
+            editor_factory = get_attribute_editor_factory(field, override, builder)
+            tooltip = get_attribute_tooltip(field, override)
         except Exception as e:
             raise AttributeEditorBuildingError(cls, field) from e
-        attribute_editors[field.name] = attr_editor_factory
+        attr_ui_infos.append(
+            AttributeUIInfo(
+                field_name=field.name,
+                label=label,
+                editor_factory=editor_factory,
+                tooltip=tooltip,
+            )
+        )
 
-    class AttrsEditor(ValueEditor[T]):
-        @typing.override
-        def __init__(self) -> None:
-            self._widget = QWidget()
+    return functools.partial(AttrsEditor, cls, tuple(attr_ui_infos))
 
-            layout = QFormLayout()
-            self._widget.setLayout(layout)
-            for field in fields:
-                editor = attribute_editors[field.name]()
-                setattr(self, attr_to_editor_name(field.name), editor)
-                label = QLabel(prettify_snake_case(field.name))
-                if field.name in attribute_docstrings:
-                    label.setToolTip(attribute_docstrings[field.name])
-                layout.addRow(label, editor.widget())
 
-        @typing.override
-        def set_value(self, value: T) -> None:
-            for field in fields:
-                editor = getattr(self, attr_to_editor_name(field.name))
-                assert isinstance(editor, ValueEditor)
-                editor.set_value(getattr(value, field.name))
+class AttrsEditor[T: attrs.AttrsInstance](ValueEditor[T]):
+    """A generic editor for attrs classes."""
 
-        # TODO: Figure out why pyright report this method as an incompatible override
-        @typing.override
-        def read_value(self) -> T:  # type: ignore[reportIncompatibleMethodOverride]
-            attribute_values = {}
-            for field in fields:
-                editor = getattr(self, attr_to_editor_name(field.name))
-                assert isinstance(editor, ValueEditor)
-                attribute_values[field.name] = editor.read_value()
-            return cls(**attribute_values)
+    def __init__(self, cls: type[T], ui_specs: Sequence[AttributeUIInfo]) -> None:
+        self._widget = QWidget()
+        self._ui_specs = ui_specs
+        self._cls = cls
 
-        @typing.override
-        def set_editable(self, editable: bool) -> None:
-            for field in fields:
-                editor = getattr(self, attr_to_editor_name(field.name))
-                assert isinstance(editor, ValueEditor)
-                editor.set_editable(editable)
+        layout = QFormLayout()
+        self._widget.setLayout(layout)
+        for ui_spec in ui_specs:
+            editor = ui_spec.editor_factory()
+            setattr(self, ui_spec.editor_name, editor)
+            label = QLabel(ui_spec.label)
+            if ui_spec.tooltip is not None:
+                label.setToolTip(ui_spec.tooltip)
+            layout.addRow(label, editor.widget())
 
-        @typing.override
-        def widget(self) -> QWidget:
-            return self._widget
+    @typing.override
+    def set_value(self, value: T) -> None:
+        for ui_spec in self._ui_specs:
+            editor = getattr(self, ui_spec.editor_name)
+            assert isinstance(editor, ValueEditor)
+            editor.set_value(getattr(value, ui_spec.field_name))
 
-    return AttrsEditor
+    # TODO: Figure out why pyright report this method as an incompatible override
+    @typing.override
+    def read_value(self) -> T:  # type: ignore[reportIncompatibleMethodOverride]
+        attribute_values = {}
+        for ui_spec in self._ui_specs:
+            editor = getattr(self, ui_spec.editor_name)
+            assert isinstance(editor, ValueEditor)
+            attribute_values[ui_spec.field_name] = editor.read_value()
+        return self._cls(**attribute_values)
+
+    @typing.override
+    def set_editable(self, editable: bool) -> None:
+        for ui_spec in self._ui_specs:
+            editor = getattr(self, ui_spec.editor_name)
+            assert isinstance(editor, ValueEditor)
+            editor.set_editable(editable)
+
+    @typing.override
+    def widget(self) -> QWidget:
+        return self._widget
 
 
 @attrs.frozen
 class AttributeOverride:
+    label: str | None = None
     editor_factory: EditorFactory | None = None
     tooltip: str | None = None
+
+
+@attrs.frozen
+class AttributeUIInfo:
+    field_name: str
+    label: str
+    editor_factory: EditorFactory
+    tooltip: str | None
+
+    @property
+    def editor_name(self) -> str:
+        return attr_to_editor_name(self.label)
+
+
+def get_attribute_label(
+    attr: attrs.Attribute,
+    override: AttributeOverride | None,
+) -> str:
+    label = None
+    if override is not None:
+        label = override.label
+    if label is None:
+        label = prettify_snake_case(attr.name)
+    return label
 
 
 def get_attribute_editor_factory(
@@ -120,6 +157,18 @@ def get_attribute_editor_factory(
     return editor_factory
 
 
+def get_attribute_tooltip(
+    attr: attrs.Attribute,
+    override: AttributeOverride | None,
+) -> str | None:
+    tooltip = None
+    if override is not None:
+        tooltip = override.tooltip
+    if tooltip is None:
+        tooltip = extract_documentation(attr.type)
+    return tooltip
+
+
 def prettify_snake_case(name: str) -> str:
     if name:
         words = name.split("_")
@@ -131,30 +180,6 @@ def prettify_snake_case(name: str) -> str:
 
 def attr_to_editor_name(name: str) -> str:
     return f"editor_{name}"
-
-
-def extract_attribute_documentations(
-    attr_types: Mapping[str, TypeExpr]
-) -> dict[str, str]:
-    """Extract documentation of attribute types.
-
-    Args:
-        attr_types: A mapping of attribute names to their type annotations.
-
-    Returns:
-        A dictionary mapping attribute names to their documentation.
-
-        Not all attributes may have documentation, so the dictionary may not contain all
-        attributes, or may be empty.
-    """
-
-    result = {}
-
-    for name, type_ in attr_types.items():
-        doc = extract_documentation(type_)
-        if doc is not None:
-            result[name] = inspect.cleandoc(doc)
-    return result
 
 
 def extract_documentation(type_: TypeExpr) -> str | None:
