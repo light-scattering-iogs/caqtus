@@ -1,19 +1,21 @@
 import inspect
+import typing
+from collections.abc import Mapping
 from typing import override
 
+import annotated_types
 import attrs
-import docstring_parser
 from PySide6.QtWidgets import QWidget, QFormLayout, QLabel
 
-from ._editor_builder import EditorBuilder, EditorBuildingError, EditorFactory
+from ._editor_builder import EditorBuilder, EditorBuildingError, EditorFactory, TypeExpr
 from .._value_editor import ValueEditor
 
 
 def build_attrs_class_editor[
     T: attrs.AttrsInstance
-](cls: type[T], builder: EditorBuilder, **attr_editors: EditorFactory) -> EditorFactory[
-    T
-]:
+](
+    cls: type[T], builder: EditorBuilder, **attr_editors_override: EditorFactory
+) -> EditorFactory[T]:
     """Build an editor for attrs class.
 
     This function will build a form editor with a list of widgets for the attributes of
@@ -22,28 +24,30 @@ def build_attrs_class_editor[
     The label for each widget is the name of the attribute, prettified by removing
     underscores and capitalizing the first letter of the first word.
 
-    The tooltip of this label is the docstring of the attribute.
+    If an attribute is annotated like this
+    `typing.Annotated[T, annotated_types.doc("Some documentation")]`,
+    the documentation will be used as a tooltip for the label.
 
     Args:
         cls: The attrs class to build the editor for.
         builder: The editor builder used to build editors for the class attributes.
-        **attr_editors: If a named argument corresponds to one of the attributes,
-            the editor passed for this argument will be used instead of using the
-            builder.
+        **attr_editors_override: If a named argument corresponds to one of the
+            attributes, the editor passed for this argument will be used instead of
+            using the builder.
     """
 
-    fields: tuple[attrs.Attribute] = attrs.fields(cls)
+    fields: tuple[attrs.Attribute, ...] = attrs.fields(cls)
 
     if any(isinstance(field.type, str) for field in fields):
         # PEP 563 annotations - need to be resolved.
         attrs.resolve_types(cls)
 
-    attribute_docstrings = extract_attribute_docstrings(cls)
+    attribute_docstrings = extract_attribute_documentations(cls)
 
     attribute_editors = {}
     for field in fields:
-        if field.name in attr_editors:
-            attribute_editors[field.name] = attr_editors[field.name]
+        if field.name in attr_editors_override:
+            attribute_editors[field.name] = attr_editors_override[field.name]
             continue
         if field.type is None:
             raise AttributeEditorBuildingError(cls, field) from ValueError(
@@ -113,30 +117,36 @@ def attr_to_editor_name(name: str) -> str:
     return f"editor_{name}"
 
 
-def extract_attribute_docstrings(cls: type) -> dict[str, str]:
-    """Extract docstrings of attributes from a class.
+def extract_attribute_documentations(
+    attr_types: Mapping[str, TypeExpr]
+) -> dict[str, str]:
+    """Extract documentation of attribute types.
 
     Args:
-        cls: The class to extract the docstrings from.
+        attr_types: A mapping of attribute names to their type annotations.
 
     Returns:
-        A dictionary mapping attribute names to their docstrings.
+        A dictionary mapping attribute names to their documentation.
 
-        Not all attributes may have docstrings, so the dictionary may not contain all
+        Not all attributes may have documentation, so the dictionary may not contain all
         attributes, or may be empty.
     """
 
-    docstring = inspect.getdoc(cls)
+    result = {}
 
-    if docstring:
-        parsed = docstring_parser.parse(docstring)
-        return {
-            param.arg_name: param.description
-            for param in parsed.params
-            if param.description is not None
-        }
-    else:
-        return {}
+    for name, type_ in attr_types.items():
+        doc = extract_documentation(type_)
+        if doc is not None:
+            result[name] = inspect.cleandoc(doc)
+    return result
+
+
+def extract_documentation(type_: TypeExpr) -> str | None:
+    if typing.get_origin(type_) is typing.Annotated:
+        for arg in typing.get_args(type_):
+            if isinstance(arg, annotated_types.DocInfo):
+                return arg.documentation
+    return None
 
 
 class AttributeEditorBuildingError(EditorBuildingError):

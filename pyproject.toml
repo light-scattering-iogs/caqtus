@@ -50,8 +50,8 @@ dependencies = [
     "pyqtgraph>=0.13.4",
     "matplotlib>=3.8.3",
     "setuptools",
-    "docstring_parser",
     "docstring-inheritance>=2.2.1",
+    "annotated-types>=0.7.0",
     "caqtus-parsing>=0.3.0",
 ]
 
