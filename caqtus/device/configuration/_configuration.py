@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import abc
 from typing import (
     TypeVar,
     Optional,
     NewType,
+    Generic,
 )
 
 import attrs
@@ -19,11 +19,11 @@ DeviceType = TypeVar("DeviceType", bound=Device)
 
 
 @attrs.define
-class DeviceConfiguration[DeviceType](abc.ABC):
+class DeviceConfiguration(Generic[DeviceType]):
     """Contains static information about a device.
 
     This is an abstract class, generic in :data:`DeviceType` that stores the information
-    necessary to connect to a device and program it during a sequencer.
+    necessary to connect to a device and program it during a sequence.
 
     This information is meant to be encoded in a user-friendly way that might not be
     possible to be directly programmed on a device.
