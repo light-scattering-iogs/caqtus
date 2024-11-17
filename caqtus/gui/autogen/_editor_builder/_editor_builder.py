@@ -51,7 +51,11 @@ class EditorBuilder:
         origin = typing.get_origin(type_)
 
         if origin is typing.Annotated:  # typing.Annotated[T, ...]
-            type_ = typing.get_args(type_)[0]
+            try:
+                return self.build_editor(typing.get_args(type_)[0])
+            except Exception as e:
+                e.add_note(f"The error occurred while processing the type {type_}")
+                raise e from e.__cause__
 
         try:
             return self._editor_factories[type_]
