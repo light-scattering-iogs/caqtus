@@ -6,9 +6,7 @@ from typing import Generic
 import attrs
 
 from caqtus.device import DeviceConfiguration, Device, DeviceController
-
-# noinspection PyPep8Naming
-from caqtus.device.configuration import DeviceConfigType as C
+from caqtus.device.configuration import DeviceConfigType as DeviceConfigT
 from caqtus.device.remote import DeviceProxy
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.shot_compilation import DeviceCompiler
@@ -16,7 +14,7 @@ from caqtus.utils.serialization import JSON
 
 
 @attrs.frozen(kw_only=True)
-class DeviceExtension(Generic[C]):
+class DeviceExtension(Generic[DeviceConfigT]):
     """Define how to implement a device plugin.
 
     This class is generic in the :class:`DeviceConfiguration` type.
@@ -112,12 +110,14 @@ class DeviceExtension(Generic[C]):
 
     label: str = attrs.field(converter=str)
 
-    configuration_type: type[C] = attrs.field()
-    configuration_factory: Callable[[], C] = attrs.field()
-    configuration_dumper: Callable[[C], JSON] = attrs.field()
-    configuration_loader: Callable[[JSON], C] = attrs.field()
+    configuration_type: type[DeviceConfigT] = attrs.field()
+    configuration_factory: Callable[[], DeviceConfigT] = attrs.field()
+    configuration_dumper: Callable[[DeviceConfigT], JSON] = attrs.field()
+    configuration_loader: Callable[[JSON], DeviceConfigT] = attrs.field()
 
-    editor_type: Callable[[C], DeviceConfigurationEditor[C]] = attrs.field()
+    editor_type: Callable[[DeviceConfigT], DeviceConfigurationEditor[DeviceConfigT]] = (
+        attrs.field()
+    )
 
     device_type: Callable[..., Device] = attrs.field()
     compiler_type: type[DeviceCompiler] = attrs.field()
