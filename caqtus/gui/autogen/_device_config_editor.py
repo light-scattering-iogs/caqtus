@@ -14,11 +14,14 @@ from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_edit
 )
 from caqtus.types.expression import Expression
 from caqtus.types.image.roi import RectangularROI
-from ._editor_builder import EditorBuilder, EditorFactory, build_attrs_class_editor
+from ._editor_builder import (
+    EditorBuilder,
+    EditorFactory,
+    AttributeOverride,
+    build_attrs_class_editor,
+)
 from ._expression_editor import ExpressionEditor
-from ._int_editor import IntegerEditor
 from ._output_transform_editor import OutputTransformEditor
-from ._string_editor import StringEditor
 from ._value_editor import ValueEditor
 
 
@@ -57,19 +60,16 @@ def build_device_configuration_editor[
 ](
     config_type: type[C],
     builder: EditorBuilder = _builder,
-    **attrs_override: EditorFactory,
+    **overrides: AttributeOverride,
 ) -> DeviceConfigEditorFactory[C]:
     """Builds a device configuration editor for the given configuration type.
 
+    For more documentation, see :func:`~caqtus.gui.autogen.build_attrs_class_editor`.
+
     Args:
         config_type: The type of configuration to construct the editor for.
-            If it is an attrs class, the editor build will contain a list of editors
-            for each attribute of the class.
+            Must be an attrs class.
         builder: Used to build editors for the fields of the configuration.
-        **attrs_override: If the configuration type is an attrs class, and a named
-            argument matches one of its attribute, the editor factory passed as argument
-            will be used instead of looking up the editor builder for a corresponding
-            type.
 
     Returns:
         An automatically generated class of type
@@ -77,17 +77,12 @@ def build_device_configuration_editor[
         that can be used to edit configurations with type `config_type`.
     """
 
-    if attrs_override:
-        if not attrs.has(config_type):
-            raise ValueError(
-                "The configuration type must be an attrs class if "
-                "overriding attributes."
-            )
-        config_editor_factory = build_attrs_class_editor(
-            config_type, builder, **attrs_override
-        )
-    else:
-        config_editor_factory = builder.build_editor(config_type)
+    if not attrs.has(config_type):
+        raise TypeError("config_type must be an attrs class")
+
+    config_editor_factory = build_attrs_class_editor(
+        config_type, builder=builder, **overrides
+    )
     return functools.partial(
         GeneratedConfigEditor, editor_factory=config_editor_factory
     )
@@ -135,8 +130,6 @@ class RectangularROIEditor(ValueEditor[RectangularROI]):
         return self._widget
 
 
-_builder.register_editor(str, StringEditor)
-_builder.register_editor(int, IntegerEditor)
 _builder.register_editor(Optional[DeviceServerName], DeviceServerNameEditor)
 _builder.register_editor(RectangularROI, RectangularROIEditor)
 _builder.register_editor(EvaluableOutput, OutputTransformEditor)

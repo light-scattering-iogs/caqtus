@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import abc
 from typing import (
     TypeVar,
     Optional,
@@ -11,7 +10,6 @@ from typing import (
 )
 
 import attrs
-import docstring_inheritance
 
 from caqtus.device.runtime import Device
 
@@ -20,20 +18,12 @@ DeviceServerName = NewType("DeviceServerName", str)
 DeviceType = TypeVar("DeviceType", bound=Device)
 
 
-class Meta(abc.ABCMeta, docstring_inheritance.GoogleDocstringInheritanceInitMeta):
-    pass
-
-
 @attrs.define
-class DeviceConfiguration(
-    abc.ABC,
-    Generic[DeviceType],
-    metaclass=Meta,
-):
+class DeviceConfiguration(Generic[DeviceType]):
     """Contains static information about a device.
 
     This is an abstract class, generic in :data:`DeviceType` that stores the information
-    necessary to connect to a device and program it during a sequencer.
+    necessary to connect to a device and program it during a sequence.
 
     This information is meant to be encoded in a user-friendly way that might not be
     possible to be directly programmed on a device.
