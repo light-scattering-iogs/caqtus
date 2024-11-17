@@ -8,7 +8,15 @@ import annotated_types
 import attrs
 from PySide6.QtWidgets import QWidget, QFormLayout, QLabel
 
-from ._editor_builder import EditorBuilder, EditorBuildingError, EditorFactory, TypeExpr
+from ._editor_builder import (
+    EditorBuilder,
+    EditorBuildingError,
+    EditorFactory,
+    TypeExpr,
+    TypeNotRegisteredError,
+)
+from .._int_editor import IntegerEditor
+from .._string_editor import StringEditor
 from .._value_editor import ValueEditor
 
 
@@ -158,7 +166,15 @@ def get_attribute_editor_factory(
     if editor_factory is None:
         if attr.type is None:
             raise ValueError("Attribute has no type annotation")
-        editor_factory = builder.build_editor(attr.type)
+        try:
+            editor_factory = builder.build_editor(attr.type)
+        except TypeNotRegisteredError:
+            if attr.type is int:
+                editor_factory = IntegerEditor
+            elif attr.type is str:
+                editor_factory = StringEditor
+            else:
+                raise
     return editor_factory
 
 
