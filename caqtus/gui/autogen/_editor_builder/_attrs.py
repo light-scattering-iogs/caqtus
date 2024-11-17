@@ -4,7 +4,6 @@ import functools
 import typing
 from collections.abc import Sequence
 
-import annotated_types
 import attrs
 from PySide6.QtWidgets import QWidget, QFormLayout, QLabel
 
@@ -12,7 +11,6 @@ from ._editor_builder import (
     EditorBuilder,
     EditorBuildingError,
     EditorFactory,
-    TypeExpr,
     TypeNotRegisteredError,
 )
 from .._int_editor import IntegerEditor
@@ -32,15 +30,6 @@ def build_attrs_class_editor[
 
     The label for each widget is the name of the attribute, prettified by removing
     underscores and capitalizing the first letter of the first word.
-
-    This function make use the `typing.Annotated` type hint to provide additional
-    information for the editor.
-
-    The annotations that are understood by this function can be found in the module
-    `caqtus.utils.annotations`:
-
-    - `Annotated[T, doc("Some documentation")`: This annotation is used to provide a
-      tooltip for the editor.
 
     Args:
         cls: The attrs class to build the editor for.
@@ -185,8 +174,10 @@ def get_attribute_tooltip(
     tooltip = None
     if override is not None:
         tooltip = override.tooltip
-    if tooltip is None:
-        tooltip = extract_documentation(attr.type)
+    # TODO: Extract tooltip from documentation
+    # Would need to parse the docstring of the class and find the attribute's docstring.
+    # In addition, might need to parse the docstring of parent classes if the attribute
+    # is inherited.
     return tooltip
 
 
@@ -201,14 +192,6 @@ def prettify_snake_case(name: str) -> str:
 
 def attr_to_editor_name(name: str) -> str:
     return f"editor_{name}"
-
-
-def extract_documentation(type_: TypeExpr) -> str | None:
-    if typing.get_origin(type_) is typing.Annotated:
-        for arg in typing.get_args(type_):
-            if isinstance(arg, annotated_types.DocInfo):
-                return arg.documentation
-    return None
 
 
 class AttributeEditorBuildingError(EditorBuildingError):

@@ -7,13 +7,11 @@ from typing import (
     Optional,
     NewType,
     Protocol,
-    Annotated,
 )
 
 import attrs
 
 from caqtus.device.runtime import Device
-from caqtus.utils.annotations import doc
 
 DeviceServerName = NewType("DeviceServerName", str)
 
@@ -38,15 +36,13 @@ class DeviceConfiguration(
     Subclasses should add necessary attributes depending on the device.
 
     The dunder method :meth:`__eq__` should be implemented.
+
+    Attributes:
+        remote_server: Indicates the name of the computer on which the device should be
+            instantiated.
     """
 
-    remote_server: Annotated[
-        Optional[DeviceServerName],
-        doc(
-            "Indicates the name of the computer on which the device should be "
-            "instantiated."
-        ),
-    ] = attrs.field()
+    remote_server: Optional[DeviceServerName] = attrs.field()
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
