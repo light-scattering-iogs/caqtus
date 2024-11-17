@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import abc
 from typing import (
     TypeVar,
     Optional,
     NewType,
-    Protocol,
 )
 
 import attrs
@@ -19,9 +19,7 @@ DeviceType = TypeVar("DeviceType", bound=Device)
 
 
 @attrs.define
-class DeviceConfiguration(
-    Protocol[DeviceType],
-):
+class DeviceConfiguration[DeviceType](abc.ABC):
     """Contains static information about a device.
 
     This is an abstract class, generic in :data:`DeviceType` that stores the information
