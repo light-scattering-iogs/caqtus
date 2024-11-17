@@ -127,7 +127,7 @@ class AttributeUIInfo:
 
     @property
     def editor_name(self) -> str:
-        return attr_to_editor_name(self.label)
+        return attr_to_editor_name(self.field_name)
 
 
 def get_attribute_label(
