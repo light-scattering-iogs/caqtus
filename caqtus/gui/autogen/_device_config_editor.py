@@ -64,6 +64,8 @@ def build_device_configuration_editor[
 ) -> DeviceConfigEditorFactory[C]:
     """Builds a device configuration editor for the given configuration type.
 
+    For more documentation, see :func:`~caqtus.gui.autogen.build_attrs_class_editor`.
+
     Args:
         config_type: The type of configuration to construct the editor for.
             Must be an attrs class.

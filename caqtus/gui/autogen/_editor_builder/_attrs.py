@@ -25,9 +25,14 @@ def build_attrs_class_editor[
     The label for each widget is the name of the attribute, prettified by removing
     underscores and capitalizing the first letter of the first word.
 
-    If an attribute is annotated like this
-    `typing.Annotated[T, annotated_types.doc("Some documentation")]`,
-    the documentation will be used as a tooltip for the label.
+    This function make use the `typing.Annotated` type hint to provide additional
+    information for the editor.
+
+    The annotations that are understood by this function can be found in the module
+    `caqtus.utils.annotations`:
+
+    - `Annotated[T, doc("Some documentation")`: This annotation is used to provide a
+      tooltip for the editor.
 
     Args:
         cls: The attrs class to build the editor for.
