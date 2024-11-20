@@ -10,7 +10,6 @@ from collections.abc import Sequence
 from typing import (
     NewType,
     overload,
-    Optional,
     assert_never,
     Callable,
     Any,
@@ -21,7 +20,9 @@ from typing import (
 import numpy
 import numpy as np
 import numpy.typing as npt
-from typing_extensions import TypeIs, TypeVar
+from typing_extensions import TypeIs, TypeVar, deprecated
+
+from caqtus.utils._no_public_constructor import NoPublicConstructor
 
 Length = NewType("Length", int)
 Width = NewType("Width", int)
@@ -247,15 +248,10 @@ class Leaf(Generic[LT, T], abc.ABC):
         return graph._repr_mimebundle_(include, exclude)
 
 
-class Pattern[T: np.generic](Leaf["Pattern", T]):
+class Pattern[T: np.generic](Leaf["Pattern", T], metaclass=NoPublicConstructor):
     """An instruction representing a sequence of values.
 
     This is a fully explicit instruction for which each sample point must be given.
-
-    Args:
-        pattern: The sequence of values that this pattern represents.
-        dtype: The dtype of the pattern.
-            If not provided, it is inferred from the values.
 
     Raises:
         ValueError: If the pattern contains non-finite values.
@@ -266,16 +262,16 @@ class Pattern[T: np.generic](Leaf["Pattern", T]):
 
     __slots__ = ("_pattern", "_length")
 
-    def __init__(self, pattern: npt.ArrayLike, dtype: Optional[np.dtype[T]] = None):
-        self._pattern = numpy.array(pattern, dtype=dtype)
-        if not _has_only_finite_values(self._pattern):
-            raise ValueError("Pattern must contain only finite values")
+    @deprecated("Use the function `pattern` instead")
+    def __init__(self, values: Array1D[T]):
+        assert isinstance(values, np.ndarray)
+        assert values.ndim == 1
+        assert len(values) >= 1
+        assert _has_only_finite_values(self._pattern)
+
+        self._pattern = values
         self._pattern.setflags(write=False)
         self._length = Length(len(self._pattern))
-        assert self._is_canonical()
-
-    def _is_canonical(self) -> bool:
-        return self._length > 0
 
     def __repr__(self):
         if np.issubdtype(self.dtype, np.void):
@@ -959,3 +955,26 @@ def merge(
         return b.merge(a)
     else:
         return a.merge(b)
+
+
+@overload
+def pattern(array: Sequence[bool]) -> Pattern[np.bool]:  # type: ignore[reportOverlappingOverload]
+    ...
+
+
+@overload
+def pattern(array: Sequence[int]) -> Pattern[np.int64]: ...
+
+
+@overload
+def pattern(array: Sequence[float]) -> Pattern[np.float64]: ...
+
+
+@overload
+def pattern(array: npt.ArrayLike) -> Pattern: ...
+
+
+def pattern(array: npt.ArrayLike) -> Pattern:
+    """Creates a pattern from the given values."""
+
+    return Pattern(np.asarray(array))
