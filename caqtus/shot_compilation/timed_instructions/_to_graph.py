@@ -1,10 +1,11 @@
 import functools
-from typing import Optional
+from typing import Optional, reveal_type
 
 import graphviz
 import numpy as np
 
 from ._instructions import TimedInstruction, Concatenated, Repeated, Pattern
+from ._fields import get_field, has_dtype
 
 
 def to_graph(instruction: TimedInstruction) -> graphviz.Digraph:
@@ -73,7 +74,8 @@ def _(instr: Pattern, graph, levels: list[int]):
         rows.append(f"<TR>{'\n'.join(cells)}</TR>")
     else:
         for i, name in enumerate(instr.dtype.names):
-            cells = values_to_row(instr.array[name])
+            assert has_dtype(instr.array, np.void)
+            cells = values_to_row(get_field(instr.array, name))
             if i == 0:
                 cells = [f'<TD PORT="port"><B>{name}</B></TD>'] + cells
             else:

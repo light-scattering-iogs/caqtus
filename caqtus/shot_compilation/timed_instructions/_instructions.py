@@ -248,7 +248,8 @@ class Leaf(Generic[LT, T], abc.ABC):
         return graph._repr_mimebundle_(include, exclude)
 
 
-class Pattern[T: np.generic](Leaf["Pattern", T], metaclass=NoPublicConstructor):
+
+class Pattern(Leaf["Pattern", T], Generic[T], metaclass=NoPublicConstructor):
     """An instruction representing a sequence of values.
 
     This is a fully explicit instruction for which each sample point must be given.
@@ -295,9 +296,9 @@ class Pattern[T: np.generic](Leaf["Pattern", T], metaclass=NoPublicConstructor):
         if isinstance(item, int):
             return self._pattern[item]
         elif isinstance(item, slice):
-            return Pattern.create_without_copy(self._pattern[item])
+            return Pattern._create(self._pattern[item])
         elif isinstance(item, str):
-            return Pattern.create_without_copy(self._pattern[item])
+            return Pattern._create(self._pattern[item])
         else:
             assert_never(item)
 
