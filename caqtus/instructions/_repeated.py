@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-import math
-from typing import Generic, Self
+from typing import Generic, Self, Protocol, overload
 
 import numpy as np
 from typing_extensions import TypeVar
 
+from ._concatenated import Concatenated
 from ._empty import Empty
-from ._typing import SubInstruction, HasDType, DataT_co
-from ._indexing import Indexable, _normalize_index, Sliceable, _normalize_slice
+from ._indexing import (
+    Indexable,
+    _normalize_index,
+    SupportsSlicing,
+    _normalize_slice,
+)
+from ._typing import SubInstruction, HasDType, DataT_co, Addable, Multipliable
 
 InstrT = TypeVar("InstrT", bound=SubInstruction, covariant=True, default=SubInstruction)
 
@@ -56,33 +61,47 @@ class Repeated(Generic[InstrT]):
     def dtype(self: Repeated[HasDType[DataT_co]]) -> np.dtype[DataT_co]:
         return self._instruction.dtype()
 
+    @overload
+    def __getitem__(self: Repeated[Indexable[DataT_co]], item: int) -> DataT_co: ...
+
+    @overload
+    def __getitem__(
+        self: Repeated[SupportsRepeatedSlicing[SliceR]], item: slice
+    ) -> SliceR: ...
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            return self._get_slice(item)  # type: ignore[reportAttributeAccessIssue]
+        elif isinstance(item, int):
+            return self._get_index(item)  # type: ignore[reportAttributeAccessIssue]
+        else:
+            raise TypeError("Invalid argument type")
+
     def _get_index(self: Repeated[Indexable[DataT_co]], index: int) -> DataT_co:
         index = _normalize_index(index, len(self))
         _, r = divmod(index, len(self._instruction))
         return self._instruction[r]
 
-    def _get_slice(self, slice_: slice):
+    def _get_slice(
+        self: Repeated[SupportsRepeatedSlicing[SliceR]],
+        slice_: slice,
+    ) -> SliceR:
         start, stop, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
+
         length = len(self._instruction)
-        first_repetition = math.ceil(start / length)
-        last_repetition = math.floor(stop / length)
-        if first_repetition > last_repetition:
-            return self._instruction[
-                start - first_repetition * length : stop - first_repetition * length
-            ]
-        else:
-            previous_repetition = math.floor(start / length)
-            prepend = self._instruction[
-                start
-                - previous_repetition
-                * length : (first_repetition - previous_repetition)
-                * length
-            ]
-            middle = self._instruction * (last_repetition - first_repetition)
-            append = self._instruction[: stop - last_repetition * length]
-            return prepend + middle + append
+
+        slice_length = stop - start
+        q, r = divmod(slice_length, length)
+        local_start = start % length
+
+        left = self._instruction[local_start:]
+        right = self._instruction[:local_start]
+
+        rearranged_instruction = left + right
+        result = rearranged_instruction * q + rearranged_instruction[:r]
+        return result
 
     def __mul__(self, other: int) -> Self | Empty:
         if other >= 1:
@@ -94,3 +113,41 @@ class Repeated(Generic[InstrT]):
 
     def __rmul__(self, other: int) -> Self | Empty:
         return self.__mul__(other)
+
+    def __add__[
+        T: SubInstruction
+    ](self, other: Empty | T) -> Self | Concatenated[Self, T]:
+        if isinstance(other, Empty):
+            return self
+        return Concatenated(self, other)
+
+
+SliceR = TypeVar("SliceR", bound=SubInstruction, covariant=True, default=SubInstruction)
+SliceT = TypeVar("SliceT", bound=SubInstruction, default=SubInstruction)
+
+
+class CanAddMultiplicationWithSlice(
+    SupportsSlicing[SliceT],
+    Multipliable[Addable[SliceT, SliceR]],
+    Protocol[SliceT, SliceR],
+):
+    pass
+
+
+SelfAddableResultT = TypeVar(
+    "SelfAddableResultT",
+    covariant=True,
+    bound=SubInstruction,
+    default=SubInstruction,
+)
+
+
+class SelfAddable(SubInstruction, Protocol[SelfAddableResultT]):
+    def __add__(self, other: Self) -> SelfAddableResultT: ...
+
+
+class SupportsRepeatedSlicing(
+    SupportsSlicing[SelfAddable[CanAddMultiplicationWithSlice[SubInstruction, SliceR]]],
+    Protocol[SliceR],
+):
+    pass
