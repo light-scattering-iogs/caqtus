@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import Generic, overload
+from typing import Generic, overload, Self
 
 import numpy as np
 from typing_extensions import TypeVar
 
+from ._empty import Empty
 from ._indexing import Indexable, _normalize_index, Sliceable, _normalize_slice
+from ._repeated import Repeated
 from ._typing import SubInstruction, HasDType, DataT_co, Addable
 
 LeftInstrT = TypeVar(
@@ -95,3 +97,16 @@ class Concatenated(Generic[LeftInstrT, RightInstrT]):
             return self._left[item]
         else:
             return self._right[item - len(self._left)]
+
+    def __mul__(self, other: int) -> Repeated[Self] | Self | Empty:
+        if other >= 2:
+            return Repeated(other, self)
+        elif other == 1:
+            return self
+        elif other == 0:
+            return Empty()
+        else:
+            raise ValueError("Cannot multiply by a negative number")
+
+    def __rmul__(self, other: int) -> Repeated[Self] | Self | Empty:
+        return self.__mul__(other)
