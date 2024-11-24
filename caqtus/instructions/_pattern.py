@@ -90,16 +90,16 @@ class Pattern(Generic[DataT]):
             return False
 
     @overload
-    def __getitem__(self, index: int) -> DataT: ...
+    def __getitem__(self, item: int, /) -> DataT: ...
 
     @overload
-    def __getitem__(self, index: slice) -> Self | Empty: ...
+    def __getitem__(self, item: slice, /) -> Self | Empty: ...
 
-    def __getitem__(self, index: int | slice) -> DataT | Self | Empty:
-        if isinstance(index, slice):
-            sliced = self._array[index]
+    def __getitem__(self, item: int | slice, /) -> DataT | Self | Empty:
+        if isinstance(item, slice):
+            sliced = self._array[item]
             if len(sliced) == 0:
                 return Empty()
             return self.__class__(sliced)
         else:
-            return self._array[index]
+            return self._array[item]
