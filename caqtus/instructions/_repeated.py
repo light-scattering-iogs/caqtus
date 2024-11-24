@@ -6,7 +6,8 @@ import numpy as np
 from typing_extensions import TypeVar
 
 from ._empty import Empty
-from ._typing import SubInstruction, HasDType
+from ._typing import SubInstruction, HasDType, DataT_co
+from ._indexing import Indexable, _normalize_index
 
 InstrT = TypeVar("InstrT", bound=SubInstruction, covariant=True, default=SubInstruction)
 
@@ -51,8 +52,13 @@ class Repeated(Generic[InstrT]):
     def __len__(self) -> int:
         return self._length
 
-    def dtype[DataT: np.generic](self: Repeated[HasDType[DataT]]) -> np.dtype[DataT]:
+    def dtype(self: Repeated[HasDType[DataT_co]]) -> np.dtype[DataT_co]:
         return self._instruction.dtype()
+
+    def _get_index(self: Repeated[Indexable[DataT_co]], index: int) -> DataT_co:
+        index = _normalize_index(index, len(self))
+        _, r = divmod(index, len(self._instruction))
+        return self._instruction[r]
 
     def __mul__(self, other: int) -> Self | Empty:
         if other >= 1:
