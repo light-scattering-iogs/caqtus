@@ -4,7 +4,7 @@ import abc
 from collections.abc import Mapping
 from typing import Protocol, Any, runtime_checkable
 
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from .compilation_contexts import SequenceContext, ShotContext
 
 
@@ -65,7 +65,7 @@ class DeviceCompiler(Protocol):
         return {}
 
 
-class DeviceNotUsedException(Exception):
+class DeviceNotUsedException(Exception):  # noqa: N818
     """Raised when a device is not used in a sequence."""
 
     pass

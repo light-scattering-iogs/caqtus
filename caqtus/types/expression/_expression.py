@@ -17,14 +17,6 @@ from ..variable_name import DottedVariableName, VariableName
 
 EXPRESSION_REGEX = re.compile(".*")
 
-expression_builtins: contextvars.ContextVar[Mapping[str, Any]] = contextvars.ContextVar(
-    "expression_builtins", default={}
-)
-"""A context variable holding the built-in names used when evaluating an expression.
-
-It is possible to override the builtins by setting this value to different builtins
-before expressions are evaluated.
-"""
 
 DEFAULT_BUILTINS: Mapping[str, Any] = {
     "abs": numpy.abs,
@@ -56,8 +48,14 @@ DEFAULT_BUILTINS: Mapping[str, Any] = {
 } | {str(name): value for name, value in units.items()}
 """Default built-in functions and constants available in expressions."""
 
+expression_builtins: contextvars.ContextVar[Mapping[str, Any]] = contextvars.ContextVar(
+    "expression_builtins", default=DEFAULT_BUILTINS
+)
+"""A context variable holding the built-in names used when evaluating an expression.
 
-expression_builtins.set(DEFAULT_BUILTINS)
+It is possible to override the builtins by setting this value to different builtins
+before expressions are evaluated.
+"""
 
 
 class Expression:

@@ -17,6 +17,7 @@ from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import TimeLanes
+from caqtus.utils._tblib import ensure_exception_pickling
 from ._shot_primitives import ShotParameters
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 
@@ -82,6 +83,7 @@ class ShotCompiler(ShotCompilerProtocol):
             self.compile_shot_sync, shot_parameters.parameters
         )
 
+    @ensure_exception_pickling
     def compile_shot_sync(
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:

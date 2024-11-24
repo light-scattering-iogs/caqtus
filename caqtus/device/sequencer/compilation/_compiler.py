@@ -5,9 +5,6 @@ from typing import Mapping, Any, TypedDict
 import attrs
 import numpy as np
 
-# TODO: Can remove tblib support once the experiment manager runs in a single process
-import tblib.pickling_support
-
 from caqtus.device import DeviceName
 from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.shot_compilation.lane_compilation import DimensionedSeries
@@ -40,6 +37,9 @@ from ..trigger import (
     SoftwareTrigger,
     Trigger,
 )
+
+
+# TODO: Can remove tblib support once the experiment manager runs in a single process
 
 
 class SequencerCompiler(TriggerableDeviceCompiler):
@@ -350,9 +350,6 @@ class SequencerCompilationError(ExceptionGroup):
 
 class ChannelCompilationError(Exception):
     pass
-
-
-tblib.pickling_support.install(SequencerCompilationError, ChannelCompilationError)
 
 
 def _convert_series_to_instruction(

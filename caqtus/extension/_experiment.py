@@ -6,7 +6,6 @@ import warnings
 from collections.abc import Callable
 from typing import Optional, assert_never, Concatenate
 
-import tblib.pickling_support
 from typing_extensions import deprecated
 
 from caqtus.experiment_control.manager import (
@@ -319,13 +318,11 @@ class Experiment:
 
         setup_logs("caqtus.log")
 
-        tblib.pickling_support.install()
-
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
             app_id = "caqtus.condetrol"
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)  # type: ignore[reportAttributeAccessIssue]
 
         app = Condetrol(
             self.get_storage_manager(),
@@ -346,14 +343,11 @@ class Experiment:
         """
 
         setup_logs("experiment_server.log")
-
-        tblib.pickling_support.install()
-
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
             app_id = "caqtus.experiment_server"
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)  # type: ignore[reportAttributeAccessIssue]
 
         if not isinstance(
             self._experiment_manager_location, RemoteExperimentManagerConfiguration
@@ -394,13 +388,11 @@ class Experiment:
 
         setup_logs(f"{name}.log")
 
-        tblib.pickling_support.install()
-
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
             app_id = "caqtus.device_server"
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)  # type: ignore[reportAttributeAccessIssue]
 
         with Server(config) as server:
             print("Ready")

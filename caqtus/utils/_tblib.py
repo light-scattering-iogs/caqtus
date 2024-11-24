@@ -5,6 +5,7 @@ function to pickle the exception object instead of `exception.__reduce_ex__` met
 This allows to customize the pickling behavior by using `copyreg.pickle`.
 """
 
+import copyreg
 import functools
 import io
 import pickle
@@ -13,6 +14,8 @@ from collections.abc import Callable
 from typing import Optional
 
 import tblib
+import tblib.pickling_support
+import trio
 
 
 def unpickle_traceback(tb_frame, tb_lineno, tb_next) -> Optional[types.TracebackType]:
@@ -70,14 +73,18 @@ def _get_subclasses(cls):
         to_visit += list(this.__subclasses__())
 
 
-def get_dispatch_table(exc_type: type[BaseException]) -> dict[type, Callable]:
-    result: dict[type, Callable] = {
-        exception_cls: pickle_exception for exception_cls in _get_subclasses(exc_type)
-    }
-    result.update(
-        {types.TracebackType: functools.partial(pickle_traceback, get_locals=None)}
-    )
-    return result
+def ensure_exception_pickling[T, **P](func: Callable[P, T]) -> Callable[P, T]:
+    """Decorator that ensures that an exception is pickled correctly."""
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        try:
+            return func(*args, **kwargs)
+        except BaseException as exc:
+            tblib.pickling_support.install(exc)
+            raise
+
+    return wrapper
 
 
 class ExceptionPickler:
@@ -111,3 +118,12 @@ class ExceptionPickler:
 
     def loads(self, data: bytes):
         return pickle.loads(data)
+
+
+# Trio cancelled exception cannot be pickled, so we register custom pickling functions
+# for it in order to send it over the network.
+def pickle_trio_cancelled_exception(exception):
+    return trio.Cancelled._create, ()
+
+
+copyreg.pickle(trio.Cancelled, pickle_trio_cancelled_exception)

@@ -2,7 +2,6 @@ from collections.abc import Mapping, Iterable, Sequence
 from typing import Any, TypeVar, TYPE_CHECKING
 
 import attrs
-import tblib.pickling_support
 from typing_extensions import deprecated
 
 from caqtus.device import DeviceName, DeviceConfiguration
@@ -221,9 +220,6 @@ class DeviceCompilationError(Exception):
     """Raised when compilation for a device fails."""
 
     pass
-
-
-tblib.pickling_support.install(DeviceCompilationError)
 
 
 def evaluate_step_durations(

@@ -1,5 +1,4 @@
 import contextlib
-import copyreg
 import operator
 from collections.abc import Callable, Iterator
 from typing import TypeAlias, Literal
@@ -11,7 +10,6 @@ from typing import (
 
 import anyio
 import attrs
-import trio
 from anyio.streams.buffered import BufferedByteReceiveStream
 
 from caqtus.utils._tblib import ExceptionPickler
@@ -33,19 +31,6 @@ from .._proxy import Proxy
 T = TypeVar("T")
 
 ReturnedType: TypeAlias = Literal["copy", "proxy"]
-
-
-# Trio cancelled exception cannot be pickled, so we register custom pickling functions
-# for it in order to send it over the network.
-def unpickle_trio_cancelled_exception():
-    return trio.Cancelled._create()
-
-
-def pickle_trio_cancelled_exception(exception):
-    return unpickle_trio_cancelled_exception, ()
-
-
-copyreg.pickle(trio.Cancelled, pickle_trio_cancelled_exception)
 
 
 @contextlib.contextmanager

@@ -38,13 +38,24 @@ class EditorBuilder:
         This method dispatches the type passed as argument to the editor registered
         for this type.
 
-        If the type is not registered, and the type is an attrs class, an editor will
-        be built for it by aggregating editors for its attributes.
+        If the type is `typing.Annotated[T, ...]`, the editor for `T` will be built.
+
+        If the type is not registered, but is an attrs class, an editor will be built
+        for it by calling :func:`build_attrs_class_editor`.
 
         Raises:
             TypeNotRegisteredError: If no editor is registered to handle the given type,
                 and it is not possible to infer an editor from the type.
         """
+
+        origin = typing.get_origin(type_)
+
+        if origin is typing.Annotated:  # typing.Annotated[T, ...]
+            try:
+                return self.build_editor(typing.get_args(type_)[0])
+            except Exception as e:
+                e.add_note(f"The error occurred while processing the type {type_}")
+                raise e from e.__cause__
 
         try:
             return self._editor_factories[type_]

@@ -5,6 +5,7 @@ from ._editor_builder import (
     EditorBuilder,
     TypeNotRegisteredError,
     build_attrs_class_editor,
+    AttributeOverride,
 )
 from ._int_editor import IntegerEditor
 from ._string_editor import StringEditor
@@ -20,4 +21,5 @@ __all__ = [
     "StringEditor",
     "ValueEditor",
     "TypeNotRegisteredError",
+    "AttributeOverride",
 ]

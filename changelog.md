@@ -5,11 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [6.17.0] - 2024-11-17
+
+### Added
+
+- Possibility to override more information when generating an editor for a device
+  configuration
+
+## [6.16.2] - 2024-11-17
+
+### Fixed
+
+- Exceptions occurring during shot compilation were not always fully displayed
+- Builtins values not correctly defined in expressions
+
+## [6.16.1] - 2024-11-16
+
+- Fix issues when pickling exceptions
+
+## [6.16.0] - 2024-11-16
 
 ### Added
 
 - Documentation for module `caqtus.gui.condetrol.timelanes_editor`.
+
+### Fixed
+
+- Bug where a sequence would sometimes crash when being interrupted.
 
 ## [6.15.0] - 2024-10-29
 

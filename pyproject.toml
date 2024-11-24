@@ -50,8 +50,7 @@ dependencies = [
     "pyqtgraph>=0.13.4",
     "matplotlib>=3.8.3",
     "setuptools",
-    "docstring_parser",
-    "docstring-inheritance>=2.2.1",
+    "caqtus-parsing>=0.3.0",
 ]
 
 [project.urls]
@@ -129,6 +128,10 @@ dependencies = [
     "matplotlib",
     "nbsphinx>=0.9.5"
 ]
+
+[tool.hatch.envs.docs.scripts]
+clean = ["doc\\make.bat clean", "rm -r doc\\_autosummary"]
+build = ["doc\\make.bat html"]
 
 [tool.hatch.envs.types]
 dependencies = [

@@ -15,8 +15,6 @@ Only make exceptions recoverable if you expect them to happen in normal operatio
 
 from __future__ import annotations
 
-import tblib.pickling_support
-
 
 def is_recoverable(error: BaseException) -> bool:
     """Check if an error is recoverable.
@@ -137,14 +135,3 @@ class EvaluationError(RecoverableException):
 
 class NotDefinedUnitError(RecoverableException):
     """Raised when the user tries to use a unit that is not defined."""
-
-
-tblib.pickling_support.install(
-    RecoverableException,
-    InvalidTypeError,
-    InvalidValueError,
-    ConnectionFailedError,
-    ShotAttemptsExceededError,
-    EvaluationError,
-    NotDefinedUnitError,
-)

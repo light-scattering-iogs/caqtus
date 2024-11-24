@@ -8,7 +8,7 @@ import attrs
 from caqtus.utils import serialization
 
 
-@attrs.define
+@attrs.define(repr=False, eq=False, init=False)
 class DottedVariableName:
     """Represents the name of a parameter.
 
@@ -72,7 +72,7 @@ def dotted_variable_name_converter(name: Any) -> DottedVariableName:
         raise InvalidVariableNameError(f"Invalid variable name: {name}")
 
 
-@attrs.define
+@attrs.define(eq=False, repr=False, init=False)
 class VariableName(DottedVariableName):
     """Represents a single variable name."""
 
@@ -94,6 +94,8 @@ class VariableName(DottedVariableName):
     def __eq__(self, other):
         if isinstance(other, VariableName):
             return self._dotted_name == other._dotted_name
+        elif isinstance(other, str):
+            return self._dotted_name == other
         else:
             return NotImplemented
 

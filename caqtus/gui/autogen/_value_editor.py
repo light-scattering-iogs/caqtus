@@ -7,10 +7,6 @@ class ValueEditor[T](abc.ABC):
     """Allows to edit a value of type T."""
 
     @abc.abstractmethod
-    def __init__(self) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def set_value(self, value: T) -> None:
         raise NotImplementedError
 
