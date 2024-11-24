@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 import numpy as np
 
@@ -39,5 +39,16 @@ class Indexable[DataT: np.generic](SubInstruction, Protocol):
     def __getitem__(self, item: int, /) -> DataT: ...
 
 
-class Sliceable[SliceT](SubInstruction, Protocol):
+SliceT_contra = TypeVar(
+    "SliceT_contra", bound=SubInstruction, contravariant=True, default=SubInstruction
+)
+SliceT_co = TypeVar(
+    "SliceT_co", bound=SubInstruction, covariant=True, default=SubInstruction
+)
+
+
+SliceT = TypeVar("SliceT", bound=SubInstruction, covariant=True, default=SubInstruction)
+
+
+class SupportsSlicing(SubInstruction, Protocol[SliceT]):
     def __getitem__(self, item: slice, /) -> SliceT: ...
