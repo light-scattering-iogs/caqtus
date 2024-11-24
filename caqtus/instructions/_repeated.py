@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Generic
+from typing import Generic, Self
 
 import numpy as np
 from typing_extensions import TypeVar
 
+from ._empty import Empty
 from ._typing import SubInstruction, HasDType
 
 InstrT = TypeVar("InstrT", bound=SubInstruction, covariant=True, default=SubInstruction)
@@ -52,3 +53,14 @@ class Repeated(Generic[InstrT]):
 
     def dtype[DataT: np.generic](self: Repeated[HasDType[DataT]]) -> np.dtype[DataT]:
         return self._instruction.dtype()
+
+    def __mul__(self, other: int) -> Self | Empty:
+        if other >= 1:
+            return self.__class__(self._count * other, self._instruction)
+        elif other == 0:
+            return Empty()
+        else:
+            raise ValueError("The repetition count cannot be negative")
+
+    def __rmul__(self, other: int) -> Self | Empty:
+        return self.__mul__(other)
