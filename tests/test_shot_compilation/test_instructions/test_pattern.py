@@ -33,7 +33,19 @@ def test_mixed_int_float_pattern():
     assert_type(p, Pattern[np.float64])
 
 
-def test_getitem():
+def test_get_index():
     p = pattern([1, 2, 3])
     assert not isinstance(p, Empty)
     assert p[0] == 1
+
+
+def test_get_slice():
+    p = pattern([1, 2, 3])
+    assert not isinstance(p, Empty)
+    assert p[1:3] == pattern([2, 3])
+
+
+def test_get_empty_slice():
+    p = pattern([1, 2, 3])
+    assert not isinstance(p, Empty)
+    assert p[1:1] == Empty()

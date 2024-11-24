@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Generic, overload
+from typing import Generic, overload, Self
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 
-from ._typing import DataT
 from ._empty import Empty
+from ._typing import DataT
 
 
 @overload
@@ -83,5 +83,23 @@ class Pattern(Generic[DataT]):
     def __len__(self) -> int:
         return len(self._array)
 
-    def __getitem__(self, index: int) -> DataT:
-        return self._array[index]
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Pattern):
+            return np.array_equal(self._array, other._array)
+        else:
+            return False
+
+    @overload
+    def __getitem__(self, index: int) -> DataT: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Self | Empty: ...
+
+    def __getitem__(self, index: int | slice) -> DataT | Self | Empty:
+        if isinstance(index, slice):
+            sliced = self._array[index]
+            if len(sliced) == 0:
+                return Empty()
+            return self.__class__(sliced)
+        else:
+            return self._array[index]
