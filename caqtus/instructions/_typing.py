@@ -18,3 +18,7 @@ class HasDType[DataT: np.generic](SubInstruction, Protocol):
 SubInstrT = TypeVar(
     "SubInstrT", bound=SubInstruction, covariant=True, default=SubInstruction
 )
+
+
+class Addable[T, R](SubInstruction, Protocol):
+    def __add__(self, other: T) -> R: ...

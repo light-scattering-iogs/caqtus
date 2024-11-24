@@ -37,3 +37,7 @@ def _normalize_slice(slice_: slice, length: int) -> tuple[int, int, int]:
 
 class Indexable[DataT: np.generic](SubInstruction, Protocol):
     def __getitem__(self, item: int, /) -> DataT: ...
+
+
+class Sliceable[SliceT](SubInstruction, Protocol):
+    def __getitem__(self, item: slice, /) -> SliceT: ...

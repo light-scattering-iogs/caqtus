@@ -103,3 +103,8 @@ class Pattern(Generic[DataT_co]):
             return self.__class__(sliced)
         else:
             return self._array[item]
+
+    def __add__(self, other: Empty | Self) -> Self:
+        if isinstance(other, Empty):
+            return self
+        return self.__class__(np.concatenate([self._array, other._array]))

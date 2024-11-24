@@ -22,3 +22,14 @@ def test_get_index():
     assert c[2] == 3
     assert c[3] == 1
     assert_type(c[0], np.int64)
+
+
+def test_slice():
+    l1 = pattern([1, 2, 3])
+    assert not isinstance(l1, Empty)
+    l2 = pattern([4, 5, 6])
+    assert not isinstance(l2, Empty)
+
+    c = Concatenated(l1, l2)
+    assert_type(c[0:3], Pattern[np.int64])
+    assert isinstance(c[0:3], Pattern)
