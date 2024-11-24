@@ -7,6 +7,7 @@ import numpy as np
 from numpy.typing import NDArray, ArrayLike
 
 from ._empty import Empty
+from ._repeated import Repeated
 from ._typing import DataT_co
 
 
@@ -108,3 +109,16 @@ class Pattern(Generic[DataT_co]):
         if isinstance(other, Empty):
             return self
         return self.__class__(np.concatenate([self._array, other._array]))
+
+    def __mul__(self, other: int) -> Repeated[Self] | Self | Empty:
+        if other >= 2:
+            return Repeated(other, self)
+        elif other == 1:
+            return self
+        elif other == 0:
+            return Empty()
+        else:
+            raise ValueError("The number of repetitions must be non-negative.")
+
+    def __rmul__(self, other: int) -> Repeated[Self] | Self | Empty:
+        return self.__mul__(other)
