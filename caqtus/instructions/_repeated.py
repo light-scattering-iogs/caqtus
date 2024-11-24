@@ -143,7 +143,7 @@ SelfAddableResultT = TypeVar(
 
 
 class SelfAddable(SubInstruction, Protocol[SelfAddableResultT]):
-    def __add__(self, other: Self) -> SelfAddableResultT: ...
+    def __add__(self, other: Self | Empty) -> SelfAddableResultT: ...
 
 
 class SupportsRepeatedSlicing(
