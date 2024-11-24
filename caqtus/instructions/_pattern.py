@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import NDArray, ArrayLike
 
 from ._empty import Empty
-from ._typing import DataT
+from ._typing import DataT_co
 
 
 @overload
@@ -37,7 +37,7 @@ def pattern(values: ArrayLike) -> Pattern | Empty:
     return Pattern(values)
 
 
-class Pattern(Generic[DataT]):
+class Pattern(Generic[DataT_co]):
     """A sequence of arbitrary values.
 
     This allows to represent a series of values in the most explicit way possible.
@@ -50,14 +50,14 @@ class Pattern(Generic[DataT]):
     __slots__ = ("_array",)
     __match_args__ = ("values",)
 
-    def __init__(self, values: NDArray[DataT]):
+    def __init__(self, values: NDArray[DataT_co]):
         assert isinstance(values, np.ndarray)
         assert values.ndim == 1
         assert len(values) > 0
         self._array = values
 
     @property
-    def values(self) -> NDArray[DataT]:
+    def values(self) -> NDArray[DataT_co]:
         """The values in the pattern.
 
         The array is guaranteed to have exactly one dimension and at least one element.
@@ -69,7 +69,7 @@ class Pattern(Generic[DataT]):
 
         return self._array
 
-    def dtype(self) -> np.dtype[DataT]:
+    def dtype(self) -> np.dtype[DataT_co]:
         """The data type of the values in the pattern."""
 
         return self._array.dtype
@@ -90,12 +90,12 @@ class Pattern(Generic[DataT]):
             return False
 
     @overload
-    def __getitem__(self, item: int, /) -> DataT: ...
+    def __getitem__(self, item: int, /) -> DataT_co: ...
 
     @overload
     def __getitem__(self, item: slice, /) -> Self | Empty: ...
 
-    def __getitem__(self, item: int | slice, /) -> DataT | Self | Empty:
+    def __getitem__(self, item: int | slice, /) -> DataT_co | Self | Empty:
         if isinstance(item, slice):
             sliced = self._array[item]
             if len(sliced) == 0:

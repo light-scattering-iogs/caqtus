@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Generic
+from typing import Generic, overload
 
 import numpy as np
 from typing_extensions import TypeVar
 
-from ._typing import SubInstruction, HasDType, DataT
+from ._indexing import Indexable, _normalize_index
+from ._typing import SubInstruction, HasDType, DataT_co
 
 LeftInstrT = TypeVar(
     "LeftInstrT", bound=SubInstruction, covariant=True, default=SubInstruction
@@ -51,5 +52,33 @@ class Concatenated(Generic[LeftInstrT, RightInstrT]):
     def __len__(self) -> int:
         return self._length
 
-    def dtype(self: Concatenated[HasDType[DataT], HasDType[DataT]]) -> np.dtype[DataT]:
+    def dtype[
+        DataT: (np.bool, np.int64, np.float64, np.void)
+    ](self: Concatenated[HasDType[DataT], HasDType[DataT]]) -> np.dtype[DataT]:
         return self._left.dtype()
+
+    @overload
+    def __getitem__(
+        self: Concatenated[Indexable[DataT_co], Indexable[DataT_co]], item: int
+    ) -> DataT_co: ...
+
+    @overload
+    def __getitem__(
+        self,
+        item: slice,
+    ) -> None: ...
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            pass
+        else:
+            return self._get_index(item)  # type: ignore[reportAttributeAccessIssue]
+
+    def _get_index(
+        self: Concatenated[Indexable[DataT_co], Indexable[DataT_co]], item: int
+    ) -> DataT_co:
+        item = _normalize_index(item, len(self))
+        if item < len(self._left):
+            return self._left[item]
+        else:
+            return self._right[item - len(self._left)]
