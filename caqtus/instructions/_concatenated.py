@@ -17,6 +17,9 @@ RightInstrT = TypeVar(
 class Concatenated(Generic[LeftInstrT, RightInstrT]):
     """The concatenation of two instructions."""
 
+    __slots__ = ("_left", "_right")
+    __match_args__ = ("left", "right")
+
     def __init__(self, left: LeftInstrT, right: RightInstrT) -> None:
         self._left = left
         self._right = right
