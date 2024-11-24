@@ -6,9 +6,10 @@ from typing import Generic, overload, Self
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 
+from ._concatenated import Concatenated
 from ._empty import Empty
 from ._repeated import Repeated
-from ._typing import DataT_co
+from ._typing import DataT_co, SubInstrT
 
 
 @overload
@@ -105,10 +106,13 @@ class Pattern(Generic[DataT_co]):
         else:
             return self._array[item]
 
-    def __add__(self, other: Empty | Self) -> Self:
+    def __add__(self, other: Empty | SubInstrT) -> Self | Concatenated[Self, SubInstrT]:
         if isinstance(other, Empty):
             return self
-        return self.__class__(np.concatenate([self._array, other._array]))
+        elif isinstance(other, Pattern):
+            return self.__class__(np.concatenate([self._array, other._array]))
+        else:
+            return Concatenated(self, other)
 
     def __mul__(self, other: int) -> Repeated[Self] | Self | Empty:
         if other >= 2:
