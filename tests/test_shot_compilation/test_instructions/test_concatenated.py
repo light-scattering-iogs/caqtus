@@ -19,5 +19,6 @@ def test_get_index():
     p = pattern([1, 2, 3])
     assert not isinstance(p, Empty)
     c = Concatenated(p, p)
-    assert c[0] == 1
+    assert c[2] == 3
+    assert c[3] == 1
     assert_type(c[0], np.int64)
