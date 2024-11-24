@@ -37,6 +37,9 @@ class Pattern(Generic[DataT]):
     directly.
     """
 
+    __slots__ = ("_array",)
+    __match_args__ = ("values",)
+
     def __init__(self, values: NDArray[DataT]):
         assert isinstance(values, np.ndarray)
         assert values.ndim == 1
@@ -45,10 +48,15 @@ class Pattern(Generic[DataT]):
 
     @property
     def values(self) -> NDArray[DataT]:
-        """The values of the pattern.
+        """The values in the pattern.
 
         The array is guaranteed to have exactly one dimension and at least one element.
+
+        Warning:
+            Modifying the returned array will modify the underlying pattern and is
+            discouraged.
         """
+
         return self._array
 
     def dtype(self) -> np.dtype[DataT]:
