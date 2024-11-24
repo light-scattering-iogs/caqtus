@@ -1,3 +1,3 @@
-from ._pattern import Pattern
+from ._pattern import pattern, Pattern
 
-__all__ = ["Pattern"]
+__all__ = ["pattern", "Pattern"]
