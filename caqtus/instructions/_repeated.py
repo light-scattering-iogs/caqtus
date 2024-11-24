@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Generic, Self
 
 import numpy as np
@@ -7,7 +8,7 @@ from typing_extensions import TypeVar
 
 from ._empty import Empty
 from ._typing import SubInstruction, HasDType, DataT_co
-from ._indexing import Indexable, _normalize_index
+from ._indexing import Indexable, _normalize_index, Sliceable, _normalize_slice
 
 InstrT = TypeVar("InstrT", bound=SubInstruction, covariant=True, default=SubInstruction)
 
@@ -59,6 +60,29 @@ class Repeated(Generic[InstrT]):
         index = _normalize_index(index, len(self))
         _, r = divmod(index, len(self._instruction))
         return self._instruction[r]
+
+    def _get_slice(self, slice_: slice):
+        start, stop, step = _normalize_slice(slice_, len(self))
+        if step != 1:
+            raise NotImplementedError
+        length = len(self._instruction)
+        first_repetition = math.ceil(start / length)
+        last_repetition = math.floor(stop / length)
+        if first_repetition > last_repetition:
+            return self._instruction[
+                start - first_repetition * length : stop - first_repetition * length
+            ]
+        else:
+            previous_repetition = math.floor(start / length)
+            prepend = self._instruction[
+                start
+                - previous_repetition
+                * length : (first_repetition - previous_repetition)
+                * length
+            ]
+            middle = self._instruction * (last_repetition - first_repetition)
+            append = self._instruction[: stop - last_repetition * length]
+            return prepend + middle + append
 
     def __mul__(self, other: int) -> Self | Empty:
         if other >= 1:
