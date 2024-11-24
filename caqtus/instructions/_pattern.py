@@ -107,10 +107,10 @@ class Pattern(Generic[DataT_co]):
             return self._array[item]
 
     @overload
-    def __add__(self, other: Empty) -> Self: ...  # type: ignore[reportOverlappingOverload]
+    def __add__(self, other: Empty) -> Self: ...
 
     @overload
-    def __add__(self, other: Self) -> Self: ...
+    def __add__(self, other: Self) -> Self: ...  # type: ignore[reportOverlappingOverload]
 
     @overload
     def __add__(self, other: SubInstrT) -> Concatenated[Self, SubInstrT]: ...
