@@ -7,24 +7,34 @@ import numpy as np
 from numpy.typing import NDArray, ArrayLike
 
 from ._typing import DataT
+from ._empty import Empty
 
 
 @overload
-def pattern(values: Sequence[bool]) -> Pattern[np.bool]: ...  # type: ignore[reportOverlappingOverload]
+def pattern(values: Sequence[bool]) -> Pattern[np.bool] | Empty: ...  # type: ignore[reportOverlappingOverload]
 
 
 @overload
-def pattern(values: Sequence[int]) -> Pattern[np.int64]: ...
+def pattern(values: Sequence[int]) -> Pattern[np.int64] | Empty: ...
 
 
 @overload
-def pattern(values: Sequence[float]) -> Pattern[np.float64]: ...
+def pattern(values: Sequence[float]) -> Pattern[np.float64] | Empty: ...
 
 
-def pattern(values: ArrayLike) -> Pattern:
-    """Create a pattern from a sequence of values."""
+def pattern(values: ArrayLike) -> Pattern | Empty:
+    """Create a pattern from a sequence of values.
 
-    return Pattern(np.array(values))
+    Raises:
+        ValueError: If the values are empty or not one-dimensional.
+    """
+
+    values = np.array(values)
+    if values.ndim != 1:
+        raise ValueError("The values must be a one-dimensional array.")
+    if len(values) == 0:
+        return Empty()
+    return Pattern(values)
 
 
 class Pattern(Generic[DataT]):
