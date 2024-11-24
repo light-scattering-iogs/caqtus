@@ -6,9 +6,14 @@ import numpy as np
 from typing_extensions import TypeVar
 
 from ._empty import Empty
-from ._indexing import Indexable, _normalize_index, Sliceable, _normalize_slice
+from ._indexing import (
+    Indexable,
+    _normalize_index,
+    SupportsSlicing,
+    _normalize_slice,
+)
 from ._repeated import Repeated
-from ._typing import SubInstruction, HasDType, DataT_co, Addable
+from ._typing import SubInstruction, HasDType, DataT_co, Addable, InstrT_co, InstrT_inv
 
 LeftInstrT = TypeVar(
     "LeftInstrT", bound=SubInstruction, covariant=True, default=SubInstruction
@@ -65,9 +70,12 @@ class Concatenated(Generic[LeftInstrT, RightInstrT]):
     ) -> DataT_co: ...
 
     @overload
-    def __getitem__[
-        T, R
-    ](self: Concatenated[Sliceable[Addable[T, R]], Sliceable[T]], item: slice) -> R: ...
+    def __getitem__(
+        self: Concatenated[
+            SupportsSlicing[Addable[InstrT_inv, InstrT_co]], SupportsSlicing[InstrT_inv]
+        ],
+        item: slice,
+    ) -> InstrT_co: ...
 
     def __getitem__(self, item):
         if isinstance(item, slice):
@@ -75,9 +83,12 @@ class Concatenated(Generic[LeftInstrT, RightInstrT]):
         else:
             return self._get_index(item)  # type: ignore[reportAttributeAccessIssue]
 
-    def _get_slice[
-        T, R
-    ](self: Concatenated[Sliceable[Addable[T, R]], Sliceable[T]], item: slice) -> R:
+    def _get_slice(
+        self: Concatenated[
+            SupportsSlicing[Addable[InstrT_inv, InstrT_co]], SupportsSlicing[InstrT_inv]
+        ],
+        item: slice,
+    ) -> InstrT_co:
         start, stop, step = _normalize_slice(item, len(self))
         if step != 1:
             raise NotImplementedError("Slicing with a step is not supported")
