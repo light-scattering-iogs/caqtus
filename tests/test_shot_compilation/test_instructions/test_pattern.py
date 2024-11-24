@@ -31,3 +31,9 @@ def test_mixed_int_float_pattern():
     assert not isinstance(p, Empty)
     assert p.dtype() == np.dtype(np.float64)
     assert_type(p, Pattern[np.float64])
+
+
+def test_getitem():
+    p = pattern([1, 2, 3])
+    assert not isinstance(p, Empty)
+    assert p[0] == 1
