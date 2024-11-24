@@ -4,6 +4,8 @@ from typing import Protocol
 import numpy as np
 from typing_extensions import TypeVar
 
+from ._empty import Empty
+
 DataT_co = TypeVar("DataT_co", covariant=True, bound=np.generic, default=np.generic)
 
 
@@ -38,10 +40,10 @@ InstrT_inv = TypeVar(
 
 
 class Addable(SubInstruction, Protocol[InstrT_contra, InstrT_co]):
-    def __add__(self, other: InstrT_contra) -> InstrT_co: ...
+    def __add__(self, other: InstrT_contra | Empty) -> InstrT_co: ...
 
 
 class Multipliable(SubInstruction, Protocol[InstrT_co]):
-    def __mul__(self, other: int) -> InstrT_co: ...
+    def __mul__(self, other: int) -> InstrT_co | Empty: ...
 
-    def __rmul__(self, other: int) -> InstrT_co: ...
+    def __rmul__(self, other: int) -> InstrT_co | Empty: ...

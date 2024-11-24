@@ -85,7 +85,7 @@ class Repeated(Generic[InstrT]):
     def _get_slice(
         self: Repeated[SupportsRepeatedSlicing[SliceR]],
         slice_: slice,
-    ) -> SliceR:
+    ) -> SliceR | Empty:
         start, stop, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError

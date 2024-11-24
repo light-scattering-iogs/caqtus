@@ -2,6 +2,7 @@ from typing import Protocol, TypeVar
 
 import numpy as np
 
+from ._empty import Empty
 from ._typing import SubInstruction
 
 
@@ -51,4 +52,4 @@ SliceT = TypeVar("SliceT", bound=SubInstruction, covariant=True, default=SubInst
 
 
 class SupportsSlicing(SubInstruction, Protocol[SliceT]):
-    def __getitem__(self, item: slice, /) -> SliceT: ...
+    def __getitem__(self, item: slice, /) -> SliceT | Empty: ...

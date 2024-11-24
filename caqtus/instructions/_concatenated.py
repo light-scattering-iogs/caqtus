@@ -72,10 +72,11 @@ class Concatenated(Generic[LeftInstrT, RightInstrT]):
     @overload
     def __getitem__(
         self: Concatenated[
-            SupportsSlicing[Addable[InstrT_inv, InstrT_co]], SupportsSlicing[InstrT_inv]
+            SupportsSlicing[Addable[InstrT_inv, InstrT_co]],
+            SupportsSlicing[InstrT_inv],
         ],
         item: slice,
-    ) -> InstrT_co: ...
+    ) -> InstrT_co | InstrT_inv | Empty: ...
 
     def __getitem__(self, item):
         if isinstance(item, slice):
@@ -85,10 +86,11 @@ class Concatenated(Generic[LeftInstrT, RightInstrT]):
 
     def _get_slice(
         self: Concatenated[
-            SupportsSlicing[Addable[InstrT_inv, InstrT_co]], SupportsSlicing[InstrT_inv]
+            SupportsSlicing[Addable[InstrT_inv, InstrT_co]],
+            SupportsSlicing[InstrT_inv],
         ],
         item: slice,
-    ) -> InstrT_co:
+    ) -> InstrT_co | InstrT_inv | Empty:
         start, stop, step = _normalize_slice(item, len(self))
         if step != 1:
             raise NotImplementedError("Slicing with a step is not supported")
