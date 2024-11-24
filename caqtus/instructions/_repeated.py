@@ -100,6 +100,8 @@ class Repeated(Generic[InstrT]):
         right = self._instruction[:local_start]
 
         rearranged_instruction = left + right
+        if isinstance(rearranged_instruction, Empty):
+            return rearranged_instruction
         result = rearranged_instruction * q + rearranged_instruction[:r]
         return result
 
