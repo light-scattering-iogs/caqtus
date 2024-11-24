@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Self, Never
 
 
 class Empty:
@@ -13,3 +13,12 @@ class Empty:
 
     def __add__[T](self, other: T) -> T:
         return other
+
+    def __mul__(self, other: int) -> Self:
+        return self
+
+    def __rmul__(self, other: int) -> Self:
+        return self
+
+    def __getitem__(self, item: slice) -> Self:
+        return self
