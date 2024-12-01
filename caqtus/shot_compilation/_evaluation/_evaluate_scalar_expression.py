@@ -141,10 +141,7 @@ def evaluate_binary_operator(
             result = left**right
         case _:  # pragma: no cover
             assert_never(binary_operator)
-    if not is_scalar(result):
-        raise AssertionError(
-            "A binary operation between scalars should return a scalar."
-        )
+    assert is_scalar(result)
     return result
 
 
@@ -160,10 +157,7 @@ def evaluate_unary_operator(
             result = -operand
         case _:  # pragma: no cover
             assert_never(unary_operator)
-    if not is_scalar(result):
-        raise AssertionError(
-            "A unary operation between scalars should return a scalar."
-        )
+    assert is_scalar(result)
     return result
 
 
