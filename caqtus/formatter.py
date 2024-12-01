@@ -87,7 +87,7 @@ def device_param(name: str, value: str) -> str:
     return f"device parameter '{name}' = '{value}'"
 
 
-def expression(expression: "Expression") -> str:
+def expression(expression) -> str:
     return f"expression '{expression}'"
 
 

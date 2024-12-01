@@ -1,27 +1,26 @@
-from collections.abc import Mapping, Sequence
-from typing import Any
+from collections.abc import Sequence
+from typing import assert_never
 
 import numpy as np
 
-import caqtus.formatter as fmt
 from caqtus.shot_compilation.timed_instructions import (
     TimedInstruction,
     Pattern,
     concatenate,
 )
 from caqtus.types.expression import Expression
-from caqtus.types.recoverable_exceptions import InvalidTypeError
+from caqtus.types.parameter import Parameters
 from caqtus.types.timelane import DigitalTimeLane
+from .._evaluation import evaluate_time_dependent_digital_expression
 from ..timing import Time, number_ticks
-from ...types.variable_name import DottedVariableName
 
 
 def compile_digital_lane(
     lane: DigitalTimeLane,
     step_start_times: Sequence[Time],
     time_step: Time,
-    parameters: Mapping[DottedVariableName, Any],
-) -> TimedInstruction[np.bool_]:
+    parameters: Parameters,
+) -> TimedInstruction[np.bool]:
     """Compile a digital lane into a sequence of instructions.
 
     Args:
@@ -43,70 +42,20 @@ def compile_digital_lane(
     for cell_value, (start, stop) in zip(
         lane.block_values(), lane.block_bounds(), strict=True
     ):
-        length = number_ticks(
-            step_start_times[start], step_start_times[stop], time_step
-        )
         if isinstance(cell_value, bool):
-            instructions.append(get_constant_instruction(cell_value, length))
+            length = number_ticks(
+                step_start_times[start], step_start_times[stop], time_step
+            )
+            instructions.append(Pattern([cell_value]) * length)
         elif isinstance(cell_value, Expression):
-            value = cell_value.evaluate(parameters)
-            if not isinstance(value, bool):
-                raise InvalidTypeError(
-                    f"{fmt.expression(cell_value)} does not evaluate to "
-                    f"{fmt.type_(bool)}, but to {fmt.type_(type(value))}",
-                )
-            instructions.append(get_constant_instruction(value, length))
-
+            instr = evaluate_time_dependent_digital_expression(
+                cell_value,
+                parameters,
+                step_start_times[start],
+                step_start_times[stop],
+                time_step,
+            )
+            instructions.append(instr)
         else:
-            raise NotImplementedError(f"Unexpected value {cell_value} in digital lane")
+            assert_never(cell_value)
     return concatenate(*instructions)
-
-
-def get_constant_instruction(value: bool, length: int) -> TimedInstruction[np.bool_]:
-    return Pattern([value]) * length
-
-
-#
-# elif isinstance(cell_value, Blink):
-# period = (
-#     cell_value.period.evaluate(variables | units).to("ns").magnitude
-# )
-# duty_cycle = (
-#     Quantity(cell_value.duty_cycle.evaluate(variables | units))
-#     .to(dimensionless)
-#     .magnitude
-# )
-# if not 0 <= duty_cycle <= 1:
-#     raise ShotEvaluationError(
-#         f"Duty cycle '{cell_value.duty_cycle.body}' must be between 0 and"
-#         f" 1, not {duty_cycle}"
-#     )
-# num_ticks_per_period, _ = divmod(period, time_step)
-# num_ticks_high = math.ceil(num_ticks_per_period * duty_cycle)
-# num_ticks_low = num_ticks_per_period - num_ticks_high
-# num_clock_pulses, remainder = divmod(length, num_ticks_per_period)
-# phase = (
-#     Quantity(cell_value.phase.evaluate(variables | units))
-#     .to(dimensionless)
-#     .magnitude
-# )
-# if not 0 <= phase <= 2 * math.pi:
-#     raise ShotEvaluationError(
-#         f"Phase '{cell_value.phase.body}' must be between 0 and 2*pi, not"
-#         f" {phase}"
-#     )
-# split_position = round(phase / (2 * math.pi) * num_ticks_per_period)
-# clock_pattern = (
-#         Pattern([True]) * num_ticks_high + Pattern([False]) * num_ticks_low
-# )
-# a, b = clock_pattern[:split_position], clock_pattern[split_position:]
-# clock_pattern = b + a
-# pattern = (
-#         clock_pattern * num_clock_pulses + Pattern([False]) * remainder
-# )
-# if not len(pattern) == length:
-#     raise RuntimeError(
-#         f"Pattern length {len(pattern)} does not match expected length"
-#         f" {length}"
-#     )
-# print(f"{pattern=}")

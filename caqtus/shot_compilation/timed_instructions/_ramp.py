@@ -122,6 +122,24 @@ class Ramp[T: (np.floating, np.void)](
     def dtype(self) -> np.dtype[T]:
         return self._start.dtype
 
+    @property
+    def slope(self: Ramp[np.float64]) -> float:
+        """The slope of the ramp.
+
+        Only applicable if the ramp is of floating point type.
+        """
+
+        return float((self._stop - self._start) / self._length)
+
+    @property
+    def intercept(self: Ramp[np.float64]) -> float:
+        """The intercept of the ramp.
+
+        Only applicable if the ramp is of floating point type.
+        """
+
+        return float(self._start)
+
     def __len__(self) -> Length:
         return self._length
 
