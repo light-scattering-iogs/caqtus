@@ -134,7 +134,7 @@ def evaluate_call(
                 f"{fmt.expression(x_expression)} in 'square_wave' must be "
                 f"dimensionless, got {x_instr.units}."
             )
-        return square_wave(x_instr, duty_cycle)
+        return square_wave(x_instr.magnitudes, duty_cycle)
     else:
         raise InvalidOperationError(
             f"Function {call.function} is not supported in digital expressions."
@@ -143,7 +143,7 @@ def evaluate_call(
 
 @functools.singledispatch
 def square_wave(x_instr, duty_cycle: float) -> DigitalInstruction:
-    raise NotImplementedError
+    raise NotImplementedError(f"Square wave of {type(x_instr)} is not supported.")
 
 
 @square_wave.register(Pattern)

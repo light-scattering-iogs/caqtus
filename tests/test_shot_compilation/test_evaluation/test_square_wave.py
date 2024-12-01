@@ -2,8 +2,11 @@ import pytest
 
 from caqtus.shot_compilation._evaluation._time_dependent_expression._digital_expression import (
     square_wave,
+    evaluate_time_dependent_digital_expression,
 )
 from caqtus.shot_compilation.timed_instructions import create_ramp, Pattern
+from caqtus.shot_compilation.timing import to_time
+from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError
 
 
@@ -26,3 +29,21 @@ def test_fail_on_too_fast_ramp():
 def test_duty_cycle():
     r = create_ramp(0, 10, 1000)
     assert square_wave(r, 0.1) == (Pattern([True]) * 10 + Pattern([False]) * 90) * 10
+
+
+def test_expression_evaluation():
+    expr = Expression("square_wave(t * 1 kHz)")
+
+    result = evaluate_time_dependent_digital_expression(
+        expr, {}, to_time(0), to_time(1), to_time(1e-6)
+    )
+    assert result == (Pattern([True]) * 500 + Pattern([False]) * 500) * 1000
+
+
+def test_square_wave_divided():
+    expr = Expression("square_wave(t / 1 ms)")
+
+    result = evaluate_time_dependent_digital_expression(
+        expr, {}, to_time(0), to_time(1), to_time(1e-6)
+    )
+    assert result == (Pattern([True]) * 500 + Pattern([False]) * 500) * 1000
