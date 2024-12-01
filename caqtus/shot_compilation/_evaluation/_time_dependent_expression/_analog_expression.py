@@ -112,6 +112,11 @@ def evaluate_analog_ast(
                     magnitudes=add(left_magnitudes, right_magnitudes),
                     units=left.units,
                 )
+            case nodes.Power():
+                raise NotImplementedError(
+                    "Power operator is not yet supported for time dependent "
+                    "expressions."
+                )
             case _:
                 assert_never(ast)
 
