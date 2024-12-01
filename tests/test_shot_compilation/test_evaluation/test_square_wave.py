@@ -64,7 +64,7 @@ def test_square_wave_time_offset():
 
 
 def test_square_wave_duty_cycle():
-    expr = Expression("square_wave(t / 1 ms, 0.1)")
+    expr = Expression("square_wave(t / 1 ms, 10%)")
 
     result = evaluate_time_dependent_digital_expression(
         expr, {}, to_time(0), to_time(1), to_time(1e-6)
