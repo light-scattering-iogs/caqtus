@@ -1,9 +1,13 @@
+from collections.abc import Mapping
 from typing import TypeGuard, Any, TypeAlias
 
 from caqtus.utils import serialization
 from ._analog_value import Quantity, ScalarAnalogValue, is_scalar_analog_value
+from ..variable_name import DottedVariableName
 
 Parameter: TypeAlias = ScalarAnalogValue | int | bool
+
+type Parameters = Mapping[DottedVariableName, Parameter]
 
 
 def unstructure_quantity(value: Quantity):

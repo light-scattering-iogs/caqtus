@@ -5,8 +5,8 @@ from ._analog_value import (
     is_quantity,
     NotQuantityError,
 )
+from ._parameter import Parameter, is_parameter, Parameters
 from ._parameter_namespace import ParameterNamespace
-from ._parameter import Parameter, is_parameter
 
 __all__ = [
     "AnalogValue",
@@ -14,6 +14,7 @@ __all__ = [
     "is_analog_value",
     "Parameter",
     "is_parameter",
+    "Parameters",
     "ParameterNamespace",
     "is_quantity",
     "NotQuantityError",
