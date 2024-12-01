@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Text for digital lane expressions is now centered
 - Subprocesses for shot compilation are launched during sequence preparation
 
+### Added
+
+- Documentation for digital expressions
+
 ## [6.18.0] - 2024-12-01
 
 ### Added
