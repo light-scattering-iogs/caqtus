@@ -187,7 +187,7 @@ def square_wave_ramp(
 
     if period < 2:
         raise InvalidValueError(
-            f"Period of ramp in 'square_wave' must be at least two clock ticks"
+            "Period of ramp in 'square_wave' must be at least two clock ticks"
         )
 
     rounded_period = round(period)
@@ -195,11 +195,11 @@ def square_wave_ramp(
     low_duration = rounded_period - high_duration
     if high_duration == 0 and duty_cycle != 0:
         raise InvalidValueError(
-            f"High duration of square wave in smaller than one clock tick"
+            "High duration of square wave in smaller than one clock tick"
         )
     if low_duration == 0 and duty_cycle != 1:
         raise InvalidValueError(
-            f"Low duration of square wave in smaller than one clock tick"
+            "Low duration of square wave in smaller than one clock tick"
         )
 
     pulse = Pattern([True]) * high_duration + Pattern([False]) * low_duration
