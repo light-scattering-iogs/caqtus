@@ -1,3 +1,4 @@
+import functools
 from collections.abc import Mapping
 from typing import assert_never
 
@@ -58,16 +59,43 @@ def evaluate_digital_expression(
         value = evaluate_bool_expression(expression, parameters)
         length = number_ticks(t1, t2, timestep)
         return Pattern([value]) * length
-    else:
-        raise NotImplementedError
+
+    match expression:
+        case int() | float() | nodes.Quantity():
+            raise AssertionError(
+                "This should never happen, because at this point, the expression "
+                "is known to be time-dependent."
+            )
+        case nodes.Variable(name=name):
+            assert name == "t"
+            raise InvalidOperationError(
+                f"{fmt.expression(expression)} is not a valid digital expression."
+            )
+        case (
+            nodes.Add()
+            | nodes.Subtract()
+            | nodes.Multiply()
+            | nodes.Divide()
+            | nodes.Power()
+            | nodes.Plus()
+            | nodes.Minus()
+        ):
+            raise InvalidOperationError(
+                f"{fmt.expression(expression)} is not a valid digital expression."
+            )
+        case nodes.Call():
+            return evaluate_call(expression, parameters, t1, t2, timestep)
+        case _:
+            assert_never(expression)
 
 
+@functools.lru_cache
 def is_time_dependent(expression: nodes.Expression) -> bool:
     match expression:
         case int() | float() | nodes.Quantity():
             return False
-        case nodes.Variable(names=names):
-            return names == ("t",)
+        case nodes.Variable(name=name):
+            return name == "t"
         case (
             nodes.Add()
             | nodes.Subtract()
@@ -84,3 +112,19 @@ def is_time_dependent(expression: nodes.Expression) -> bool:
             return any(is_time_dependent(arg) for arg in expression.args)
         case _:
             assert_never(expression)
+
+
+def evaluate_call(
+    call: nodes.Call,
+    parameters: Parameters,
+    t1: Time,
+    t2: Time,
+    timestep: Time,
+) -> DigitalInstruction:
+    raise NotImplementedError
+
+
+class InvalidOperationError(EvaluationError):
+    """Raised when an invalid operation is attempted."""
+
+    pass
