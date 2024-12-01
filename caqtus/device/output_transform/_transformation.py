@@ -8,6 +8,7 @@ import attrs
 
 import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import Parameters
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.units import is_scalar_quantity, Quantity, dimensionless
 from caqtus.types.units.base import BaseUnit
@@ -41,9 +42,7 @@ Evaluable object can be used in the :func:`evaluate` function.
 """
 
 
-def evaluate(
-    input_: EvaluableOutput, variables: Mapping[DottedVariableName, Any]
-) -> OutputValue:
+def evaluate(input_: EvaluableOutput, variables: Parameters) -> OutputValue:
     """Evaluates the input and returns the result as a parameter.
 
     If the evaluated input is a quantity, it is converted to its base units.

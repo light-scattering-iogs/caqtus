@@ -10,7 +10,7 @@ from caqtus.types.variable_name import DottedVariableName
 from .timing import to_time, get_step_bounds, Time
 from ..formatter import fmt
 from ..types.expression import Expression
-from ..types.parameter import NotQuantityError
+from ..types.parameter import NotQuantityError, Parameters
 from ..types.recoverable_exceptions import InvalidValueError, EvaluationError
 from ..types.units import (
     DimensionalityError,
@@ -164,7 +164,7 @@ class ShotContext:
 
         return self._step_bounds[-1]
 
-    def get_parameters(self) -> Mapping[DottedVariableName, Any]:
+    def get_parameters(self) -> Parameters:
         """Returns the parameters for the shot."""
 
         return self._variables

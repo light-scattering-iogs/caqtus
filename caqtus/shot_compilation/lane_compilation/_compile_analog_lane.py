@@ -11,6 +11,7 @@ import numpy.typing as npt
 import caqtus.formatter as fmt
 from caqtus.device.output_transform import evaluate
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import Parameters
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import AnalogTimeLane, Ramp, Block
 from caqtus.types.units import (
@@ -59,7 +60,7 @@ class DimensionedSeries[T: (np.number, np.bool_)]:
 
 def compile_analog_lane(
     lane: AnalogTimeLane,
-    variables: Mapping[DottedVariableName, Any],
+    variables: Parameters,
     step_start_times: Sequence[Time],
     time_step: Time,
 ) -> DimensionedSeries[np.float64]:
