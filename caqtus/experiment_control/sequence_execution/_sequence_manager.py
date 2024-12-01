@@ -7,6 +7,7 @@ from collections.abc import Mapping, AsyncGenerator, AsyncIterable
 from typing import Optional
 
 import anyio
+import anyio.to_process
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import (
@@ -167,6 +168,10 @@ class SequenceManager:
                 sequence_context,
                 self._device_manager_extension,
             )
+
+            # We start the subprocesses while preparing the sequence to avoid
+            # the overhead of starting when the sequence is launched.
+            await anyio.to_process.run_sync(nothing)
             async with (
                 self._shot_runner_factory(
                     sequence_context, shot_compiler, self._device_manager_extension
@@ -234,3 +239,7 @@ class SequenceManager:
                 shot_data.end_time,
             )
             unwrap(result)
+
+
+def nothing():
+    pass
