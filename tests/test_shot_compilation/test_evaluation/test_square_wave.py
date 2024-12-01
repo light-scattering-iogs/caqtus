@@ -31,6 +31,11 @@ def test_duty_cycle():
     assert square_wave(r, 0.1) == (Pattern([True]) * 10 + Pattern([False]) * 90) * 10
 
 
+def test_initial_offset():
+    r = create_ramp(0.1, 10.1, 1000)
+    assert square_wave(r, 0.1) == (Pattern([False]) * 90 + Pattern([True]) * 10) * 10
+
+
 def test_expression_evaluation():
     expr = Expression("square_wave(t * 1 kHz)")
 
