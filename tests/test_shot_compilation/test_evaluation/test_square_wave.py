@@ -1,6 +1,6 @@
 import pytest
 
-from caqtus.shot_compilation._evaluation._time_dependent_expression._digital_expression import (
+from caqtus.shot_compilation._evaluation._time_dependent_expression import (
     square_wave,
     evaluate_time_dependent_digital_expression,
 )
