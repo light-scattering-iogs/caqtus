@@ -1,6 +1,5 @@
 import functools
 import operator
-from collections.abc import Mapping
 from collections.abc import Sequence
 from typing import assert_never, Any
 
@@ -9,10 +8,9 @@ from typing_extensions import TypeIs
 import caqtus.formatter as fmt
 import caqtus_parsing.nodes as nodes
 from caqtus.types.expression import Expression
-from caqtus.types.parameter import Parameter
-from caqtus.types.recoverable_exceptions import EvaluationError
+from caqtus.types.parameter import Parameters
+from caqtus.types.recoverable_exceptions import EvaluationError, InvalidTypeError
 from caqtus.types.units import Quantity, is_scalar_quantity, Unit
-from caqtus.types.variable_name import DottedVariableName
 from caqtus_parsing import parse, InvalidSyntaxError
 from ._constants import CONSTANTS
 from ._exceptions import (
@@ -26,7 +24,7 @@ from ._units import units
 
 
 def evaluate_scalar_expression(
-    expression: Expression, parameters: Mapping[DottedVariableName, Parameter]
+    expression: Expression, parameters: Parameters
 ) -> Scalar:
     """Evaluate a scalar expression.
 
@@ -51,9 +49,19 @@ def evaluate_scalar_expression(
         ) from error
 
 
-def evaluate_expression(
-    expression: nodes.Expression, parameters: Mapping[DottedVariableName, Parameter]
-) -> Scalar:
+def evaluate_bool_expression(
+    expression: nodes.Expression, parameters: Parameters
+) -> bool:
+    value = evaluate_expression(expression, parameters)
+    if not isinstance(value, bool):
+        raise InvalidTypeError(
+            f"Expected {fmt.expression(expression)} to evaluate to a boolean, "
+            f"but got {fmt.type_(type(value))}."
+        )
+    return value
+
+
+def evaluate_expression(expression: nodes.Expression, parameters: Parameters) -> Scalar:
     match expression:
         case int() | float():
             return expression
@@ -78,7 +86,7 @@ def evaluate_expression(
 
 
 def evaluate_scalar_variable(
-    variable: nodes.Variable, parameters: Mapping[DottedVariableName, Parameter]
+    variable: nodes.Variable, parameters: Parameters
 ) -> Scalar:
     name = variable.name
     if name in parameters:
@@ -93,7 +101,7 @@ def evaluate_scalar_variable(
 
 def evaluate_function_call(
     function_call: nodes.Call,
-    parameters: Mapping[DottedVariableName, Parameter],
+    parameters: Parameters,
 ) -> Scalar:
     function_name = function_call.function
     try:
@@ -112,7 +120,7 @@ def evaluate_function_call(
 
 def evaluate_binary_operator(
     binary_operator: nodes.BinaryOperator,
-    parameters: Mapping[DottedVariableName, Parameter],
+    parameters: Parameters,
 ) -> Scalar:
     left = evaluate_expression(binary_operator.left, parameters)
     right = evaluate_expression(binary_operator.right, parameters)
@@ -142,7 +150,7 @@ def evaluate_binary_operator(
 
 def evaluate_unary_operator(
     unary_operator: nodes.UnaryOperator,
-    parameters: Mapping[DottedVariableName, Parameter],
+    parameters: Parameters,
 ) -> Scalar:
     operand = evaluate_expression(unary_operator.operand, parameters)
     match unary_operator:
