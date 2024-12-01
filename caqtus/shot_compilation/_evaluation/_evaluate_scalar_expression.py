@@ -10,7 +10,7 @@ import caqtus_parsing.nodes as nodes
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameters
 from caqtus.types.recoverable_exceptions import EvaluationError, InvalidTypeError
-from caqtus.types.units import Quantity, is_scalar_quantity, Unit
+from caqtus.types.units import Quantity, is_scalar_quantity, Unit, DimensionalityError
 from caqtus_parsing import parse, InvalidSyntaxError
 from ._constants import CONSTANTS
 from ._exceptions import (
@@ -59,6 +59,18 @@ def evaluate_bool_expression(
             f"but got {fmt.type_(type(value))}."
         )
     return value
+
+
+def evaluate_float_expression(
+    expression: nodes.Expression, parameters: Parameters
+) -> float:
+    value = evaluate_expression(expression, parameters)
+    try:
+        return float(value)
+    except DimensionalityError as error:
+        raise InvalidOperationError(
+            f"Could not convert {fmt.expression(expression)} to a float."
+        ) from error
 
 
 def evaluate_expression(expression: nodes.Expression, parameters: Parameters) -> Scalar:

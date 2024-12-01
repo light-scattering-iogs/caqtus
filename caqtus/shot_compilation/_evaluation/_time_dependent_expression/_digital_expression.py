@@ -8,10 +8,14 @@ import caqtus.formatter as fmt
 import caqtus_parsing.nodes as nodes
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter
-from caqtus.types.recoverable_exceptions import EvaluationError
+from caqtus.types.recoverable_exceptions import EvaluationError, InvalidValueError
+from caqtus.types.units import dimensionless, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
 from caqtus_parsing import parse, InvalidSyntaxError
-from .._evaluate_scalar_expression import evaluate_bool_expression
+from .._evaluate_scalar_expression import (
+    evaluate_bool_expression,
+    evaluate_float_expression,
+)
 from ...timed_instructions import TimedInstruction, Pattern
 from ...timing import Time, number_ticks
 
@@ -120,6 +124,44 @@ def evaluate_call(
     t1: Time,
     t2: Time,
     timestep: Time,
+) -> DigitalInstruction:
+    if call.function == "square_wave":
+        if len(call.args) == 0:
+            raise InvalidOperationError(
+                f"Function {call.function} requires at least 1 argument, got 0."
+            )
+        if len(call.args) == 1:
+            x_expression = call.args[0]
+            duty_cycle = 0.5
+        elif len(call.args) == 2:
+            x_expression = call.args[0]
+            duty_cycle_expression = call.args[1]
+            duty_cycle = evaluate_float_expression(duty_cycle_expression, parameters)
+            if not 0 <= duty_cycle <= 1:
+                raise InvalidValueError(
+                    f"Duty cycle {fmt.expression(duty_cycle_expression)} in "
+                    f"'square_wave' must be between 0 and 1, got {duty_cycle}."
+                )
+        else:
+            raise InvalidOperationError(
+                f"Function {call.function} takes at most 2 arguments, got "
+                f"{len(call.args)}."
+            )
+        x_instr = evaluate_analog_expression(x_expression, parameters, t1, t2, timestep)
+        if x_instr.units != dimensionless:
+            raise InvalidDimensionalityError(
+                f"{fmt.expression(x_expression)} in 'square_wave' must be "
+                f"dimensionless, got {x_instr.units}."
+            )
+        return evaluate_square_wave(x_instr, duty_cycle)
+    else:
+        raise InvalidOperationError(
+            f"Function {call.function} is not supported in digital expressions."
+        )
+
+
+def evaluate_square_wave(
+    x_instr: AnalogInstruction, duty_cycle: float
 ) -> DigitalInstruction:
     raise NotImplementedError
 
