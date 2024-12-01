@@ -17,7 +17,14 @@ from caqtus.shot_compilation.timed_instructions import (
 )
 from caqtus.shot_compilation.timing import Time, number_ticks, start_tick, stop_tick
 from caqtus.types.parameter import Parameters
-from caqtus.types.units import BaseUnit, dimensionless, Quantity, SECOND, Unit
+from caqtus.types.units import (
+    BaseUnit,
+    dimensionless,
+    Quantity,
+    SECOND,
+    Unit,
+    InvalidDimensionalityError,
+)
 from ._is_time_dependent import is_time_dependent
 from .._evaluate_scalar_expression import evaluate_expression
 
@@ -88,7 +95,23 @@ def evaluate_analog_ast(
                     magnitudes=divide(left.magnitudes, right.magnitudes),
                     units=units.to_base(),
                 )
-
+            case nodes.Add() | nodes.Subtract() as binary_operator:
+                left = evaluate_analog_ast(ast.left, parameters, t1, t2, timestep)
+                right = evaluate_analog_ast(ast.right, parameters, t1, t2, timestep)
+                if left.units != right.units:
+                    raise InvalidDimensionalityError(
+                        f"Cannot add {ast.left} with units {left.units} to "
+                        f"{ast.right} with units {right.units}."
+                    )
+                left_magnitudes = left.magnitudes
+                if isinstance(binary_operator, nodes.Subtract):
+                    right_magnitudes = negate(right.magnitudes)
+                else:
+                    right_magnitudes = right.magnitudes
+                return AnalogInstruction(
+                    magnitudes=add(left_magnitudes, right_magnitudes),
+                    units=left.units,
+                )
             case _:
                 assert_never(ast)
 
@@ -236,3 +259,45 @@ def _divide_ramp(ramp: Ramp[np.void]) -> TimedInstruction[np.float64]:
         return create_ramp(a0, stop, len(ramp))
     else:
         return _divide(ramp.to_pattern())
+
+
+def add(
+    a: TimedInstruction[np.float64], b: TimedInstruction[np.float64]
+) -> TimedInstruction[np.float64]:
+    merged = merge_instructions(left=a, right=b)
+    return _add(merged)
+
+
+@functools.singledispatch
+def _add(instruction) -> TimedInstruction[np.float64]:
+    raise NotImplementedError(f"Addition of {type(instruction)} is not supported.")
+
+
+@_add.register(Pattern)
+def _add_pattern(pattern: Pattern[np.void]) -> Pattern[np.float64]:
+    left_array = pattern["left"].array
+    right_array = pattern["right"].array
+    return Pattern.create_without_copy(left_array + right_array)
+
+
+@_add.register(Concatenated)
+def _add_concatenated(
+    concatenated: Concatenated[np.void],
+) -> TimedInstruction[np.float64]:
+    return concatenate(*(_add(instr) for instr in concatenated.instructions))
+
+
+@_add.register(Repeated)
+def _add_repeated(repeated: Repeated[np.void]) -> TimedInstruction[np.float64]:
+    return repeated.repetitions * _add(repeated.instruction)
+
+
+@_add.register(Ramp)
+def _add_ramp(ramp: Ramp[np.void]) -> TimedInstruction[np.float64]:
+    left = ramp["left"]
+    right = ramp["right"]
+
+    a1 = left.slope + right.slope
+    a0 = left.intercept + right.intercept
+    stop = a0 + a1 * len(ramp)
+    return create_ramp(a0, stop, len(ramp))

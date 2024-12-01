@@ -52,3 +52,21 @@ def test_square_wave_divided():
         expr, {}, to_time(0), to_time(1), to_time(1e-6)
     )
     assert result == (Pattern([True]) * 500 + Pattern([False]) * 500) * 1000
+
+
+def test_square_wave_time_offset():
+    expr = Expression("square_wave((t - 0.5 ms) / 1 ms)")
+
+    result = evaluate_time_dependent_digital_expression(
+        expr, {}, to_time(0), to_time(1), to_time(1e-6)
+    )
+    assert result == (Pattern([False]) * 500 + Pattern([True]) * 500) * 1000
+
+
+def test_square_wave_duty_cycle():
+    expr = Expression("square_wave(t / 1 ms, 0.1)")
+
+    result = evaluate_time_dependent_digital_expression(
+        expr, {}, to_time(0), to_time(1), to_time(1e-6)
+    )
+    assert result == (Pattern([True]) * 100 + Pattern([False]) * 900) * 1000
