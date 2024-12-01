@@ -79,8 +79,14 @@ class ShotCompiler(ShotCompilerProtocol):
     async def compile_shot(
         self, shot_parameters: ShotParameters
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
-        return await anyio.to_process.run_sync(
-            self.compile_shot_sync, shot_parameters.parameters
+        # We add a deadline to shot compilation to not hang indefinitely in case of
+        # a bug.
+        with anyio.move_on_after(5):
+            return await anyio.to_process.run_sync(
+                self.compile_shot_sync, shot_parameters.parameters, cancellable=True
+            )
+        raise TimeoutError(
+            "Shot compilation took too long to complete and has been terminated."
         )
 
     @ensure_exception_pickling
