@@ -39,6 +39,8 @@ class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane]):
             if isinstance(value, bool):
                 if value:
                     return self._brush
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignCenter
         else:
             return super().data(index, role)
 
