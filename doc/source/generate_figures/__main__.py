@@ -14,7 +14,7 @@ from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_e
 )
 from caqtus.shot_compilation import ShotContext, SequenceContext
 from caqtus.types.expression import Expression
-from caqtus.types.timelane import TimeLanes, AnalogTimeLane, Ramp
+from caqtus.types.timelane import TimeLanes, AnalogTimeLane, Ramp, DigitalTimeLane
 from doc.source.generate_figures.screen_shot_time_lanes import screenshot_time_lanes
 from screenshot_output_graph import screenshot_output, screenshot_node
 
@@ -46,6 +46,24 @@ def generate_for_constant():
         "images/sequencer_outputs/constant_plot.png",
         bbox_inches="tight",
     )
+
+
+def generate_digital_lane():
+    time_lanes = TimeLanes(
+        ["step 1", "step 3", "step 2", "step 4"],
+        [Expression("1 s"), Expression("1 s"), Expression("1 s"), Expression("1 s")],
+        {
+            "digital lane": DigitalTimeLane(
+                [
+                    False,
+                    Expression("Disabled"),
+                    Expression("square_wave(t / 50 ms, 0.2)"),
+                    True,
+                ]
+            )
+        },
+    )
+    screenshot_time_lanes(time_lanes, "images/digital_lane/example.png")
 
 
 def generate_for_lane():
@@ -91,6 +109,7 @@ def generate_figures():
     screenshot_output(None, "images/sequencer_outputs/output_node.png")
     generate_for_constant()
     generate_for_lane()
+    generate_digital_lane()
 
 
 if __name__ == "__main__":

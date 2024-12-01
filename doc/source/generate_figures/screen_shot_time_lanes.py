@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtCore import QRect, QPoint, QSize
 from PySide6.QtWidgets import QAbstractScrollArea
 
@@ -7,6 +9,8 @@ from caqtus.types.timelane import TimeLanes
 
 
 def screenshot_time_lanes(time_lanes: TimeLanes, filename: str):
+    file = Path(filename)
+    file.parent.mkdir(parents=True, exist_ok=True)
     exp = Experiment()
     exp.setup_default_extensions()
     view = TimeLanesView(exp._extension.condetrol_extension.lane_extension, {})
