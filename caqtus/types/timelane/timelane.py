@@ -380,22 +380,29 @@ class TimeLanes:
         on_setattr=attrs.setters.validate,
     )
 
-    @step_durations.validator  # type: ignore
-    def validate_step_durations(self, _, value):
-        if not all(isinstance(v, Expression) for v in value):
-            raise ValueError("All step durations must be instances of Expression")
-
     @step_names.validator  # type: ignore
     def validate_step_names(self, _, value):
         if not all(isinstance(v, str) for v in value):
             raise ValueError("All step names must be instances of str")
 
+    @step_durations.validator  # type: ignore
+    def validate_step_durations(self, _, value):
+        if len(value) != len(self.step_names):
+            raise ValueError(
+                "The number of step durations must match the number of step names"
+            )
+        if not all(isinstance(v, Expression) for v in value):
+            raise ValueError("All step durations must be instances of Expression")
+
     @lanes.validator  # type: ignore
     def validate_lanes(self, _, value):
         if not all(isinstance(v, TimeLane) for v in value.values()):
             raise ValueError("All lanes must be instances of TimeLane")
-        if not all(len(lane) == self.number_steps for lane in value.values()):
-            raise ValueError("All lanes must have the same length")
+        for name, lane in value.items():
+            if len(lane) != self.number_steps:
+                raise ValueError(
+                    f"Lane '{name}' does not have the same length as the time steps"
+                )
 
     @property
     def number_steps(self) -> int:
