@@ -1,5 +1,4 @@
 import anyio.lowlevel
-import trio
 
 from caqtus.utils._no_public_constructor import NoPublicConstructor
 
@@ -13,14 +12,12 @@ class ShotTimer(metaclass=NoPublicConstructor):
     """
 
     def __init__(self) -> None:
-        # This class relies on the trio implementation.
-        # It would need to be adapted for anyio/asyncio.
-        self._start_time = trio.current_time()
+        self._start_time = anyio.current_time()
 
     def elapsed(self) -> float:
         """Returns the elapsed time since the start of the shot."""
 
-        return trio.current_time() - self._start_time
+        return anyio.current_time() - self._start_time
 
     async def wait_until(self, target_time: float) -> float:
         """Waits until a target time is reached.
@@ -32,7 +29,10 @@ class ShotTimer(metaclass=NoPublicConstructor):
 
         Returns:
             The duration waited for the target time to be reached.
-            This duration can be negative if the target time is in the past.
+            This duration is positive if the target time is in the future at the moment
+            of the call.
+            This duration is negative if the target time is in the past at the moment of
+            the call.
 
         Raises:
             ValueError: If the target time is negative.
@@ -46,11 +46,15 @@ class ShotTimer(metaclass=NoPublicConstructor):
         if target_time < 0:
             raise ValueError("The target time must be positive.")
 
-        duration_to_sleep = target_time - self.elapsed()
+        absolute_target_time = self._start_time + target_time
 
-        if duration_to_sleep < 0:
-            # We still need to await to get a checkpoint.
+        absolute_current_time = anyio.current_time()
+        duration_to_wait = absolute_target_time - absolute_current_time
+
+        if duration_to_wait < 0:
+            # We ensure that we go through a cancellation point even if there is no
+            # wait.
             await anyio.lowlevel.checkpoint()
         else:
-            await trio.sleep(duration_to_sleep)
-        return duration_to_sleep
+            await anyio.sleep_until(absolute_target_time)
+        return duration_to_wait
