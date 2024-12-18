@@ -23,14 +23,14 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
-    "numpy>=1.26.4",
+    "numpy>=2.0",
     "scipy>=1.12.0",
     "sympy>=1.12",
     "polars>=1.3",
     "tblib>=3.0.0",
     "anyio[trio]>=4.3.0",
     "python-benedict>=0.33.2",
-    "pint>=0.23",
+    "pint>=0.24", # Compatibility with numpy >=2.0
     "token-utils>=0.1.8",
     "attrs>=23.2.0",
     "cattrs>=24.1.1",
