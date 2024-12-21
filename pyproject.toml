@@ -167,4 +167,4 @@ enable_incomplete_feature = "NewGenericSyntax"
 select = ["E", "F", "W", "N", "B", "NPY", "ASYNC", "LOG"]
 
 [tool.pyright]
-exclude = ["**/*_ui.py"]
+exclude = ["**/*_ui.py", "caqtus/gui/_common/NodeGraphQt"]
