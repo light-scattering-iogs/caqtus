@@ -21,8 +21,12 @@ from tests.test_gui.test_condetrol.mock_device_configuration import (
 
 def test_edit(qtbot: QtBot):
     device_configurations = {
-        DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
-        DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
+        DeviceName("Device 1"): MockDeviceConfiguration(
+            remote_server=DeviceServerName("default")
+        ),
+        DeviceName("Device 2"): MockDeviceConfiguration(
+            remote_server=DeviceServerName("default")
+        ),
     }
     widget = DeviceConfigurationsEditor(CondetrolDeviceExtension(), parent=None)
     widget.set_device_configurations(device_configurations)
@@ -41,8 +45,12 @@ def test_edit(qtbot: QtBot):
 
 def test_edit_1(qtbot: QtBot):
     device_configurations = {
-        DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
-        DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
+        DeviceName("Device 1"): MockDeviceConfiguration(
+            remote_server=DeviceServerName("default")
+        ),
+        DeviceName("Device 2"): MockDeviceConfiguration(
+            remote_server=DeviceServerName("default")
+        ),
     }
     widget = DeviceConfigurationsEditor(CondetrolDeviceExtension(), parent=None)
     widget.set_device_configurations(device_configurations)
@@ -53,7 +61,7 @@ def test_edit_1(qtbot: QtBot):
     editor = widget.editor()
     assert isinstance(editor, FormDeviceConfigurationEditor)
     assert editor.read_remote_server() == "default"
-    editor.set_remote_server("new")
+    editor.set_remote_server(DeviceServerName("new"))
     widget._list_view.setCurrentIndex(widget._model.index(1, 0))
     new_configs = widget.get_device_configurations()
     assert new_configs[DeviceName("Device 1")].remote_server == "new"
@@ -61,7 +69,7 @@ def test_edit_1(qtbot: QtBot):
 
 
 def test_add_config(qtbot: QtBot):
-    config = MockDeviceConfiguration(remote_server="default")
+    config = MockDeviceConfiguration(remote_server=DeviceServerName("default"))
     view = DeviceConfigurationsEditor(CondetrolDeviceExtension(), parent=None)
     qtbot.addWidget(view)
     view.add_configuration(DeviceName("Device 1"), config)
