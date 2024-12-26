@@ -33,6 +33,3 @@ def test_0(qtbot: QtBot):
         editor.view.viewport(), Qt.MouseButton.LeftButton, pos=source_rect.center()
     )
     qtbot.wait_until(lambda: dropped)
-
-    path = qtbot.screenshot(editor)
-    assert False, path

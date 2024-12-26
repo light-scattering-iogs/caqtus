@@ -1,5 +1,5 @@
 from caqtus.device.sequencer.timing import to_time_step
-from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
+from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (  # noqa: E501
     TimeStepEditor,
 )
 
