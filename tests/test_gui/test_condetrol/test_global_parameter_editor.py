@@ -24,13 +24,12 @@ def test_0(qtbot: QtBot):
     def drop():
         qtbot.mouseMove(editor.view.viewport(), target_rect.center())
         QTest.qWait(50)
-        qtbot.mouseRelease(editor.view.viewport(), Qt.LeftButton)
+        qtbot.mouseRelease(editor.view.viewport(), Qt.MouseButton.LeftButton)
         nonlocal dropped
         dropped = True
 
     QTimer().singleShot(5000, drop)
-    qtbot.mousePress(editor.view.viewport(), Qt.LeftButton, pos=source_rect.center())
+    qtbot.mousePress(
+        editor.view.viewport(), Qt.MouseButton.LeftButton, pos=source_rect.center()
+    )
     qtbot.wait_until(lambda: dropped)
-
-    path = qtbot.screenshot(editor)
-    assert False, path
