@@ -35,6 +35,9 @@ class Unit(
         assert isinstance(result, Unit)
         return result
 
+    def __repr__(self) -> str:
+        return f"Unit(\"{format(self, '~')}\")"
+
 
 BaseUnit = NewType("BaseUnit", Unit)
 """A type that represents a unit expressed in base SI units."""
