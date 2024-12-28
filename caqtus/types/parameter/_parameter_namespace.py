@@ -151,8 +151,8 @@ class ParameterNamespace:
             value = expression.evaluate(results)
             if not is_parameter(value):
                 raise InvalidTypeError(
-                    f"{fmt.expression(value)} for {fmt.shot_param(name)} does not evaluate "
-                    f"to a parameter, but to {fmt.type_(type(value))}",
+                    f"{fmt.expression(value)} for {fmt.shot_param(name)} does not "
+                    f"evaluate to a parameter, but to {fmt.type_(type(value))}",
                 )
             results[name] = value
 

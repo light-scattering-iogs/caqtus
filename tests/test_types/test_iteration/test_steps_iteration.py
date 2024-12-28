@@ -11,7 +11,6 @@ from caqtus.types.parameter import ParameterSchema
 from caqtus.types.parameter._schema import QuantityType, Integer, Float
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from tests.fixtures.steps_iteration import steps_configuration
 
 
 def test_serialization(steps_configuration: StepsConfiguration):
