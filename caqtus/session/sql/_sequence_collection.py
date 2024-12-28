@@ -730,8 +730,10 @@ def _get_sequence_global_parameters(
 
     parameters_content = sequence.parameters.content
 
-    return serialization.converters["json"].structure(
-        parameters_content, ParameterNamespace
+    return Success(
+        serialization.converters["json"].structure(
+            parameters_content, ParameterNamespace
+        )
     )
 
 

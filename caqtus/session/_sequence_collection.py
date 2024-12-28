@@ -81,7 +81,7 @@ class SequenceNotEditableError(SequenceStateError):
 
 
 class SequenceNotLaunchedError(SequenceStateError):
-    """Raised when trying to read the exceptions of a sequence that is not launched."""
+    """Raised when accessing information only available after launching a sequence."""
 
     pass
 
