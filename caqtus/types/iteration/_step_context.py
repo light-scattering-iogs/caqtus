@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from copy import deepcopy
 from typing import Generic, TypeVar, Self
 
@@ -10,8 +11,12 @@ T = TypeVar("T")
 class StepContext(Generic[T]):
     """Immutable context that contains the variables of a given step."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, initial_variables: Mapping[DottedVariableName, T] = None
+    ) -> None:
         self._variables = VariableNamespace[T]()
+        if initial_variables is not None:
+            self._variables.update(dict(initial_variables))
 
     def clone(self) -> Self:
         return deepcopy(self)
