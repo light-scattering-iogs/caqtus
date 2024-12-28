@@ -65,6 +65,16 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
             f"_variable_schema={self._variable_schema})"
         )
 
+    def __str__(self) -> str:
+        constants = (
+            f'"{key}": {value}' for key, value in self._constant_schema.items()
+        )
+        variables = (
+            f'"{key}": {value}' for key, value in self._variable_schema.items()
+        )
+        joined = itertools.chain(constants, variables)
+        return "{" + ", ".join(joined) + "}"
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ParameterSchema):
             return NotImplemented

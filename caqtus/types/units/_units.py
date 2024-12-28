@@ -106,6 +106,12 @@ class Quantity(
         else:
             return float(mag)  # type: ignore[reportReturnType]
 
+    def __str__(self):
+        return format(self, "~")
+
+    def __repr__(self) -> str:
+        return f"Quantity({self.magnitude}, {self.units!r})"
+
 
 def is_quantity(value) -> TypeIs[Quantity]:
     """Returns True if the value is a quantity, False otherwise."""

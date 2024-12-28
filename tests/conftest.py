@@ -94,6 +94,9 @@ def steps_configuration() -> StepsConfiguration:
             VariableDeclaration(
                 variable=DottedVariableName("a"), value=Expression("1")
             ),
+            VariableDeclaration(
+                variable=DottedVariableName("c"), value=Expression("0.0")
+            ),
             LinspaceLoop(
                 variable=DottedVariableName("b"),
                 start=Expression("0"),

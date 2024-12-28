@@ -17,8 +17,9 @@ from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
 )
-from caqtus.types.parameter import ParameterNamespace
-from caqtus.types.units import ureg
+from caqtus.types.parameter import ParameterNamespace, ParameterSchema
+from caqtus.types.parameter._schema import Integer, Float
+from caqtus.types.units import ureg, Quantity, Unit
 from caqtus.types.variable_name import DottedVariableName, VariableName
 from caqtus.utils.result import unwrap
 from .device_configuration import DummyConfiguration
@@ -296,3 +297,23 @@ def test_1(session_maker, steps_configuration: StepsConfiguration, time_lanes):
         sequence = Sequence(p, session)
         d = sequence.get_device_configurations()
     assert d == configurations
+
+
+def test_fetch_schema(
+    session_maker, steps_configuration: StepsConfiguration, time_lanes
+):
+    with session_maker() as session:
+        p = PureSequencePath(r"\a\b\c")
+        session.set_global_parameters(
+            ParameterNamespace.from_mapping({"const": Expression("12 MHz")})
+        )
+        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
+        schema = sequence.get_parameter_schema()
+        assert schema == ParameterSchema(
+            _constant_schema={DottedVariableName("const"): Quantity(12, Unit("MHz"))},
+            _variable_schema={
+                DottedVariableName("a"): Integer(),
+                DottedVariableName("b"): Float(),
+                DottedVariableName("c"): Float(),
+            },
+        )
