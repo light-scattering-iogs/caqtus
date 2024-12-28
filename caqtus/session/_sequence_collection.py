@@ -3,23 +3,26 @@ from __future__ import annotations
 import abc
 import datetime
 from collections.abc import Mapping, Set, Iterable
-from typing import Protocol, Optional, Literal
+from typing import Protocol, Optional, Literal, TYPE_CHECKING
 
 import attrs
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.iteration import IterationConfiguration, Unknown
-from caqtus.types.parameter import Parameter, ParameterNamespace
+from caqtus.types.parameter import Parameter, ParameterNamespace, ParameterSchema
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils.result import Success, Failure
+from caqtus.utils.result import Success, Failure, is_failure_type, is_failure
 from ._data_id import DataId
 from ._exception_summary import TracebackSummary
 from ._path import PureSequencePath
 from ._path_hierarchy import PathError, PathNotFoundError, PathHasChildrenError
 from ._shot_id import ShotId
 from ._state import State
+
+if TYPE_CHECKING:
+    from ._experiment_session import ExperimentSession
 
 
 class PathIsSequenceError(PathError):
@@ -77,6 +80,12 @@ class SequenceNotEditableError(SequenceStateError):
     pass
 
 
+class SequenceNotLaunchedError(SequenceStateError):
+    """Raised when trying to read the exceptions of a sequence that is not launched."""
+
+    pass
+
+
 class SequenceNotCrashedError(SequenceStateError):
     """Raised when trying to read the exceptions of a sequence that is not crashed."""
 
@@ -100,6 +109,12 @@ class SequenceCollection(Protocol):
     :class:`caqtus.session.Sequence` and :class:`caqtus.session.Shot` classes to access
     data from sequences and shots.
     """
+
+    @property
+    def parent_session(self) -> "ExperimentSession":
+        """The session that this collection belongs to."""
+
+        ...
 
     @abc.abstractmethod
     def is_sequence(
@@ -125,6 +140,7 @@ class SequenceCollection(Protocol):
         Success[ParameterNamespace]
         | Failure[PathNotFoundError]
         | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
     ):
         """Get the global parameters that were used by this sequence.
 
@@ -459,6 +475,30 @@ class SequenceCollection(Protocol):
         """Return all sequences in the given state."""
 
         raise NotImplementedError
+
+    def get_parameter_schema(
+        self, path: PureSequencePath
+    ) -> (
+        Success[ParameterSchema]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
+        """Return the parameter schema for this sequence."""
+
+        globals_result = self.get_global_parameters(path)
+        if is_failure_type(globals_result, SequenceNotLaunchedError):
+            sequence_globals = self.parent_session.get_global_parameters()
+        elif is_failure(globals_result):
+            return globals_result
+        else:
+            sequence_globals = globals_result.value
+
+        iterations = self.get_iteration_configuration(path)
+
+        initial_values = sequence_globals.evaluate()
+
+        schema = iterations.get_parameter_schema(initial_values)
+        return Success(schema)
 
 
 @attrs.frozen

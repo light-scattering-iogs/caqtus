@@ -11,7 +11,7 @@ import polars
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel
 from caqtus.types.iteration import IterationConfiguration, Unknown
-from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.parameter import ParameterNamespace, ParameterSchema
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from .shot import Shot
@@ -241,6 +241,20 @@ class Sequence:
         """
 
         return unwrap(self.session.sequences.get_exception(self.path))
+
+    def get_parameter_schema(self) -> ParameterSchema:
+        """Return the types of the parameters used to run this sequence.
+
+        Examples:
+            Get the units of a parameter:
+
+            .. code-block:: python
+                    schema = sequence.get_parameter_schema()
+                    schema["mot.detuning"].units
+                    # Unit("MHz")
+        """
+
+        return unwrap(self.session.sequences.get_parameter_schema(self.path))
 
     def load_shots_data(
         self,

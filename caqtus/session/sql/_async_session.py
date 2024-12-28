@@ -47,6 +47,7 @@ from .._sequence_collection import (
     SequenceNotCrashedError,
     SequenceNotRunningError,
     InvalidStateTransitionError,
+    SequenceNotLaunchedError,
 )
 from .._shot_id import ShotId
 from ..async_session import (
@@ -234,6 +235,7 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         Success[ParameterNamespace]
         | Failure[PathNotFoundError]
         | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
     ):
         return await self._run_sync(_get_sequence_global_parameters, path)
 

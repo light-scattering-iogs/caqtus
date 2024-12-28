@@ -19,6 +19,7 @@ from .._sequence_collection import (
     SequenceNotCrashedError,
     SequenceNotRunningError,
     InvalidStateTransitionError,
+    SequenceNotLaunchedError,
 )
 from .._shot_id import ShotId
 from .._state import State
@@ -86,6 +87,7 @@ class AsyncSequenceCollection(Protocol):
         Success[ParameterNamespace]
         | Failure[PathNotFoundError]
         | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
     ):
         raise NotImplementedError
 
