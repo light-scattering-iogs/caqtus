@@ -9,9 +9,10 @@ from ..variable_name import DottedVariableName
 
 
 class IterationConfiguration(abc.ABC):
-    """Defines how parameters should be iterated over for a sequence.
+    """Defines how parameters should be iterated over.
 
-    This is an abstract base class that defines the interface for iterations.
+    This is an abstract base class that defines the interface for iterations of shots
+    during a sequence.
     It is meant to be subclassed to define different types of iterations.
     """
 
@@ -19,8 +20,8 @@ class IterationConfiguration(abc.ABC):
     def expected_number_shots(self) -> int | Unknown:
         """Return the expected number of shots defined by this iteration.
 
-        If the number of shots can be determined ahead of time, this method should
-        return that number.
+        If the number of shots can be statically determined ahead of time, this method
+        should return that number.
         If the number of shots cannot be determined ahead of time, this method should
         return unknown.
         In doubt, the method must return unknown and not a possibly wrong guess.
