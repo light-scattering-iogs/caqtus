@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import abc
+from collections.abc import Mapping
 from typing import TypeGuard
 
+from ..parameter import Parameter, ParameterSchema
 from ..variable_name import DottedVariableName
 
 
@@ -33,6 +35,25 @@ class IterationConfiguration(abc.ABC):
         This method must return the name of the parameters whose values are changed
         during the iteration.
         The iteration must set the values of all these parameters before each shot.
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_parameter_schema(
+        self, initial_parameters: Mapping[DottedVariableName, Parameter]
+    ) -> ParameterSchema:
+        """Compute the schema of the parameters that are iterated over.
+
+        Args:
+            initial_parameters: The values of the parameters that are defined before the
+                iteration starts.
+
+        Returns:
+            The schema of the parameters that are iterated over.
+
+            If some parameters do not change during the iteration, they can be included
+            in the constant schema.
         """
 
         raise NotImplementedError
