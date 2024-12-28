@@ -63,19 +63,25 @@ class ParameterSchema:
 
     @attrs.frozen
     class Quantity:
-        unit: Unit
+        units: Unit
 
     @attrs.frozen
     class Float:
-        pass
+        @property
+        def units(self) -> None:
+            return None
 
     @attrs.frozen
     class Boolean:
-        pass
+        @property
+        def units(self) -> None:
+            return None
 
     @attrs.frozen
     class Integer:
-        pass
+        @property
+        def units(self) -> None:
+            return None
 
     @classmethod
     def type_from_value(cls, value: Parameter) -> ParameterType:
@@ -86,6 +92,6 @@ class ParameterSchema:
         elif isinstance(value, float):
             return cls.Float()
         elif isinstance(value, Quantity):
-            return cls.Quantity(unit=value.units)
+            return cls.Quantity(units=value.units)
         else:
             assert_never(value)
