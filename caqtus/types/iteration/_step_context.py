@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from copy import deepcopy
-from typing import Generic, TypeVar, Self
+from typing import Generic, TypeVar, Self, Optional
 
 from caqtus.types.variable_name import DottedVariableName
 from .._parameter_namespace import VariableNamespace
@@ -12,7 +12,7 @@ class StepContext(Generic[T]):
     """Immutable context that contains the variables of a given step."""
 
     def __init__(
-        self, initial_variables: Mapping[DottedVariableName, T] = None
+        self, initial_variables: Optional[Mapping[DottedVariableName, T]] = None
     ) -> None:
         self._variables = VariableNamespace[T]()
         if initial_variables is not None:
@@ -27,5 +27,5 @@ class StepContext(Generic[T]):
         return clone
 
     @property
-    def variables(self):
+    def variables(self) -> VariableNamespace[T]:
         return deepcopy(self._variables)

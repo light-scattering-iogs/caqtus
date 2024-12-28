@@ -1,9 +1,10 @@
 from collections.abc import Mapping
+from typing import assert_never
 
 import attrs
 
 from caqtus.types.parameter import Parameter
-from caqtus.types.units import Unit
+from caqtus.types.units import Unit, Quantity
 from caqtus.types.variable_name import DottedVariableName
 
 type ConstantSchema = Mapping[DottedVariableName, Parameter]
@@ -75,3 +76,16 @@ class ParameterSchema:
     @attrs.frozen
     class Integer:
         pass
+
+    @classmethod
+    def type_from_value(cls, value: Parameter) -> ParameterType:
+        if isinstance(value, bool):
+            return cls.Boolean()
+        elif isinstance(value, int):
+            return cls.Integer()
+        elif isinstance(value, float):
+            return cls.Float()
+        elif isinstance(value, Quantity):
+            return cls.Quantity(unit=value.units)
+        else:
+            assert_never(value)
