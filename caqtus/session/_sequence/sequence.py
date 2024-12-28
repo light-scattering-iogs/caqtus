@@ -113,7 +113,7 @@ class Sequence:
                 are only set once the sequence has entered the PREPARING state.
         """
 
-        return self.session.sequences.get_global_parameters(self.path)
+        return unwrap(self.session.sequences.get_global_parameters(self.path))
 
     def get_iteration_configuration(self) -> IterationConfiguration:
         """Return the iteration configuration of the sequence."""

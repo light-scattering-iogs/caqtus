@@ -167,7 +167,13 @@ class SQLSequenceCollection(SequenceCollection):
 
         sequence.parameters.content = parameters_content
 
-    def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+    def get_global_parameters(
+        self, path: PureSequencePath
+    ) -> (
+        Success[ParameterNamespace]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         return _get_sequence_global_parameters(self._get_sql_session(), path)
 
     def get_iteration_configuration(
@@ -700,8 +706,15 @@ def _get_stats(
 
 def _get_sequence_global_parameters(
     session: Session, path: PureSequencePath
-) -> ParameterNamespace:
-    sequence = unwrap(_query_sequence_model(session, path))
+) -> (
+    Success[ParameterNamespace]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+):
+    sequence_result = _query_sequence_model(session, path)
+    if is_failure(sequence_result):
+        return sequence_result
+    sequence = sequence_result.value
 
     if sequence.state == State.DRAFT:
         raise RuntimeError("Sequence has not been prepared yet")

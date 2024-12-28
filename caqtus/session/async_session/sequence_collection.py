@@ -80,7 +80,13 @@ class AsyncSequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+    async def get_global_parameters(
+        self, path: PureSequencePath
+    ) -> (
+        Success[ParameterNamespace]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         raise NotImplementedError
 
     @abc.abstractmethod

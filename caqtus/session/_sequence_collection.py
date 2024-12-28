@@ -119,7 +119,13 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+    def get_global_parameters(
+        self, path: PureSequencePath
+    ) -> (
+        Success[ParameterNamespace]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         """Get the global parameters that were used by this sequence.
 
         Raises:
