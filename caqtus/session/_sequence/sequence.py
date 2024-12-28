@@ -249,9 +249,10 @@ class Sequence:
             Get the units of a parameter:
 
             .. code-block:: python
-                    schema = sequence.get_parameter_schema()
-                    schema["mot.detuning"].units
-                    # Unit("MHz")
+
+                schema = sequence.get_parameter_schema()
+                schema["mot.detuning"].units
+                # Unit("MHz")
         """
 
         return unwrap(self.session.sequences.get_parameter_schema(self.path))
