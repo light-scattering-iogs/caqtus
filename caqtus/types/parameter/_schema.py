@@ -1,3 +1,4 @@
+import itertools
 from collections.abc import Mapping
 from typing import assert_never
 
@@ -9,15 +10,10 @@ from caqtus.types.variable_name import DottedVariableName
 
 type ConstantSchema = Mapping[DottedVariableName, Parameter]
 type VariableSchema = Mapping[DottedVariableName, ParameterType]
-type ParameterType = (
-    ParameterSchema.Boolean
-    | ParameterSchema.Integer
-    | ParameterSchema.Float
-    | ParameterSchema.Quantity
-)
+type ParameterType = (Boolean | Integer | Float | QuantityType)
 
 
-class ParameterSchema:
+class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
     """Contains the type of each parameter in a sequence."""
 
     def __init__(
@@ -33,6 +29,22 @@ class ParameterSchema:
             )
         self._constant_schema = _constant_schema
         self._variable_schema = _variable_schema
+
+    def __len__(self):
+        return len(self._constant_schema) + len(self._variable_schema)
+
+    def __iter__(self):
+        return itertools.chain(self._constant_schema, self._variable_schema)
+
+    def __getitem__(self, key: DottedVariableName | str) -> ParameterType:
+        if isinstance(key, str):
+            key = DottedVariableName(key)
+        if key in self._constant_schema:
+            return self.type_from_value(self._constant_schema[key])
+        elif key in self._variable_schema:
+            return self._variable_schema[key]
+        else:
+            raise KeyError(key)
 
     @property
     def constant_schema(self) -> ConstantSchema:
@@ -61,37 +73,41 @@ class ParameterSchema:
             and self._variable_schema == other._variable_schema
         )
 
-    @attrs.frozen
-    class Quantity:
-        units: Unit
-
-    @attrs.frozen
-    class Float:
-        @property
-        def units(self) -> None:
-            return None
-
-    @attrs.frozen
-    class Boolean:
-        @property
-        def units(self) -> None:
-            return None
-
-    @attrs.frozen
-    class Integer:
-        @property
-        def units(self) -> None:
-            return None
-
     @classmethod
     def type_from_value(cls, value: Parameter) -> ParameterType:
         if isinstance(value, bool):
-            return cls.Boolean()
+            return Boolean()
         elif isinstance(value, int):
-            return cls.Integer()
+            return Integer()
         elif isinstance(value, float):
-            return cls.Float()
+            return Float()
         elif isinstance(value, Quantity):
-            return cls.Quantity(units=value.units)
+            return QuantityType(units=value.units)
         else:
             assert_never(value)
+
+
+@attrs.frozen
+class QuantityType:
+    units: Unit
+
+
+@attrs.frozen
+class Float:
+    @property
+    def units(self) -> None:
+        return None
+
+
+@attrs.frozen
+class Boolean:
+    @property
+    def units(self) -> None:
+        return None
+
+
+@attrs.frozen
+class Integer:
+    @property
+    def units(self) -> None:
+        return None
