@@ -8,6 +8,7 @@ from caqtus.types.iteration import (
     VariableDeclaration,
 )
 from caqtus.types.parameter import ParameterSchema
+from caqtus.types.parameter._schema import QuantityType, Integer, Float
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from tests.fixtures.steps_iteration import steps_configuration
@@ -86,9 +87,7 @@ def test_parameter_schema_no_constants():
     )
     assert steps.get_parameter_schema({}) == ParameterSchema(
         _constant_schema={},
-        _variable_schema={
-            DottedVariableName("a"): ParameterSchema.Quantity(Unit("MHz"))
-        },
+        _variable_schema={DottedVariableName("a"): QuantityType(Unit("MHz"))},
     )
 
 
@@ -110,8 +109,8 @@ def test_parameter_schema_constants():
     assert steps.get_parameter_schema({DottedVariableName("a"): 0}) == ParameterSchema(
         _constant_schema={DottedVariableName("a"): 0},
         _variable_schema={
-            DottedVariableName("var"): ParameterSchema.Integer(),
-            DottedVariableName("b"): ParameterSchema.Float(),
+            DottedVariableName("var"): Integer(),
+            DottedVariableName("b"): Float(),
         },
     )
 
@@ -132,5 +131,5 @@ def test_parameter_schema_constant_redefinition():
     )
     assert steps.get_parameter_schema({DottedVariableName("a"): 0}) == ParameterSchema(
         _constant_schema={},
-        _variable_schema={DottedVariableName("a"): ParameterSchema.Float()},
+        _variable_schema={DottedVariableName("a"): Float()},
     )
