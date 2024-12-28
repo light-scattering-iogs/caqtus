@@ -48,12 +48,15 @@ class IterationConfiguration(abc.ABC):
         Args:
             initial_parameters: The values of the parameters that are defined before the
                 iteration starts.
+                Unless the iteration overwrites the values of these parameters, they
+                are considered constant during the iteration.
 
         Returns:
             The schema of the parameters that are iterated over.
 
-            If some parameters do not change during the iteration, they can be included
-            in the constant schema.
+            Implementations of this method should infer the types of the parameters
+            correctly as the consumers of this method rely on the correctness of the
+            inferred types.
         """
 
         raise NotImplementedError
