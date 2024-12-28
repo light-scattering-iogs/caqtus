@@ -3,11 +3,12 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence, Mapping
 from typing import Union, Any, Self
 
-from caqtus.formatter import fmt
+import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ._parameter import Parameter, is_parameter
+from ..recoverable_exceptions import InvalidTypeError
 
 MappingNamespace = Mapping[
     str | DottedVariableName, Union[Expression, "MappingNamespace"]
@@ -149,14 +150,9 @@ class ParameterNamespace:
         for name, expression in self.flatten():
             value = expression.evaluate(results)
             if not is_parameter(value):
-                raise TypeError(
-                    fmt(
-                        "{:expression}> for {:parameter}> does not "
-                        "evaluate to a valid parameter type, got {:type}.",
-                        expression,
-                        name,
-                        type(value),
-                    )
+                raise InvalidTypeError(
+                    f"{fmt.expression(value)} for {fmt.shot_param(name)} does not evaluate "
+                    f"to a parameter, but to {fmt.type_(type(value))}",
                 )
             results[name] = value
 
