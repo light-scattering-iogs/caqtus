@@ -364,7 +364,7 @@ async def _query_sequence_state_async(
             path, iterations=iterations, time_lanes=time_lanes, sequence_state=state
         )
     else:
-        parameters = await session.sequences.get_global_parameters(path)
+        parameters = unwrap(await session.sequences.get_global_parameters(path))
         if state == State.CRASHED:
             tb_summary = unwrap(await session.sequences.get_traceback_summary(path))
             return _SequenceCrashedState(
@@ -413,7 +413,7 @@ def _query_sequence_state_sync(
             path, iterations=iterations, time_lanes=time_lanes, sequence_state=state
         )
     else:
-        parameters = session.sequences.get_global_parameters(path)
+        parameters = unwrap(session.sequences.get_global_parameters(path))
         if state == State.CRASHED:
             traceback_summary = unwrap(session.sequences.get_exception(path))
             return _SequenceCrashedState(

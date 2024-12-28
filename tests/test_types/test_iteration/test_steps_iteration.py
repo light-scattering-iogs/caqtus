@@ -5,9 +5,12 @@ from caqtus.types.iteration import (
     ExecuteShot,
     ArangeLoop,
     is_unknown,
+    VariableDeclaration,
 )
+from caqtus.types.parameter import ParameterSchema
+from caqtus.types.parameter._schema import QuantityType, Integer, Float
+from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from tests.fixtures.steps_iteration import steps_configuration
 
 
 def test_serialization(steps_configuration: StepsConfiguration):
@@ -65,3 +68,67 @@ def test_parameter_names():
         ]
     )
     assert steps.get_parameter_names() == {DottedVariableName("a")}
+
+
+def test_parameter_schema_no_constants():
+    steps = StepsConfiguration(
+        steps=[
+            LinspaceLoop(
+                variable=DottedVariableName("a"),
+                start=Expression("0 MHz"),
+                stop=Expression("10 kHz"),
+                num=10,
+                sub_steps=[
+                    ExecuteShot(),
+                ],
+            ),
+        ]
+    )
+    assert steps.get_parameter_schema({}) == ParameterSchema(
+        _constant_schema={},
+        _variable_schema={DottedVariableName("a"): QuantityType(Unit("MHz"))},
+    )
+
+
+def test_parameter_schema_constants():
+    steps = StepsConfiguration(
+        steps=[
+            VariableDeclaration(DottedVariableName("var"), Expression("2 * a")),
+            LinspaceLoop(
+                variable=DottedVariableName("b"),
+                start=Expression("0"),
+                stop=Expression("1"),
+                num=10,
+                sub_steps=[
+                    ExecuteShot(),
+                ],
+            ),
+        ]
+    )
+    assert steps.get_parameter_schema({DottedVariableName("a"): 0}) == ParameterSchema(
+        _constant_schema={DottedVariableName("a"): 0},
+        _variable_schema={
+            DottedVariableName("var"): Integer(),
+            DottedVariableName("b"): Float(),
+        },
+    )
+
+
+def test_parameter_schema_constant_redefinition():
+    steps = StepsConfiguration(
+        steps=[
+            LinspaceLoop(
+                variable=DottedVariableName("a"),
+                start=Expression("0"),
+                stop=Expression("1"),
+                num=10,
+                sub_steps=[
+                    ExecuteShot(),
+                ],
+            ),
+        ]
+    )
+    assert steps.get_parameter_schema({DottedVariableName("a"): 0}) == ParameterSchema(
+        _constant_schema={},
+        _variable_schema={DottedVariableName("a"): Float()},
+    )

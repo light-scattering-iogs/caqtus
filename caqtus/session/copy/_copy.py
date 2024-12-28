@@ -140,7 +140,7 @@ def copy_sequence(
     if state == State.DRAFT:
         return Success(None)
     device_configs = source_session.sequences.get_device_configurations(path)
-    global_parameters = source_session.sequences.get_global_parameters(path)
+    global_parameters = unwrap(source_session.sequences.get_global_parameters(path))
     preparing_result = destination_session.sequences.set_preparing(
         path, device_configs, global_parameters
     )

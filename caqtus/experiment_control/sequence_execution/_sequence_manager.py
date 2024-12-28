@@ -26,9 +26,10 @@ from caqtus.types.recoverable_exceptions import split_recoverable
 from caqtus.utils.result import unwrap
 from ._shot_compiler import ShotCompilerFactory, create_shot_compiler
 from ._shot_runner import ShotRunnerFactory, create_shot_runner
-from .sequence_runner import execute_steps, evaluate_initial_context
+from .sequence_runner import execute_steps
 from .shots_manager import ShotManager, ShotData, ShotScheduler, ShotRetryConfig
 from ..device_manager_extension import DeviceManagerExtensionProtocol
+from ...types.iteration._step_context import StepContext
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ async def run_sequence(
         shot_runner_factory=shot_runner_factory,
         shot_compiler_factory=shot_compiler_factory,
     )
-    initial_context = evaluate_initial_context(sequence_manager.sequence_parameters)
+    initial_context = StepContext(sequence_manager.sequence_parameters.evaluate())
     async with sequence_manager.run_sequence() as shot_scheduler:
         await execute_steps(iteration, initial_context, shot_scheduler)
 

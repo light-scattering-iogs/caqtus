@@ -19,6 +19,7 @@ from .._sequence_collection import (
     SequenceNotCrashedError,
     SequenceNotRunningError,
     InvalidStateTransitionError,
+    SequenceNotLaunchedError,
 )
 from .._shot_id import ShotId
 from .._state import State
@@ -80,7 +81,14 @@ class AsyncSequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+    async def get_global_parameters(
+        self, path: PureSequencePath
+    ) -> (
+        Success[ParameterNamespace]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
         raise NotImplementedError
 
     @abc.abstractmethod
