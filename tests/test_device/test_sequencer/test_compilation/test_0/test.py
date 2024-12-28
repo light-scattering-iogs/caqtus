@@ -3,11 +3,9 @@ from caqtus.device.sequencer import SequencerCompiler
 from caqtus.device.sequencer.timing import number_time_steps
 
 from caqtus.experiment_control.sequence_execution._shot_compiler import ShotCompiler
-from caqtus.experiment_control.sequence_execution.sequence_runner import (
-    evaluate_initial_context,
-)
 from caqtus.shot_compilation import SequenceContext
 from caqtus.shot_compilation.timing import to_time
+from caqtus.types.iteration._step_context import StepContext
 from .device_configurations import configs
 from .global_parameters import parameters
 from .iterations import iterations
@@ -19,7 +17,7 @@ def test_0():
     # precision.
     # It was solved by using decimal times during shot compilation.
     for i, context in enumerate(  # noqa: B007
-        iterations.walk(evaluate_initial_context(parameters))
+        iterations.walk(StepContext(parameters.evaluate()))
     ):
         if i == 22:
             break

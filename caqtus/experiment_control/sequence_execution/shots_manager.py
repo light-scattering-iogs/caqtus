@@ -383,6 +383,9 @@ class ShotScheduler:
         self._current_shot = 0
 
     async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
+        # TODO: Should return an awaitable that allows to wait until the shot is
+        #  completed, and optionally stored.
+        #  This would make it possible to have live feedback when scheduling shots.
         shot_parameters = ShotParameters(
             index=self._current_shot, parameters=shot_variables
         )

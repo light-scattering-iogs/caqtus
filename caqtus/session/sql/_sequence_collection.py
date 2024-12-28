@@ -62,6 +62,7 @@ from .._sequence_collection import (
     SequenceNotCrashedError,
     InvalidStateTransitionError,
     SequenceNotRunningError,
+    SequenceNotLaunchedError,
 )
 from .._sequence_collection import SequenceCollection
 from .._shot_id import ShotId
@@ -74,8 +75,12 @@ if TYPE_CHECKING:
 
 @attrs.frozen
 class SQLSequenceCollection(SequenceCollection):
-    parent_session: "SQLExperimentSession"
+    _parent_session: "SQLExperimentSession"
     serializer: SerializerProtocol
+
+    @property
+    def parent_session(self) -> "SQLExperimentSession":
+        return self._parent_session
 
     def is_sequence(
         self, path: PureSequencePath
@@ -167,7 +172,14 @@ class SQLSequenceCollection(SequenceCollection):
 
         sequence.parameters.content = parameters_content
 
-    def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+    def get_global_parameters(
+        self, path: PureSequencePath
+    ) -> (
+        Success[ParameterNamespace]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
         return _get_sequence_global_parameters(self._get_sql_session(), path)
 
     def get_iteration_configuration(
@@ -700,16 +712,28 @@ def _get_stats(
 
 def _get_sequence_global_parameters(
     session: Session, path: PureSequencePath
-) -> ParameterNamespace:
-    sequence = unwrap(_query_sequence_model(session, path))
+) -> (
+    Success[ParameterNamespace]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[SequenceNotLaunchedError]
+):
+    sequence_result = _query_sequence_model(session, path)
+    if is_failure(sequence_result):
+        return sequence_result
+    sequence = sequence_result.value
 
     if sequence.state == State.DRAFT:
-        raise RuntimeError("Sequence has not been prepared yet")
+        return Failure(
+            SequenceNotLaunchedError(f"Sequence at {path} is in DRAFT state")
+        )
 
     parameters_content = sequence.parameters.content
 
-    return serialization.converters["json"].structure(
-        parameters_content, ParameterNamespace
+    return Success(
+        serialization.converters["json"].structure(
+            parameters_content, ParameterNamespace
+        )
     )
 
 

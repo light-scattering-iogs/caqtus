@@ -47,6 +47,7 @@ from .._sequence_collection import (
     SequenceNotCrashedError,
     SequenceNotRunningError,
     InvalidStateTransitionError,
+    SequenceNotLaunchedError,
 )
 from .._shot_id import ShotId
 from ..async_session import (
@@ -228,7 +229,14 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
     async def get_time_lanes(self, path: PureSequencePath) -> TimeLanes:
         return await self._run_sync(_get_time_lanes, path, self.serializer)
 
-    async def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+    async def get_global_parameters(
+        self, path: PureSequencePath
+    ) -> (
+        Success[ParameterNamespace]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
         return await self._run_sync(_get_sequence_global_parameters, path)
 
     async def get_iteration_configuration(

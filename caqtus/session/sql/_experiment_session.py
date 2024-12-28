@@ -67,9 +67,7 @@ class SQLExperimentSession(ExperimentSession):
         super().__init__(*args, **kwargs)
         self._state = Inactive(session_context=session_context)
         self._paths = SQLPathHierarchy(parent_session=self)
-        self._sequences = SQLSequenceCollection(
-            parent_session=self, serializer=serializer
-        )
+        self._sequences = SQLSequenceCollection(self, serializer)
         self.default_device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self, serializer=serializer
         )

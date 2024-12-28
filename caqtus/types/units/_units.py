@@ -35,6 +35,9 @@ class Unit(
         assert isinstance(result, Unit)
         return result
 
+    def __repr__(self) -> str:
+        return f"Unit(\"{format(self, '~')}\")"
+
 
 BaseUnit = NewType("BaseUnit", Unit)
 """A type that represents a unit expressed in base SI units."""
@@ -102,6 +105,12 @@ class Quantity(
             return mag.astype(float)  # type: ignore[reportReturnType]
         else:
             return float(mag)  # type: ignore[reportReturnType]
+
+    def __str__(self):
+        return format(self, "~")
+
+    def __repr__(self) -> str:
+        return f"Quantity({self.magnitude}, {self.units!r})"
 
 
 def is_quantity(value) -> TypeIs[Quantity]:

@@ -3,8 +3,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Iterable, Callable, Generator
 from collections.abc import Mapping, Iterator
-from typing import TypeAlias, TypeGuard, Any, assert_type
-from typing import assert_never
+from typing import TypeAlias, TypeGuard, Any, assert_type, override, assert_never
 
 import attrs
 import numpy
@@ -13,6 +12,8 @@ import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
     NotAnalogValueError,
+    Parameter,
+    ParameterSchema,
 )
 from caqtus.types.parameter import is_parameter
 from caqtus.types.recoverable_exceptions import InvalidTypeError
@@ -373,7 +374,36 @@ class StepsConfiguration(IterationConfiguration):
         return serialization.structure(data, StepsConfiguration)
 
     def walk(self, initial_context: StepContext) -> Iterator[StepContext]:
+        """Returns the context for every shot encountered while walking the steps."""
+
         return walk_steps(self.steps, initial_context)
+
+    @override
+    def get_parameter_schema(
+        self, initial_parameters: Mapping[DottedVariableName, Parameter]
+    ) -> ParameterSchema:
+        context_iterator = self.walk(StepContext(initial_parameters))
+        try:
+            first_context = next(context_iterator)
+        except StopIteration:
+            # In case there is not steps to walk, we return a schema made only of the
+            # initial constant parameters.
+            return ParameterSchema(
+                _constant_schema=initial_parameters, _variable_schema={}
+            )
+        variable_parameters = self.get_parameter_names()
+        constant_parameters = set(initial_parameters) - variable_parameters
+        constant_schema = {
+            name: first_context.variables[name] for name in constant_parameters
+        }
+        initial_values = first_context.variables.to_flat_dict()
+        variable_schema = {
+            name: ParameterSchema.type_from_value(initial_values[name])
+            for name in variable_parameters
+        }
+        return ParameterSchema(
+            _constant_schema=constant_schema, _variable_schema=variable_schema
+        )
 
 
 @functools.singledispatch
