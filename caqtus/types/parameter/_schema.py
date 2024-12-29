@@ -109,6 +109,45 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
         else:
             assert_never(value)
 
+    def enforce(
+        self, values: Mapping[DottedVariableName, Parameter]
+    ) -> Mapping[DottedVariableName, Parameter]:
+        """Enforce the schema on a set of values.
+
+        This method checks that the values are compatible with the schema and returns a
+        dictionary with the same keys and the values coerced to the correct types.
+
+        Raises:
+            KeyError: If a parameter is missing from the values.
+            ValueError: If the values are not compatible with the schema, or if extra
+                parameters are present in the values.
+        """
+
+        values = dict(values)
+
+        for constant_name, constant_value in self._constant_values.items():
+            if values.pop(constant_name) != constant_value:
+                raise ValueError(
+                    f"Constant parameter {constant_name} must be {constant_value}."
+                )
+
+        result = dict(self._constant_values)
+        for variable_name, variable_type in self._variable_types.items():
+            value = values.pop(variable_name)
+            try:
+                converted = variable_type.convert(value)
+            except ValueError as e:
+                raise ValueError(
+                    f"Parameter {variable_name} cannot be converted to the expected "
+                    f"type: {variable_type}"
+                ) from e
+            result[variable_name] = converted
+
+        if values:
+            raise ValueError(f"Unexpected parameters: {values.keys()}")
+
+        return result
+
 
 @attrs.frozen
 class QuantityType:
@@ -135,6 +174,9 @@ class QuantityType:
                     raise ValueError(f"Can't coerce value {value} to quantity.")
             case _:
                 assert_never(value)
+
+    def __str__(self):
+        return f"quantity<{self.units}>"
 
 
 @attrs.frozen
@@ -167,6 +209,9 @@ class Float:
             case _:
                 assert_never(value)
 
+    def __str__(self):
+        return "float"
+
 
 @attrs.frozen
 class Boolean:
@@ -193,6 +238,9 @@ class Boolean:
             case _:
                 assert_never(value)
 
+    def __str__(self):
+        return "bool"
+
 
 @attrs.frozen
 class Integer:
@@ -213,3 +261,6 @@ class Integer:
                 raise ValueError(f"Can't coerce quantity {value} to integer.")
             case _:
                 assert_never(value)
+
+    def __str__(self):
+        return "int"
