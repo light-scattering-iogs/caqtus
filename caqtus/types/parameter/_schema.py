@@ -5,7 +5,7 @@ from typing import assert_never
 import attrs
 
 from caqtus.types.parameter import Parameter
-from caqtus.types.units import Unit, Quantity
+from caqtus.types.units import Unit, Quantity, dimensionless
 from caqtus.types.variable_name import DottedVariableName
 
 type ConstantSchema = Mapping[DottedVariableName, Parameter]
@@ -14,7 +14,15 @@ type ParameterType = (Boolean | Integer | Float | QuantityType)
 
 
 class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
-    """Contains the type of each parameter in a sequence."""
+    """Contains the type of each parameter in a sequence.
+
+    More explicitly, it contains the value of the parameters that are constant during
+    the sequence and the types of the parameters that can change during the sequence.
+    The constant and variable parameters have no overlap.
+
+    This object behaves like an immutable dictionary with the keys being the parameter
+    names and the values being the types of the parameters.
+    """
 
     def __init__(
         self,
@@ -35,6 +43,9 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
 
     def __iter__(self):
         return itertools.chain(self._constant_schema, self._variable_schema)
+
+    def __contains__(self, item) -> bool:
+        return item in self._constant_schema or item in self._variable_schema
 
     def __getitem__(self, key: DottedVariableName | str) -> ParameterType:
         if isinstance(key, str):
@@ -101,12 +112,58 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
 class QuantityType:
     units: Unit
 
+    def convert(self, value: Parameter) -> Quantity[float]:
+        """Convert a value to a quantity with the correct units.
+
+        Raises:
+            ValueError: If the value is not compatible with the units.
+        """
+
+        match value:
+            case int() | float() | bool() as v:
+                if self.units.is_compatible_with(dimensionless):
+                    q = Quantity(v, dimensionless)
+                    return q.to_unit(self.units)
+                else:
+                    raise ValueError(f"Can't coerce value {value} to quantity.")
+            case Quantity() as q:
+                if q.unit.is_compatible_with(self.units):
+                    return q.to_unit(self.units)
+                else:
+                    raise ValueError(f"Can't coerce value {value} to quantity.")
+            case _:
+                assert_never(value)
+
 
 @attrs.frozen
 class Float:
     @property
     def units(self) -> None:
         return None
+
+    @staticmethod
+    def convert(value: Parameter) -> float:
+        """Convert a value to a float.
+
+        Raises:
+            ValueError: If the value can't be converted to a float without loss of
+                information.
+        """
+
+        match value:
+            case bool(v):
+                return float(v)
+            case int(v):
+                return float(v)
+            case float(v):
+                return v
+            case Quantity() as q:
+                if q.unit.is_compatible_with(dimensionless):
+                    return q.to(dimensionless).magnitude
+                else:
+                    raise ValueError(f"Can't coerce quantity {value} to float.")
+            case _:
+                assert_never(value)
 
 
 @attrs.frozen
@@ -115,9 +172,42 @@ class Boolean:
     def units(self) -> None:
         return None
 
+    @staticmethod
+    def convert(value: Parameter) -> bool:
+        match value:
+            case bool(v):
+                return v
+            case int(v):
+                if v == 0:
+                    return False
+                elif v == 1:
+                    return True
+                else:
+                    raise ValueError(f"Can't coerce integer {value} to boolean.")
+            case float():
+                raise ValueError(f"Can't coerce float {value} to boolean.")
+            case Quantity():
+                raise ValueError(f"Can't coerce quantity {value} to boolean.")
+            case _:
+                assert_never(value)
+
 
 @attrs.frozen
 class Integer:
     @property
     def units(self) -> None:
         return None
+
+    @staticmethod
+    def convert(value: Parameter) -> int:
+        match value:
+            case bool(v):
+                return int(v)
+            case int(v):
+                return v
+            case float():
+                raise ValueError(f"Can't coerce float {value} to integer.")
+            case Quantity():
+                raise ValueError(f"Can't coerce quantity {value} to integer.")
+            case _:
+                assert_never(value)
