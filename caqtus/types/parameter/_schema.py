@@ -27,62 +27,64 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
     def __init__(
         self,
         *,
-        _constant_schema: ConstantSchema,
-        _variable_schema: VariableSchema,
+        _constant_values: ConstantSchema,
+        _variable_types: VariableSchema,
     ) -> None:
-        if set(_constant_schema) & set(_variable_schema):
+        if set(_constant_values) & set(_variable_types):
             raise ValueError(
                 "The constant and variable schemas must not have any parameters in "
                 "common."
             )
-        self._constant_schema = _constant_schema
-        self._variable_schema = _variable_schema
+        self._constant_values = _constant_values
+        self._constant_types = {
+            name: self.type_from_value(value)
+            for name, value in _constant_values.items()
+        }
+        self._variable_types = _variable_types
 
     def __len__(self):
-        return len(self._constant_schema) + len(self._variable_schema)
+        return len(self._constant_types) + len(self._variable_types)
 
     def __iter__(self):
-        return itertools.chain(self._constant_schema, self._variable_schema)
+        return itertools.chain(self._constant_types, self._variable_types)
 
     def __contains__(self, item) -> bool:
-        return item in self._constant_schema or item in self._variable_schema
+        return item in self._constant_types or item in self._variable_types
 
     def __getitem__(self, key: DottedVariableName | str) -> ParameterType:
         if isinstance(key, str):
             key = DottedVariableName(key)
-        if key in self._constant_schema:
-            return self.type_from_value(self._constant_schema[key])
-        elif key in self._variable_schema:
-            return self._variable_schema[key]
+        if key in self._constant_types:
+            return self._constant_types[key]
+        elif key in self._variable_types:
+            return self._variable_types[key]
         else:
             raise KeyError(key)
 
     @property
-    def constant_schema(self) -> ConstantSchema:
+    def constant_values(self) -> ConstantSchema:
         """Values of the parameters that are constant during the sequence."""
 
-        return self._constant_schema
+        return self._constant_values
 
     @property
-    def variable_schema(self) -> VariableSchema:
+    def variable_types(self) -> VariableSchema:
         """Types of the parameters that can change during the sequence."""
 
-        return self._variable_schema
+        return self._variable_types
 
     def __repr__(self) -> str:
         return (
             f"ParameterSchema("
-            f"_constant_schema={self._constant_schema}, "
-            f"_variable_schema={self._variable_schema})"
+            f"_constant_schema={self._constant_values}, "
+            f"_variable_schema={self._variable_types})"
         )
 
     def __str__(self) -> str:
         constants = (
-            f'"{key}": {value}' for key, value in self._constant_schema.items()
+            f'"{key}": {value}' for key, value in self._constant_values.items()
         )
-        variables = (
-            f'"{key}": {value}' for key, value in self._variable_schema.items()
-        )
+        variables = (f'"{key}": {value}' for key, value in self._variable_types.items())
         joined = itertools.chain(constants, variables)
         return "{" + ", ".join(joined) + "}"
 
@@ -90,8 +92,8 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
         if not isinstance(other, ParameterSchema):
             return NotImplemented
         return (
-            self._constant_schema == other._constant_schema
-            and self._variable_schema == other._variable_schema
+            self._constant_values == other._constant_values
+            and self._variable_types == other._variable_types
         )
 
     @classmethod

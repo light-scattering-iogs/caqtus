@@ -85,8 +85,8 @@ def test_parameter_schema_no_constants():
         ]
     )
     assert steps.get_parameter_schema({}) == ParameterSchema(
-        _constant_schema={},
-        _variable_schema={DottedVariableName("a"): QuantityType(Unit("MHz"))},
+        _constant_values={},
+        _variable_types={DottedVariableName("a"): QuantityType(Unit("MHz"))},
     )
 
 
@@ -106,8 +106,8 @@ def test_parameter_schema_constants():
         ]
     )
     assert steps.get_parameter_schema({DottedVariableName("a"): 0}) == ParameterSchema(
-        _constant_schema={DottedVariableName("a"): 0},
-        _variable_schema={
+        _constant_values={DottedVariableName("a"): 0},
+        _variable_types={
             DottedVariableName("var"): Integer(),
             DottedVariableName("b"): Float(),
         },
@@ -129,6 +129,6 @@ def test_parameter_schema_constant_redefinition():
         ]
     )
     assert steps.get_parameter_schema({DottedVariableName("a"): 0}) == ParameterSchema(
-        _constant_schema={},
-        _variable_schema={DottedVariableName("a"): Float()},
+        _constant_values={},
+        _variable_types={DottedVariableName("a"): Float()},
     )

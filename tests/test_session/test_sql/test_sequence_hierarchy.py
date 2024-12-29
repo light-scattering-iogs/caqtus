@@ -310,8 +310,8 @@ def test_fetch_schema(
         sequence = Sequence.create(p, steps_configuration, time_lanes, session)
         schema = sequence.get_parameter_schema()
         assert schema == ParameterSchema(
-            _constant_schema={DottedVariableName("const"): Quantity(12, Unit("MHz"))},
-            _variable_schema={
+            _constant_values={DottedVariableName("const"): Quantity(12, Unit("MHz"))},
+            _variable_types={
                 DottedVariableName("a"): Integer(),
                 DottedVariableName("b"): Float(),
                 DottedVariableName("c"): Float(),
