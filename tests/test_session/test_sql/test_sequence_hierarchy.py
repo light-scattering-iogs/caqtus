@@ -18,7 +18,7 @@ from caqtus.types.iteration import (
     StepsConfiguration,
 )
 from caqtus.types.parameter import ParameterNamespace, ParameterSchema
-from caqtus.types.parameter._schema import Integer, Float
+from caqtus.types.parameter._schema import Integer, Float, Constant
 from caqtus.types.units import ureg, Quantity, Unit
 from caqtus.types.variable_name import DottedVariableName, VariableName
 from caqtus.utils.result import unwrap
@@ -310,10 +310,11 @@ def test_fetch_schema(
         sequence = Sequence.create(p, steps_configuration, time_lanes, session)
         schema = sequence.get_parameter_schema()
         assert schema == ParameterSchema(
-            _constant_values={DottedVariableName("const"): Quantity(12, Unit("MHz"))},
-            _variable_types={
+            {
+                DottedVariableName("const"): Constant(Quantity(12, Unit("MHz"))),
                 DottedVariableName("a"): Integer(),
                 DottedVariableName("b"): Float(),
                 DottedVariableName("c"): Float(),
             },
         )
+        print(schema)
