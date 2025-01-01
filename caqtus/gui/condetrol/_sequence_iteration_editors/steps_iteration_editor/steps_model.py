@@ -212,11 +212,6 @@ class StepsModel(QStandardItemModel):
         self.set_steps(steps)
         self._read_only = True
 
-    def invisibleRootItem(self) -> StepItem:
-        result = super().invisibleRootItem()
-        assert isinstance(result, StepItem)
-        return result
-
     def set_read_only(self, read_only: bool):
         self._read_only = read_only
 
@@ -227,7 +222,10 @@ class StepsModel(QStandardItemModel):
         root = self.invisibleRootItem()
         items = [root.child(i) for i in range(root.rowCount())]
         assert all(isinstance(item, StepItem) for item in items)
-        steps = [item.get_step() for item in items]
+        steps = []
+        for item in items:
+            assert isinstance(item, StepItem)
+            steps.append(item.get_step())
         return StepsConfiguration(steps=steps)
 
     def set_steps(self, steps: StepsConfiguration):
