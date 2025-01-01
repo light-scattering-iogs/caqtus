@@ -9,6 +9,7 @@ from PySide6.QtCore import (
     Qt,
     QObject,
     QMimeData,
+    QPersistentModelIndex,
 )
 from PySide6.QtGui import QStandardItem, QStandardItemModel, QPalette
 
@@ -27,6 +28,8 @@ from caqtus.utils import serialization
 NAME_COLOR = "#AA4926"
 VALUE_COLOR = "#6897BB"
 HIGHLIGHT_COLOR = "#cc7832"
+
+type AnyModelIndex = QModelIndex | QPersistentModelIndex
 
 
 @attrs.define
@@ -140,13 +143,13 @@ class StepItem(QStandardItem):
                 variable=variable,
                 start=start,
                 stop=stop,
-                step=step,
+                step=loop_step,
                 sub_steps=sub_steps,
             ):
                 children = [cls.construct(sub_step) for sub_step in sub_steps]
                 item.setData(
                     ArrangeLoopData(
-                        variable=variable, start=start, stop=stop, step=step
+                        variable=variable, start=start, stop=stop, step=loop_step
                     ),
                     Qt.ItemDataRole.EditRole,
                 )
@@ -160,12 +163,17 @@ class StepItem(QStandardItem):
 
         return item
 
-    def data(self, role: Qt.ItemDataRole.DisplayRole = Qt.ItemDataRole.DisplayRole):
+    def data(self, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             step_data = self.data(Qt.ItemDataRole.EditRole)
             assert isinstance(step_data, StepData)
             return step_data.display_data()
         return super().data(role)
+
+    def child(self, row: int, column: int = 0) -> StepItem:
+        result = super().child(row, column)
+        assert isinstance(result, StepItem)
+        return result
 
     def get_step(self) -> Step:
         data = self.data(role=Qt.ItemDataRole.EditRole)
@@ -204,6 +212,11 @@ class StepsModel(QStandardItemModel):
         self.set_steps(steps)
         self._read_only = True
 
+    def invisibleRootItem(self) -> StepItem:
+        result = super().invisibleRootItem()
+        assert isinstance(result, StepItem)
+        return result
+
     def set_read_only(self, read_only: bool):
         self._read_only = read_only
 
@@ -231,7 +244,7 @@ class StepsModel(QStandardItemModel):
             return False
         return super().setData(index, value, role)
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+    def flags(self, index: AnyModelIndex) -> Qt.ItemFlag:
         flags = super().flags(index)
 
         if self._read_only:
@@ -260,7 +273,19 @@ class StepsModel(QStandardItemModel):
         mime_data.setText(serialized)
         return mime_data
 
-    def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
+    def itemFromIndex(self, index: AnyModelIndex) -> StepItem:
+        result = super().itemFromIndex(index)
+        assert isinstance(result, StepItem)
+        return result
+
+    def canDropMimeData(
+        self,
+        data,
+        action,
+        row: int,
+        column: int,
+        parent: QModelIndex | QPersistentModelIndex,
+    ) -> bool:
         if self._read_only:
             return False
         if not data.hasFormat("application/json"):
@@ -273,12 +298,14 @@ class StepsModel(QStandardItemModel):
         action: Qt.DropAction,
         row: int,
         column: int,
-        parent: QModelIndex,
+        parent: QModelIndex | QPersistentModelIndex,
     ) -> bool:
         if not self.canDropMimeData(data, action, row, column, parent):
             return False
 
-        json_string = data.data("application/json").data().decode()
+        bytes_data = data.data("application/json").data()
+        assert isinstance(bytes_data, bytes)
+        json_string = bytes_data.decode()
         try:
             steps = serialization.from_json(json_string, list[Step])
         except ValueError:
@@ -317,6 +344,7 @@ class StepsModel(QStandardItemModel):
         root = self.invisibleRootItem()
         new_item = StepItem.construct(step)
         root.appendRow(new_item)
+        return True
 
 
 def get_strict_descendants(parent: QStandardItem) -> list[QStandardItem]:

@@ -311,7 +311,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         try:
             data = yaml.safe_load(text)
         except yaml.YAMLError as e:
-            QtWidgets.QMessageBox.warning(
+            QtWidgets.QMessageBox.warning(  # type: ignore[reportCallIssue]
                 self,
                 "Invalid YAML content",
                 f"Could not parse the clipboard content as YAML:\n {e}",

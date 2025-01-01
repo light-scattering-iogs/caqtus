@@ -22,9 +22,9 @@ from caqtus.gui.condetrol._icons import get_icon
 from caqtus.gui.qtutil import block_signals
 from caqtus.types.timelane import TimeLanes, TimeLane
 from ._delegate import TimeLaneDelegate
+from ._time_lanes_model import TimeLanesModel
 from .add_lane_dialog import AddLaneDialog
 from .extension import CondetrolLaneExtensionProtocol
-from ._time_lanes_model import TimeLanesModel
 
 
 class TimeLanesEditor(QWidget):
@@ -119,7 +119,7 @@ class TimeLanesEditor(QWidget):
             if not lane_name:
                 return
             if lane_name in self.view.get_time_lanes().lanes:
-                QMessageBox.warning(
+                QMessageBox.warning(  # type: ignore[reportCallIssue]
                     self,
                     "Lane already exists",
                     f"Can't add the lane <i>{lane_name}</i> because there is already "
@@ -154,7 +154,7 @@ class TimeLanesEditor(QWidget):
         try:
             content = yaml.safe_load(text)
         except yaml.YAMLError as e:
-            QMessageBox.warning(
+            QMessageBox.warning(  # type: ignore[reportCallIssue]
                 self,
                 "Invalid YAML content",
                 f"Could not parse the clipboard content as YAML:\n {e}",
