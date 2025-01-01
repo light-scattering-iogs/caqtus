@@ -103,7 +103,7 @@ class TimeStepEditor(QWidget):
 
     def read_time_step(self) -> TimeStep:
         multiple = self.spin_box.value()
-        return self.increment * multiple
+        return TimeStep(self.increment * multiple)
 
 
 def format_suffix(time_step: TimeStep) -> str:
@@ -119,3 +119,4 @@ def format_suffix(time_step: TimeStep) -> str:
         return f" × {time_step / decimal.Decimal('1e6')} ms"
     elif 1e9 <= time_step:
         return f" × {time_step / decimal.Decimal('1e9')} s"
+    raise AssertionError

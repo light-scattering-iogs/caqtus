@@ -82,7 +82,9 @@ class SequencerChannelWidget(QWidget):
             if self.channel_output_editor is not None:
                 previous_editor = self.channel_output_editor
             self.channel_output_editor = ChannelOutputEditor(channel.output, self)
-            self.group_box.layout().addWidget(self.channel_output_editor)
+            layout = self.group_box.layout()
+            assert layout is not None
+            layout.addWidget(self.channel_output_editor)
             if previous_editor:
                 previous_editor.deleteLater()
         else:
@@ -99,5 +101,7 @@ class SequencerChannelWidget(QWidget):
             row = current_item.row()
             self.channels[row].output = output
         for row, channel in enumerate(self.channels):
-            channel.description = self.channel_table.item(row, 0).text()
+            item = self.channel_table.item(row, 0)
+            assert item is not None
+            channel.description = item.text()
         return copy.deepcopy(self.channels)

@@ -16,14 +16,12 @@ AvailableTriggers = Literal[
     "Software", "External start", "External clock", "External adaptive clock"
 ]
 
-DEFAULT_AVAILABLE_TRIGGERS = frozenset(
-    [
-        "Software",
-        "External start",
-        "External clock",
-        "External adaptive clock",
-    ]
-)
+DEFAULT_AVAILABLE_TRIGGERS: Set[AvailableTriggers] = {
+    "Software",
+    "External start",
+    "External clock",
+    "External adaptive clock",
+}
 
 
 class TriggerSelector(QComboBox):

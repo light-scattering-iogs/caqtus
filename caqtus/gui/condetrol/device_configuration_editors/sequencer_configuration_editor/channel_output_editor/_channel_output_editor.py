@@ -259,4 +259,4 @@ def zoom_to_nodes(graph: NodeGraph) -> QRect:
 
     graph.viewer().setSceneRect(rect)
     graph.viewer().fitInView(rect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-    return rect
+    return rect  # type: ignore[reportReturnType]
