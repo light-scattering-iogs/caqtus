@@ -1,6 +1,8 @@
 import typing
 from collections.abc import Callable
 
+import attrs
+
 from .._value_editor import ValueEditor
 
 # TODO: Use PEP 747 if accepted
@@ -43,6 +45,9 @@ class EditorBuilder:
         If the type is not registered, but is an attrs class, an editor will be built
         for it by calling :func:`build_attrs_class_editor`.
 
+        If the type is not registered byr is a `typing.Literal`, an editor will be built
+        for it by calling :func:`build_literal_editor`.
+
         Raises:
             TypeNotRegisteredError: If no editor is registered to handle the given type,
                 and it is not possible to infer an editor from the type.
@@ -60,15 +65,18 @@ class EditorBuilder:
         try:
             return self._editor_factories[type_]
         except KeyError:
-            import attrs
+            if origin == typing.Literal:
+                from ._literal import build_literal_editor
 
-            from ._attrs import build_attrs_class_editor
+                return build_literal_editor(*typing.get_args(type_))
+            elif attrs.has(type_):
+                from ._attrs import build_attrs_class_editor
 
-            if attrs.has(type_):
                 return build_attrs_class_editor(type_, self)
-            raise TypeNotRegisteredError(
-                f"No editor is registered to handle {type_}"
-            ) from None
+            else:
+                raise TypeNotRegisteredError(
+                    f"No editor is registered to handle {type_}"
+                ) from None
 
 
 class EditorBuildingError(Exception):

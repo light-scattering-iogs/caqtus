@@ -1,5 +1,8 @@
+import typing
+
 import attrs
 import pytest
+from PySide6 import QtWidgets
 from pytestqt.qtbot import QtBot
 
 from caqtus.gui.autogen import (
@@ -71,3 +74,16 @@ def test_nested_class(qtbot: QtBot):
     qtbot.add_widget(widget)
     editor.set_editable(True)
     assert editor.read_value() == initial_value
+
+
+def test_literal_editor(qtbot: QtBot):
+    builder = EditorBuilder()
+
+    editor_factory = builder.build_editor(typing.Literal["abc", 123])
+    editor = editor_factory()
+
+    widget = editor.widget()
+    qtbot.add_widget(widget)
+    assert isinstance(widget, QtWidgets.QComboBox)
+    widget.setCurrentIndex(1)
+    assert editor.read_value() == 123

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Method `Sequence.get_parameter_schema` to get statically defined information about the
   parameters of a sequence
+- Support for `typing.Literal` when automatically building device configuration editor
 
 ### Changed
 
