@@ -47,11 +47,12 @@ def build_attrs_class_editor[
 
     attr_ui_infos = []
     for field in fields:
-        override = attr_overrides.get(field.name, None)
+        override = attr_overrides.pop(field.name, None)
         try:
             label = get_attribute_label(field, override)
             editor_factory = get_attribute_editor_factory(field, override, builder)
             tooltip = get_attribute_tooltip(field, override)
+            order = override.order if override is not None else 0
         except Exception as e:
             raise AttributeEditorBuildingError(cls, field) from e
         attr_ui_infos.append(
@@ -60,8 +61,14 @@ def build_attrs_class_editor[
                 label=label,
                 editor_factory=editor_factory,
                 tooltip=tooltip,
+                order=order,
             )
         )
+    if attr_overrides:
+        raise ValueError(
+            f"Unknown attribute overrides: {', '.join(attr_overrides.keys())}"
+        )
+    attr_ui_infos.sort(key=lambda ui_info: ui_info.order)
 
     return functools.partial(AttrsEditor, cls, tuple(attr_ui_infos))
 
@@ -115,9 +122,21 @@ class AttrsEditor[T: attrs.AttrsInstance](ValueEditor[T]):
 
 @attrs.frozen
 class AttributeOverride:
+    """Overrides for the automatic generation of an attribute editor.
+
+    Attributes:
+        label: The label to use for the attribute.
+        editor_factory: The editor factory to use for the attribute.
+        tooltip: The tooltip to show for the attribute.
+        order: The order in which to show the attribute in the editor.
+            Attributes will be listed in ascending order.
+            Default is 0.
+    """
+
     label: str | None = None
     editor_factory: EditorFactory | None = None
     tooltip: str | None = None
+    order: int = 0
 
 
 @attrs.frozen
@@ -126,6 +145,7 @@ class AttributeUIInfo:
     label: str
     editor_factory: EditorFactory
     tooltip: str | None
+    order: int
 
     @property
     def editor_name(self) -> str:
