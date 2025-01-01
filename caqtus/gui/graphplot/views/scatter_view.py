@@ -10,9 +10,9 @@ import pyqtgraph
 import qtawesome
 from PySide6.QtCore import QStringListModel
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QCompleter
+
 from caqtus.analysis.units import extract_unit
 from caqtus.gui.graphplot.views.view import DataView
-
 from .scatter_view_ui import Ui_ScatterView
 
 
@@ -23,7 +23,9 @@ class ScatterView(DataView, Ui_ScatterView):
 
         self.plot_widget = pyqtgraph.PlotWidget(self, background="white")
         self.plot_widget.enableAutoRange()
-        self.plot_item = self.plot_widget.getPlotItem()
+        plot_item = self.plot_widget.getPlotItem()
+        assert plot_item is not None
+        self.plot_item = plot_item
         self.scatter_plot = pyqtgraph.ScatterPlotItem()
         self.plot_item.addItem(self.scatter_plot)
 
@@ -91,8 +93,8 @@ class ScatterView(DataView, Ui_ScatterView):
         plot_info = PlotInfo(
             x_values=np.array(x_magnitude),
             y_values=np.array(y_magnitude),
-            x_range=(float(x_magnitude.min()), float(x_magnitude.max())),
-            y_range=(float(y_magnitude.min()), float(y_magnitude.max())),
+            x_range=(float(x_magnitude.min()), float(x_magnitude.max())),  # type: ignore[reportArgumentType]
+            y_range=(float(y_magnitude.min()), float(y_magnitude.max())),  # type: ignore[reportArgumentType]
             x_label=x_label,
             y_label=y_label,
         )
