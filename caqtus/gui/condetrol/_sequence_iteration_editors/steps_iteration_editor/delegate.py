@@ -8,6 +8,7 @@ from PySide6.QtCore import (
     QObject,
     QEvent,
     QStringListModel,
+    QPersistentModelIndex,
 )
 from PySide6.QtGui import (
     QTextDocument,
@@ -34,9 +35,12 @@ from .steps_model import (
     VariableDeclarationData,
     LinspaceLoopData,
     ArrangeLoopData,
+    ExecuteShotData,
 )
 from ..._qt_util import AutoResizeLineEdit
 from ....qtutil import HTMLItemDelegate
+
+type AnyModelIndex = QModelIndex | QPersistentModelIndex
 
 NAME_COLOR = "#AA4926"
 VALUE_COLOR = "#6897BB"
@@ -50,22 +54,24 @@ class StepDelegate(HTMLItemDelegate):
         self._completer = QCompleter(self)
 
     def createEditor(
-        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+        self, parent: QWidget, option: QStyleOptionViewItem, index: AnyModelIndex
     ) -> QWidget:
         value = index.data(role=Qt.ItemDataRole.EditRole)
         assert isinstance(value, StepData)
         if isinstance(value, VariableDeclarationData):
-            editor = VariableDeclarationEditor(parent, option.font)
+            editor = VariableDeclarationEditor(parent, option.font)  # type: ignore[reportAttributeAccessIssue]
         elif isinstance(value, LinspaceLoopData):
-            editor = LinspaceLoopEditor(parent, option.font)
+            editor = LinspaceLoopEditor(parent, option.font)  # type: ignore[reportAttributeAccessIssue]
         elif isinstance(value, ArrangeLoopData):
-            editor = ArrangeLoopEditor(parent, option.font)
+            editor = ArrangeLoopEditor(parent, option.font)  # type: ignore[reportAttributeAccessIssue]
+        elif isinstance(value, ExecuteShotData):
+            raise AssertionError("Can't edit ExecuteShot step")
         else:
             assert_never(value)
         editor.set_name_completer(self._completer)
         return editor
 
-    def setEditorData(self, editor: QWidget, index: QModelIndex):
+    def setEditorData(self, editor: QWidget, index: AnyModelIndex):
         data = index.data(role=Qt.ItemDataRole.EditRole)
         assert isinstance(data, StepData)
         match data:
@@ -82,13 +88,13 @@ class StepDelegate(HTMLItemDelegate):
                 raise ValueError(f"Can't set editor data for {data}")
 
     def updateEditorGeometry(
-        self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+        self, editor: QWidget, option: QStyleOptionViewItem, index: AnyModelIndex
     ):
-        geometry = option.rect
+        geometry = option.rect  # type: ignore[reportAttributeAccessIssue]
         editor.setGeometry(geometry)
 
     def setModelData(
-        self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex
+        self, editor: QWidget, model: QAbstractItemModel, index: AnyModelIndex
     ) -> None:
         previous_data = index.data(role=Qt.ItemDataRole.EditRole)
         assert isinstance(previous_data, StepData)
@@ -117,25 +123,27 @@ class StepDelegate(HTMLItemDelegate):
                     return
                 else:
                     model.setData(index, new_data, Qt.ItemDataRole.EditRole)
+            case ExecuteShotData():
+                raise AssertionError("Can't edit ExecuteShot step")
             case _:
                 assert_never(previous_data)
 
     def set_available_names(self, names: Set[DottedVariableName]) -> None:
         available_names = {str(name) for name in names}
-        self._completer.setModel(QStringListModel(available_names))
+        self._completer.setModel(QStringListModel(list(available_names)))
 
 
 class CompoundWidget(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.setLayout(layout)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+        self.setLayout(self._layout)
         self._widgets = []
 
     def add_widget(self, widget: QWidget):
-        self.layout().addWidget(widget)
+        self._layout.addWidget(widget)
         widget.installEventFilter(self)
         self._widgets.append(widget)
 
@@ -154,27 +162,27 @@ class LinspaceLoopEditor(CompoundWidget):
         super().__init__(parent)
         self.setFont(font)
         for_label = QLabel("for ", self)
-        for_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        for_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         for_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
         self.add_widget(for_label)
         self.name_editor = AutoResizeLineEdit(self)
         self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
         self.add_widget(self.name_editor)
         equal_label = QLabel(" = ", self)
-        equal_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        equal_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.add_widget(equal_label)
         self.start_editor = AutoResizeLineEdit(self)
         self.start_editor.setStyleSheet(f"color: {VALUE_COLOR}")
         self.add_widget(self.start_editor)
         to_label = QLabel(" to ", self)
-        to_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        to_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         to_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
         self.add_widget(to_label)
         self.stop_editor = AutoResizeLineEdit(self)
         self.stop_editor.setStyleSheet(f"color: {VALUE_COLOR}")
         self.add_widget(self.stop_editor)
         with_label = QLabel(" with ", self)
-        with_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        with_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         with_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
         self.add_widget(with_label)
         self.num_editor = QSpinBox(self)
@@ -182,10 +190,12 @@ class LinspaceLoopEditor(CompoundWidget):
         self.num_editor.setRange(0, 9999)
         self.add_widget(self.num_editor)
         steps_label = QLabel(" steps:", self)
-        steps_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        steps_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         steps_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
         self.add_widget(steps_label)
-        self.layout().addStretch(1)
+        layout = self.layout()
+        assert isinstance(layout, QHBoxLayout)
+        layout.addStretch(1)
 
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
@@ -217,11 +227,13 @@ class VariableDeclarationEditor(CompoundWidget):
         self.name_editor = AutoResizeLineEdit(self)
         self.add_widget(self.name_editor)
         label = QLabel(" = ", self)
-        label.setAttribute(Qt.WA_TranslucentBackground, True)
+        label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.add_widget(label)
         self.value_editor = AutoResizeLineEdit(self)
         self.add_widget(self.value_editor)
-        self.layout().addStretch(1)
+        layout = self.layout()
+        assert isinstance(layout, QHBoxLayout)
+        layout.addStretch(1)
 
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
@@ -251,37 +263,39 @@ class ArrangeLoopEditor(CompoundWidget):
         super().__init__(parent)
         self.setFont(font)
         for_label = QLabel("for ", self)
-        for_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        for_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         for_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
         self.add_widget(for_label)
         self.name_editor = AutoResizeLineEdit(self)
         self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
         self.add_widget(self.name_editor)
         equal_label = QLabel(" = ", self)
-        equal_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        equal_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.add_widget(equal_label)
         self.start_editor = AutoResizeLineEdit(self)
         self.start_editor.setStyleSheet(f"color: {VALUE_COLOR}")
         self.add_widget(self.start_editor)
         to_label = QLabel(" to ", self)
-        to_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        to_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         to_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
         self.add_widget(to_label)
         self.stop_editor = AutoResizeLineEdit(self)
         self.stop_editor.setStyleSheet(f"color: {VALUE_COLOR}")
         self.add_widget(self.stop_editor)
         with_label = QLabel(" with ", self)
-        with_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        with_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         with_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
         self.add_widget(with_label)
         self.step_editor = AutoResizeLineEdit(self)
         self.step_editor.setStyleSheet(f"color: {VALUE_COLOR}")
         self.add_widget(self.step_editor)
         spacing_label = QLabel(" spacing:", self)
-        spacing_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        spacing_label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         spacing_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
         self.add_widget(spacing_label)
-        self.layout().addStretch(1)
+        layout = self.layout()
+        assert isinstance(layout, QHBoxLayout)
+        layout.addStretch(1)
 
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
