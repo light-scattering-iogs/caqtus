@@ -8,5 +8,8 @@ from ..timelanes_editor.extension import CondetrolLaneExtensionProtocol
 class CondetrolExtensionProtocol(Protocol):
     """Defines the operations an extension must implement to be used by Condetrol."""
 
-    device_extension: CondetrolDeviceExtensionProtocol
-    lane_extension: CondetrolLaneExtensionProtocol
+    @property
+    def device_extension(self) -> CondetrolDeviceExtensionProtocol: ...
+
+    @property
+    def lane_extension(self) -> CondetrolLaneExtensionProtocol: ...

@@ -7,7 +7,17 @@ from ..timelanes_editor.extension import CondetrolLaneExtension
 
 @attrs.define
 class CondetrolExtension(CondetrolExtensionProtocol):
-    lane_extension: CondetrolLaneExtension = attrs.field(factory=CondetrolLaneExtension)
-    device_extension: CondetrolDeviceExtension = attrs.field(
+    _lane_extension: CondetrolLaneExtension = attrs.field(
+        factory=CondetrolLaneExtension
+    )
+    _device_extension: CondetrolDeviceExtension = attrs.field(
         factory=CondetrolDeviceExtension
     )
+
+    @property
+    def lane_extension(self) -> CondetrolLaneExtension:
+        return self._lane_extension
+
+    @property
+    def device_extension(self) -> CondetrolDeviceExtension:
+        return self._device_extension

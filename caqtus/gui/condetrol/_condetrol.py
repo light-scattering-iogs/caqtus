@@ -53,8 +53,8 @@ class Condetrol:
             self.app = app
         self.app.setOrganizationName("Caqtus")
         self.app.setApplicationName("Condetrol")
-        self.app.setWindowIcon(qtawesome.icon("mdi6.cactus", size=64, color="green"))
-        self.app.setStyle("Fusion")
+        self.app.setWindowIcon(qtawesome.icon("mdi6.cactus", size=64, color="green"))  # type: ignore[reportAttributeAccessIssue]
+        self.app.setStyle("Fusion")  # type: ignore[reportAttributeAccessIssue]
 
         QFontDatabase.addApplicationFont(":/fonts/JetBrainsMono-Regular.ttf")
 

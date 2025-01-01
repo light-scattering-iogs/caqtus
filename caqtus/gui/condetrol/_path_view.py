@@ -181,7 +181,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             if PureSequencePath.is_valid_name(text):
                 result = self._model.rename(index, text)
                 if isinstance(result, Failure):
-                    QMessageBox.warning(
+                    QMessageBox.warning(  # type: ignore[reportCallIssue]
                         self,
                         app.applicationName(),
                         f"<p>Could not rename <i>{path.name}</i> to "
@@ -189,7 +189,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                         f"<p>{result}</p>",
                     )
             else:
-                QMessageBox.warning(
+                QMessageBox.warning(  # type: ignore[reportCallIssue]
                     self,
                     app.applicationName(),
                     f"Name <i>{text}</i> is not valid.",
@@ -244,7 +244,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                 time_lanes = session.sequences.get_time_lanes(path)
             if text.startswith(PureSequencePath._separator()):
                 if not PureSequencePath.is_valid_path(text):
-                    QMessageBox.warning(
+                    QMessageBox.warning(  # type: ignore[reportCallIssue]
                         self,
                         title,
                         f"Path '{text}' is not valid for a sequence.",
@@ -257,7 +257,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                     )
             else:
                 if not PureSequencePath.is_valid_name(text):
-                    QMessageBox.warning(
+                    QMessageBox.warning(  # type: ignore[reportCallIssue]
                         self,
                         title,
                         f"Name '{text}' is not valid for a sequence.",
@@ -269,14 +269,14 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             if is_success(creation_result):
                 return
             elif is_failure_type(creation_result, PathIsSequenceError):
-                QMessageBox.warning(
+                QMessageBox.warning(  # type: ignore[reportCallIssue]
                     self,
                     title,
                     f"Target <i>{text}</i> already exists and is a sequence.",
                 )
                 return
             elif is_failure_type(creation_result, PathHasChildrenError):
-                QMessageBox.warning(
+                QMessageBox.warning(  # type: ignore[reportCallIssue]
                     self,
                     title,
                     f"Target <i>{text}</i> already exists and has children.",
@@ -330,7 +330,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                 app = QApplication.instance()
                 if app is None:
                     raise RuntimeError("No QApplication instance")
-                QMessageBox.warning(
+                QMessageBox.warning(  # type: ignore[reportCallIssue]
                     self,
                     app.applicationName(),
                     f"The path '{path}' contains sequences and therefore "
