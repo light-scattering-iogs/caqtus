@@ -159,8 +159,8 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         else:
             input_points = x_points
         input_points = Quantity(input_points, input_units)
-        output_points = interpolate(
-            input_points,
+        output_points = interpolate(  # type: ignore[reportCallIssue]
+            input_points,  # type: ignore[reportArgumentType]
             calibration_input_points,
             calibration_output_points,
         )

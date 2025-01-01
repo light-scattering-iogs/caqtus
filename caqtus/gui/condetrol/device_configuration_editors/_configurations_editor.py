@@ -23,6 +23,7 @@ from ._extension import CondetrolDeviceExtensionProtocol
 from .._icons import get_icon
 
 _CONFIG_ROLE = Qt.ItemDataRole.UserRole + 1
+_DEFAULT_MODEL_INDEX = QModelIndex()
 
 
 class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
@@ -70,7 +71,9 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
             device_configuration = self._extension.create_new_device_configuration(
                 device_type
             )
-            self._configs_view.add_configuration(device_name, device_configuration)
+            self._configs_view.add_configuration(
+                DeviceName(device_name), device_configuration
+            )
 
     def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
         return self._configs_view.get_device_configurations()
@@ -234,10 +237,10 @@ class DeviceConfigurationModel(QAbstractListModel):
     def rowCount(self, parent=QModelIndex()):
         return len(self._device_configurations)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self._device_configurations[index.row()][0]
         if role == _CONFIG_ROLE:
             return self._device_configurations[index.row()][1]
@@ -278,7 +281,8 @@ class DeviceConfigurationModel(QAbstractListModel):
         self._device_configurations.append((device_name, device_configuration))
         self.endInsertRows()
 
-    def removeRow(self, row):
+    def removeRow(self, row, parent=_DEFAULT_MODEL_INDEX):
         self.beginRemoveRows(QModelIndex(), row, row)
         del self._device_configurations[row]
         self.endRemoveRows()
+        return True

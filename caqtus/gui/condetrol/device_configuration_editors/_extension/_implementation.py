@@ -25,7 +25,7 @@ class CondetrolDeviceExtension(CondetrolDeviceExtensionProtocol):
         configuration_type: type[C],
         editor_type: Callable[[C], DeviceConfigurationEditor[C]],
     ) -> None:
-        self.get_device_configuration_editor.register(configuration_type)(editor_type)
+        self.get_device_configuration_editor.register(configuration_type)(editor_type)  # type: ignore[reportFunctionMemberAccess]
 
     def register_configuration_factory(
         self, configuration_label: str, factory: Callable[[], DeviceConfiguration]
