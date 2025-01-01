@@ -316,8 +316,6 @@ class Experiment:
         configurations.
         """
 
-        setup_logs("caqtus.log")
-
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
@@ -342,7 +340,6 @@ class Experiment:
         remote process.
         """
 
-        setup_logs("experiment_server.log")
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
@@ -385,8 +382,6 @@ class Experiment:
             config: The configuration of the server.
             name: The name of the server. It is used to create the log file.
         """
-
-        setup_logs(f"{name}.log")
 
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
@@ -444,42 +439,3 @@ def stamp_database(experiment: Experiment) -> None:
     config = storage_manager._get_alembic_config()
 
     stamp(config, "038164d73465")
-
-
-def setup_logs(file_name: str):
-    log_config = {
-        "version": 1,
-        "formatters": {
-            "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
-        },
-        "handlers": {
-            "default": {
-                "level": "INFO",
-                "formatter": "standard",
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stdout",
-            },
-            "warnings": {
-                "level": "WARNING",
-                "formatter": "standard",
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stderr",
-            },
-            "errors": {
-                "level": "ERROR",
-                "formatter": "standard",
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": file_name,
-                "maxBytes": 1_000_000,
-            },
-        },
-        "loggers": {
-            "": {"level": "INFO", "handlers": ["default", "warnings", "errors"]},
-            "alembic": {
-                "level": "WARNING",
-                "handlers": ["default", "warnings", "errors"],
-            },
-        },
-    }
-
-    logging.config.dictConfig(log_config)

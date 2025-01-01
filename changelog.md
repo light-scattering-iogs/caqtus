@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Method `Sequence.get_parameter_schema` to get statically defined information about the
   parameters of a sequence
 
+### Changed
+
+- Stop overwriting logging configuration when launching an application
+
 ## [6.18.1] - 2024-12-18
 
 ### Changed
