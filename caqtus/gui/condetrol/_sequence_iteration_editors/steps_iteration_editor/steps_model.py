@@ -221,7 +221,6 @@ class StepsModel(QStandardItemModel):
     def get_steps(self) -> StepsConfiguration:
         root = self.invisibleRootItem()
         items = [root.child(i) for i in range(root.rowCount())]
-        assert all(isinstance(item, StepItem) for item in items)
         steps = []
         for item in items:
             assert isinstance(item, StepItem)
