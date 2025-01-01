@@ -10,7 +10,7 @@ import pyqtgraph
 import qtawesome
 from PySide6.QtCore import QStringListModel, QTimer, Qt
 from PySide6.QtGui import QPen, QFont
-from PySide6.QtWidgets import QWidget, QDialog, QCompleter
+from PySide6.QtWidgets import QWidget, QDialog, QCompleter, QBoxLayout
 from caqtus.analysis.stats import compute_stats_average, get_nominal_value, get_error
 from caqtus.analysis.units import extract_unit
 from caqtus.gui.graphplot.views.view import DataView
@@ -30,9 +30,11 @@ class ErrorBarView(DataView, Ui_ErrorBarView):
         self.settings_button.clicked.connect(self.on_settings_button_clicked)
 
         self.columns_model = QStringListModel(self)
+        layout = self.layout()
+        assert isinstance(layout, QBoxLayout)
+        self._layout = layout
 
         self.plot: Optional[ErrorBarPlot] = None
-        timer = QTimer(self)
 
     def on_settings_button_clicked(self) -> None:
         with temporary_widget(
@@ -45,7 +47,7 @@ class ErrorBarView(DataView, Ui_ErrorBarView):
                 self.plot.deleteLater()
             if settings.hue_column is None:
                 self.plot = ErrorBarPlot(settings.x_column, settings.y_column, self)
-                self.layout().insertWidget(1, self.plot)
+                self._layout.insertWidget(1, self.plot)
             else:
                 raise NotImplementedError("Hue column not supported yet.")
 
@@ -107,7 +109,9 @@ class ErrorBarPlot(pyqtgraph.PlotWidget):
 
         self.error_bar_item = pyqtgraph.ErrorBarItem()
         self.scatter_plot = pyqtgraph.ScatterPlotItem()
-        self.plot_item = self.getPlotItem()
+        plot_item = self.getPlotItem()
+        assert plot_item is not None
+        self.plot_item = plot_item
         self.plot_item.addItem(self.error_bar_item)
         self.plot_item.addItem(self.scatter_plot)
         self.x_column = x_column
