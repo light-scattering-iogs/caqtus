@@ -8,6 +8,7 @@ from PySide6.QtCore import (
     QModelIndex,
     QMimeData,
     QEvent,
+    QPersistentModelIndex,
 )
 from PySide6.QtGui import (
     QStandardItemModel,
@@ -43,10 +44,12 @@ from .._logger import logger
 from .._qt_util import AutoResizeLineEdit
 from ...qtutil import HTMLItemDelegate
 
+type AnyModelIndex = QModelIndex | QPersistentModelIndex
+
 logger = logger.getChild("parameters_editor")
 
-PARAMETER_NAME_ROLE = Qt.UserRole + 1
-PARAMETER_VALUE_ROLE = Qt.UserRole + 2
+PARAMETER_NAME_ROLE = Qt.ItemDataRole.UserRole + 1
+PARAMETER_VALUE_ROLE = Qt.ItemDataRole.UserRole + 2
 
 
 class ParameterNamespaceEditor(QWidget):
@@ -214,7 +217,7 @@ class ParameterNamespaceView(QColumnView):
         # see: https://bugreports.qt.io/browse/QTBUG-1826
         self.w = QWidget()
         self.w.setMaximumSize(0, 0)
-        self.w.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.w.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.setPreviewWidget(self.w)
         self.updatePreviewWidget.connect(self._on_update_preview_widget)
 
@@ -236,8 +239,12 @@ class ParameterNamespaceView(QColumnView):
         self.setSelectionBehavior(QColumnView.SelectionBehavior.SelectItems)
 
     def _on_update_preview_widget(self, index):
-        self.w.parentWidget().parentWidget().setMinimumWidth(0)
-        self.w.parentWidget().parentWidget().setMaximumWidth(0)
+        parent = self.w.parentWidget()
+        assert parent is not None
+        grand_parent = parent.parentWidget()
+        assert grand_parent is not None
+        grand_parent.setMinimumWidth(0)
+        grand_parent.setMaximumWidth(0)
 
 
 class ParameterNamespaceModel(QStandardItemModel):
@@ -265,7 +272,7 @@ class ParameterNamespaceModel(QStandardItemModel):
         action: Qt.DropAction,
         row: int,
         column: int,
-        parent: QModelIndex,
+        parent: AnyModelIndex,
     ) -> bool:
         if self._read_only:
             return False
@@ -328,7 +335,7 @@ class ParameterNamespaceModel(QStandardItemModel):
         item = self._create_item(name, ParameterNamespace.empty())
         root.appendRow(item)
 
-    def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
+    def hasChildren(self, parent: AnyModelIndex = QModelIndex()) -> bool:
         # hasChildren is used to know when to display a new column in the ColumnView,
         # so we only return true when the parent is a namespace.
         if not parent.isValid():
@@ -394,7 +401,8 @@ class ParameterEditorDelegate(HTMLItemDelegate):
     """A custom delegate to display and edit the parameters in the view."""
 
     def get_text_to_render(self, index: QModelIndex) -> str:
-        text_color = f"#{self.parent().palette().text().color().rgba():X}"
+        palette = QApplication.palette()
+        text_color = f"#{palette.text().color().rgba():X}"
         name = index.data(PARAMETER_NAME_ROLE)
         assert isinstance(name, DottedVariableName)
         value = index.data(PARAMETER_VALUE_ROLE)
@@ -410,7 +418,7 @@ class ParameterEditorDelegate(HTMLItemDelegate):
             )
 
     def createEditor(
-        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+        self, parent: QWidget, option: QStyleOptionViewItem, index: AnyModelIndex
     ) -> QWidget:
         name = index.data(PARAMETER_NAME_ROLE)
         assert isinstance(name, DottedVariableName)
@@ -418,9 +426,9 @@ class ParameterEditorDelegate(HTMLItemDelegate):
         assert isinstance(value, Expression) or value is None
 
         if value is None:
-            editor = NamespaceEditor(option.font)
+            editor = NamespaceEditor(option.font)  # type: ignore[reportAttributeAccessIssue]
         else:
-            editor = ParameterEditor(option.font)
+            editor = ParameterEditor(option.font)  # type: ignore[reportAttributeAccessIssue]
         editor.setParent(parent)
         return editor
 
@@ -467,7 +475,7 @@ class ParameterEditor(QWidget):
         self.name_editor = AutoResizeLineEdit(self)
         layout.addWidget(self.name_editor)
         label = QLabel("=", self)
-        label.setAttribute(Qt.WA_TranslucentBackground, True)
+        label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         layout.addWidget(label)
         self.value_editor = AutoResizeLineEdit(self)
         layout.addWidget(self.value_editor)
