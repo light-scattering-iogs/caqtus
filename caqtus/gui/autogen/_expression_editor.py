@@ -18,5 +18,6 @@ class ExpressionEditor(ValueEditor[Expression]):
     def set_editable(self, editable: bool) -> None:
         self._line_edit.setReadOnly(not editable)
 
+    @property
     def widget(self) -> QLineEdit:
         return self._line_edit

@@ -89,7 +89,7 @@ class AttrsEditor[T: attrs.AttrsInstance](ValueEditor[T]):
             label = QLabel(ui_spec.label)
             if ui_spec.tooltip is not None:
                 label.setToolTip(ui_spec.tooltip)
-            layout.addRow(label, editor.widget())
+            layout.addRow(label, editor.widget)
 
     @typing.override
     def set_value(self, value: T) -> None:
@@ -115,6 +115,7 @@ class AttrsEditor[T: attrs.AttrsInstance](ValueEditor[T]):
             assert isinstance(editor, ValueEditor)
             editor.set_editable(editable)
 
+    @property
     @typing.override
     def widget(self) -> QWidget:
         return self._widget

@@ -25,6 +25,7 @@ class ValueEditor[T](abc.ABC):
 
         raise NotImplementedError
 
+    @property
     @abc.abstractmethod
     def widget(self) -> QWidget:
         """Return the widget that allows to edit the value."""

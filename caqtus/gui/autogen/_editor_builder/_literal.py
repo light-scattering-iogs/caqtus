@@ -46,5 +46,6 @@ class LiteralEditor(ValueEditor):
     def set_editable(self, editable: bool) -> None:
         self.combo_box.setEnabled(editable)
 
+    @property
     def widget(self) -> QtWidgets.QComboBox:
         return self.combo_box

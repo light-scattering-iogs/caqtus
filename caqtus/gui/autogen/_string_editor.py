@@ -25,5 +25,6 @@ class StringEditor(ValueEditor[str]):
     def set_editable(self, editable: bool) -> None:
         self.line_edit.setReadOnly(not editable)
 
+    @property
     def widget(self) -> QLineEdit:
         return self.line_edit

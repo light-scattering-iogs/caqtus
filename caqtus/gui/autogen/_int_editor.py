@@ -44,5 +44,6 @@ class IntegerEditor(ValueEditor[int]):
     def set_editable(self, editable: bool) -> None:
         self.spin_box.setReadOnly(not editable)
 
+    @property
     def widget(self) -> QSpinBox:
         return self.spin_box

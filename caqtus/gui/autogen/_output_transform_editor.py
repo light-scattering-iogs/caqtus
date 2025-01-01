@@ -30,7 +30,7 @@ class OutputTransformEditor(ValueEditor[EvaluableOutput]):
 
         self._tree = QLabel("Not implemented")
         self._stacked_widget = QStackedWidget()
-        self._stacked_widget.addWidget(self._expression_editor.widget())
+        self._stacked_widget.addWidget(self._expression_editor.widget)
         self._stacked_widget.addWidget(self._tree)
         self._combo_box.currentIndexChanged.connect(
             self._stacked_widget.setCurrentIndex
@@ -49,6 +49,7 @@ class OutputTransformEditor(ValueEditor[EvaluableOutput]):
         else:
             self._combo_box.setCurrentIndex(1)
 
+    @property
     def widget(self) -> QWidget:
         return self._widget
 

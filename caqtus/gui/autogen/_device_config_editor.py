@@ -37,7 +37,7 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
         self._editor.set_value(config)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self._editor.widget())
+        layout.addWidget(self._editor.widget)
         self.setLayout(layout)
 
     # TODO: Understand why need to silence pyright
@@ -109,6 +109,7 @@ class DeviceServerNameEditor(ValueEditor[Optional[DeviceServerName]]):
     def set_editable(self, editable: bool) -> None:
         self.line_edit.setReadOnly(not editable)
 
+    @property
     def widget(self) -> QLineEdit:
         return self.line_edit
 
@@ -126,6 +127,7 @@ class RectangularROIEditor(ValueEditor[RectangularROI]):
     def set_editable(self, editable: bool) -> None:
         self._widget.set_editable(editable)
 
+    @property
     def widget(self) -> RectangularROIWidget:
         return self._widget
 
