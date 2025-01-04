@@ -7,48 +7,58 @@ type NestedDataType = Array | Struct | List
 type DataType = NumericDataType | NestedDataType
 
 
+@attrs.frozen
 class Float32:
     pass
 
 
+@attrs.frozen
 class Float64:
     pass
 
 
+@attrs.frozen
 class Int8:
     pass
 
 
+@attrs.frozen
 class Int16:
     pass
 
 
+@attrs.frozen
 class Int32:
     pass
 
 
+@attrs.frozen
 class Int64:
     pass
 
 
+@attrs.frozen
 class UInt8:
     pass
 
 
+@attrs.frozen
 class UInt16:
     pass
 
 
+@attrs.frozen
 class UInt32:
     pass
 
 
+@attrs.frozen
 class UInt64:
     pass
 
 
 @attrs.frozen
-class Array:
+class ArrayDataType:
     """Fixed shape array type.
 
     Attributes:

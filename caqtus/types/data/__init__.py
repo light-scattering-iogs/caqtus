@@ -5,6 +5,8 @@ from ._data_type import Data, Array, StructuredData
 from ._is_data import is_data
 from ._schema import (
     DataType,
+    NumericDataType,
+    NestedDataType,
     Float32,
     Float64,
     Int8,
@@ -15,6 +17,7 @@ from ._schema import (
     UInt16,
     UInt32,
     UInt64,
+    ArrayDataType,
 )
 
 __all__ = [
@@ -25,6 +28,8 @@ __all__ = [
     "DataLabel",
     "is_data_label",
     "DataType",
+    "NumericDataType",
+    "NestedDataType",
     "Float32",
     "Float64",
     "Int8",
@@ -35,4 +40,5 @@ __all__ = [
     "UInt16",
     "UInt32",
     "UInt64",
+    "ArrayDataType",
 ]
