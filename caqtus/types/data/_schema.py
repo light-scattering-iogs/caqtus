@@ -15,10 +15,10 @@ from hypothesis.extra.numpy import arrays
 ARRAY_TYPE = 1
 
 
-class DataType[S, U](Protocol):
+class DataType[T](Protocol):
     """Represent the type that some data can have."""
 
-    def dumps(self, value: S) -> bytes:
+    def dumps(self, value: T) -> bytes:
         """Converts value compatible with this type to bytes.
 
         Raises:
@@ -32,7 +32,7 @@ class DataType[S, U](Protocol):
 
         return msgpack.dumps(self.unstructure_hook(value))  # type: ignore[reportReturnType]
 
-    def loads(self, data: bytes) -> S:
+    def loads(self, data: bytes) -> T:
         """Converts bytes to value compatible with this type.
 
         Raises:
@@ -47,10 +47,10 @@ class DataType[S, U](Protocol):
         return self.structure_hook(msgpack.loads(data))  # type: ignore[reportArgumentType]
 
     @property
-    def unstructure_hook(self) -> Callable[[S], U]: ...
+    def unstructure_hook(self) -> Callable[[T], Any]: ...
 
     @property
-    def structure_hook(self) -> Callable[[U], S]: ...
+    def structure_hook(self) -> Callable[[Any], T]: ...
 
     @abc.abstractmethod
     def to_polars_dtype(self) -> pl.DataType:
@@ -64,7 +64,7 @@ class DataType[S, U](Protocol):
 
         ...
 
-    def value_strategy(self) -> st.SearchStrategy:
+    def value_strategy(self) -> st.SearchStrategy[T]:
         """Returns a strategy to generate values compatible with this type.
 
         Examples:
@@ -77,11 +77,11 @@ class DataType[S, U](Protocol):
 
 
 @attrs.frozen
-class Float(DataType[float, float]):
+class Float(DataType[float]):
     """Represents a floating point number."""
 
     @property
-    def unstructure_hook(self) -> Callable[[Any], float]:
+    def unstructure_hook(self) -> Callable[[float], Any]:
         return float
 
     @property
@@ -97,16 +97,16 @@ class Float(DataType[float, float]):
     def to_polars_dtype(self) -> pl.Float64:
         return pl.Float64()
 
-    def value_strategy(self) -> st.SearchStrategy:
+    def value_strategy(self) -> st.SearchStrategy[float]:
         return st.floats()
 
 
 @attrs.frozen
-class Int(DataType[int, int]):
+class Int(DataType[int]):
     """Represents an integer number."""
 
     @property
-    def unstructure_hook(self) -> Callable[[Any], int]:
+    def unstructure_hook(self) -> Callable[[int], Any]:
         return int
 
     @property
@@ -122,16 +122,16 @@ class Int(DataType[int, int]):
     def to_polars_dtype(self) -> pl.Int64:
         return pl.Int64()
 
-    def value_strategy(self) -> st.SearchStrategy:
+    def value_strategy(self) -> st.SearchStrategy[int]:
         return st.integers(-(2**63), 2**63 - 1)
 
 
 @attrs.frozen
-class Boolean(DataType[bool, bool]):
+class Boolean(DataType[bool]):
     """Represents a boolean value."""
 
     @property
-    def unstructure_hook(self) -> Callable[[Any], bool]:
+    def unstructure_hook(self) -> Callable[[bool], Any]:
         return bool
 
     @property
@@ -150,15 +150,15 @@ class Boolean(DataType[bool, bool]):
     def to_numpy_dtype(self) -> np.dtype:
         return np.dtype(np.bool)
 
-    def value_strategy(self) -> st.SearchStrategy:
+    def value_strategy(self) -> st.SearchStrategy[bool]:
         return st.booleans()
 
 
 @attrs.frozen
-class List(DataType):
+class List[T](DataType[list[T]]):
     """Represent a variable length list where all elements have the same type."""
 
-    inner: DataType
+    inner: DataType[T]
 
     def dumps(self, value) -> bytes:
         return msgpack.dumps(self.unstructure_hook(value))  # type: ignore[reportReturnType]
@@ -222,7 +222,9 @@ class Struct(Generic[T]):
             raise ValueError(f"fields must have at least one element, not {value}")
 
     @cached_property
-    def unstructure_hook(self: Struct[DataType]) -> Callable[[Any], tuple]:
+    def unstructure_hook[
+        S
+    ](self: Struct[DataType[S]]) -> Callable[[Mapping[str, S]], Any]:
         field_hooks = {
             name: dtype.unstructure_hook for name, dtype in self.fields.items()
         }
@@ -233,7 +235,7 @@ class Struct(Generic[T]):
         return hook
 
     @cached_property
-    def structure_hook(self: Struct[DataType]) -> Callable[[dict], dict]:
+    def structure_hook[S](self: Struct[DataType[S]]) -> Callable[[Any], dict[str, S]]:
         field_hooks = {
             name: dtype.structure_hook for name, dtype in self.fields.items()
         }

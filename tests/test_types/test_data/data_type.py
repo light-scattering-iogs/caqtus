@@ -54,7 +54,7 @@ def nested_data_types(
     return one_of(dtype.map(List), structs(dtype))
 
 
-def structs(dtype: SearchStrategy[DataType]) -> SearchStrategy[Struct]:
+def structs(dtype: SearchStrategy[DataType]) -> SearchStrategy[Struct[DataType]]:
     return dictionaries(keys=text(), values=dtype, min_size=1, max_size=10).map(
         lambda d: Struct(**d)
     )

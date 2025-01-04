@@ -63,6 +63,8 @@ intersphinx_mapping = {
     "sqlalchemy": ("https://docs.sqlalchemy.org/en/20/", None),
     "graphviz": ("https://graphviz.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+    "polars": ("https://docs.pola.rs/api/python/stable/", None),
+    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
 }
 
 exclude_patterns = [
