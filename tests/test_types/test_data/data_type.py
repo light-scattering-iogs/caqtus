@@ -27,6 +27,7 @@ from caqtus.types.data import (
     ArrayDataType,
     List,
     Struct,
+    Boolean,
 )
 
 
@@ -39,6 +40,7 @@ def data_types() -> SearchStrategy[DataType]:
 def numeric_data_types() -> SearchStrategy[NumericDataType]:
     return sampled_from(
         [
+            Boolean(),
             Float32(),
             Float64(),
             Int8(),

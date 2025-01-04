@@ -2,9 +2,26 @@ from collections.abc import Mapping, Sequence
 
 import attrs
 
-type NumericDataType = Float32 | Float64 | Int8 | Int16 | Int32 | Int64 | UInt8 | UInt16 | UInt32 | UInt64
-type NestedDataType = Array | Struct | List
+type NumericDataType = (
+    Boolean
+    | Float32
+    | Float64
+    | Int8
+    | Int16
+    | Int32
+    | Int64
+    | UInt8
+    | UInt16
+    | UInt32
+    | UInt64
+)
+type NestedDataType = ArrayDataType | Struct | List
 type DataType = NumericDataType | NestedDataType
+
+
+@attrs.frozen
+class Boolean:
+    pass
 
 
 @attrs.frozen
