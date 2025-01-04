@@ -1,7 +1,6 @@
-from hypothesis import given, example
+from hypothesis import given
 from numpy.testing import assert_equal
 
-from caqtus.types.data import Struct, Int
 from .data_values import dtypes_and_values
 
 

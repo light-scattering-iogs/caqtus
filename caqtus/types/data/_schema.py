@@ -95,6 +95,7 @@ type ArrayInnerType = (
     | UInt16
     | UInt32
     | UInt64
+    | Struct[ArrayInnerType]
 )
 
 
@@ -325,5 +326,10 @@ def to_numpy_dtype(dtype: ArrayInnerType) -> np.dtype:
             return np.dtype(np.uint32)
         case UInt64():
             return np.dtype(np.uint64)
+        case Struct(fields=fields):
+            return np.dtype(
+                [(name, to_numpy_dtype(dtype)) for name, dtype in fields.items()],
+                align=False,
+            )
         case _:
             assert_never(dtype)

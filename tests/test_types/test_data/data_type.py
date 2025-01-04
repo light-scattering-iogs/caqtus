@@ -67,20 +67,32 @@ def arrays() -> SearchStrategy[ArrayDataType]:
 
 
 def array_dtypes() -> SearchStrategy[ArrayInnerType]:
-    return sampled_from(
-        [
-            Boolean(),
-            Float32(),
-            Float64(),
-            Int8(),
-            Int16(),
-            Int32(),
-            Int64(),
-            UInt8(),
-            UInt16(),
-            UInt32(),
-            UInt64(),
-        ]
+    return recursive(
+        sampled_from(
+            [
+                Boolean(),
+                Float32(),
+                Float64(),
+                Int8(),
+                Int16(),
+                Int32(),
+                Int64(),
+                UInt8(),
+                UInt16(),
+                UInt32(),
+                UInt64(),
+            ]
+        ),
+        composite_array_dtypes,
+        max_leaves=3,
+    )
+
+
+def composite_array_dtypes(
+    dtype: SearchStrategy[ArrayInnerType],
+) -> SearchStrategy[ArrayInnerType]:
+    return dictionaries(keys=text(), values=dtype, min_size=1, max_size=10).map(
+        lambda d: Struct(**d)
     )
 
 
