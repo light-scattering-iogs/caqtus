@@ -6,9 +6,11 @@ from functools import cached_property
 from typing import Any, Protocol, TypeVar, Generic, runtime_checkable
 
 import attrs
+import hypothesis.strategies as st
 import msgpack
 import numpy as np
 import polars as pl
+from hypothesis.extra.numpy import arrays
 
 ARRAY_TYPE = 1
 
@@ -28,6 +30,8 @@ class DataType[S, U](Protocol):
 
     @abc.abstractmethod
     def to_polars_dtype(self) -> pl.DataType: ...
+
+    def value_strategy(self) -> st.SearchStrategy: ...
 
 
 @attrs.frozen
@@ -49,6 +53,9 @@ class Float(DataType[float, float]):
     def to_polars_dtype(self) -> pl.Float64:
         return pl.Float64()
 
+    def value_strategy(self) -> st.SearchStrategy:
+        return st.floats()
+
 
 @attrs.frozen
 class Int(DataType[int, int]):
@@ -68,6 +75,9 @@ class Int(DataType[int, int]):
 
     def to_polars_dtype(self) -> pl.Int64:
         return pl.Int64()
+
+    def value_strategy(self) -> st.SearchStrategy:
+        return st.integers(-(2**63), 2**63 - 1)
 
 
 @attrs.frozen
@@ -91,6 +101,9 @@ class Boolean(DataType[bool, bool]):
 
     def to_numpy_dtype(self) -> np.dtype:
         return np.dtype(np.bool)
+
+    def value_strategy(self) -> st.SearchStrategy:
+        return st.booleans()
 
 
 @runtime_checkable
@@ -248,6 +261,15 @@ class ArrayDataType(DataType):
     def to_polars_dtype(self) -> pl.DataType:
         return pl.Array(inner=self.inner.to_polars_dtype(), shape=tuple(self.shape))
 
+    def value_strategy(self) -> st.SearchStrategy:
+        # Needs to disallow NaNs, because for a=array([(nan,)], dtype=[('f0', '<f4')]),
+        # numpy.testing.assert_equal(a, a) fails, which seems to be a bug in numpy.
+        return arrays(
+            dtype=self.inner.to_numpy_dtype(),
+            shape=tuple(self.shape),
+            elements=dict(allow_nan=False),
+        )
+
 
 @attrs.frozen
 class List(DataType):
@@ -281,6 +303,9 @@ class List(DataType):
 
     def to_polars_dtype(self) -> pl.DataType:
         return pl.List(self.inner.to_polars_dtype())
+
+    def value_strategy(self) -> st.SearchStrategy:
+        return st.lists(elements=self.inner.value_strategy())
 
 
 T = TypeVar("T", covariant=True)
@@ -352,6 +377,11 @@ class Struct(Generic[T]):
     def to_numpy_dtype(self: Struct[ArrayInnerType]) -> np.dtype:
         return np.dtype(
             [(name, dtype.to_numpy_dtype()) for name, dtype in self.fields.items()]
+        )
+
+    def value_strategy(self: Struct[DataType]) -> st.SearchStrategy:
+        return st.fixed_dictionaries(
+            {name: dtype.value_strategy() for name, dtype in self.fields.items()}
         )
 
 

@@ -12,8 +12,6 @@ from hypothesis.strategies import (
 
 from caqtus.types.data import (
     DataType,
-    ScalarDataType,
-    NestedDataType,
     Float32,
     Float64,
     Int8,
@@ -40,7 +38,7 @@ def data_types() -> SearchStrategy[DataType]:
     )
 
 
-def scalar_data_types() -> SearchStrategy[ScalarDataType]:
+def scalar_data_types() -> SearchStrategy[DataType]:
     return sampled_from(
         [
             Boolean(),
@@ -52,7 +50,7 @@ def scalar_data_types() -> SearchStrategy[ScalarDataType]:
 
 def nested_data_types(
     dtype: SearchStrategy[DataType],
-) -> SearchStrategy[NestedDataType]:
+) -> SearchStrategy[DataType]:
     return one_of(dtype.map(List), structs(dtype))
 
 
