@@ -1,11 +1,37 @@
-from collections.abc import Mapping, Sequence
-from typing import assert_never
+from collections.abc import Mapping, Sequence, Callable
+from typing import assert_never, Any
 
 import attrs
 import numpy as np
 from typing_extensions import TypeIs
 
-type NumericDataType = (
+type ScalarDataType = Boolean | Float | Int
+type NestedDataType = ArrayDataType | Struct | List
+type DataType = ScalarDataType | NestedDataType
+
+
+@attrs.frozen
+class Float:
+    @staticmethod
+    def validator() -> Callable[[Any], bool]:
+        return lambda x: isinstance(x, float)
+
+
+@attrs.frozen
+class Int:
+    @staticmethod
+    def validator() -> Callable[[Any], bool]:
+        return lambda x: isinstance(x, int)
+
+
+@attrs.frozen
+class Boolean:
+    @staticmethod
+    def validator() -> Callable[[Any], bool]:
+        return lambda x: isinstance(x, bool)
+
+
+type ArrayInnerType = (
     Boolean
     | Float32
     | Float64
@@ -18,13 +44,6 @@ type NumericDataType = (
     | UInt32
     | UInt64
 )
-type NestedDataType = ArrayDataType | Struct | List
-type DataType = NumericDataType | NestedDataType
-
-
-@attrs.frozen
-class Boolean:
-    pass
 
 
 @attrs.frozen
@@ -89,7 +108,7 @@ class ArrayDataType:
             Each element must be a strictly positive integer.
     """
 
-    inner: NumericDataType
+    inner: ArrayInnerType
     shape: Sequence[int] = attrs.field()
 
     @shape.validator  # type: ignore
@@ -101,12 +120,29 @@ class ArrayDataType:
         if not all(i > 0 for i in value):
             raise ValueError(f"shape must be a tuple of positive integers, not {value}")
 
+    def validator(self) -> Callable[[Any], bool]:
+        numpy_dtype = to_numpy_dtype(self.inner)
+        shape = tuple(self.shape)
+
+        def fun(x):
+            return x.shape == shape and x.dtype == numpy_dtype
+
+        return fun
+
 
 @attrs.frozen
 class List:
     """Variable length list type."""
 
     inner: DataType
+
+    def validator(self) -> Callable[[Any], bool]:
+        inner_validator = self.inner.validator()
+
+        def fun(x):
+            return all(inner_validator(i) for i in x)
+
+        return fun
 
 
 @attrs.frozen
@@ -126,33 +162,34 @@ class Struct:
         if len(value) == 0:
             raise ValueError(f"fields must have at least one element, not {value}")
 
+    def validator(self) -> Callable[[Any], bool]:
+        field_validators = {
+            name: dtype.validator() for name, dtype in self.fields.items()
+        }
+
+        def validate(x):
+            if not isinstance(x, Mapping):
+                return False
+            if x.keys() != self.fields.keys():
+                return False
+            return all(field_validators[name](value) for name, value in x.items())
+
+        return validate
+
 
 type DataSchema = Mapping[str, DataType]
 """Contains the name and type of each data field."""
 
 
-def is_numeric_dtype(dtype: DataType) -> TypeIs[NumericDataType]:
-    return isinstance(
-        dtype,
-        Boolean
-        | Float32
-        | Float64
-        | Int8
-        | Int16
-        | Int32
-        | Int64
-        | UInt8
-        | UInt16
-        | UInt32
-        | UInt64,
-    )
+def is_numeric_dtype(dtype: DataType) -> TypeIs[ScalarDataType]:
+    return isinstance(dtype, Boolean | Float | Int)
 
 
 def is_nested_dtype(dtype: DataType) -> TypeIs[NestedDataType]:
     return isinstance(dtype, ArrayDataType | Struct | List)
 
 
-def to_numpy_dtype(dtype: NumericDataType) -> np.dtype:
+def to_numpy_dtype(dtype: ArrayInnerType) -> np.dtype:
     match dtype:
         case Boolean():
             return np.dtype(np.bool)

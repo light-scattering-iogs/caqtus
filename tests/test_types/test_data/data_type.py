@@ -12,7 +12,7 @@ from hypothesis.strategies import (
 
 from caqtus.types.data import (
     DataType,
-    NumericDataType,
+    ScalarDataType,
     NestedDataType,
     Float32,
     Float64,
@@ -25,32 +25,27 @@ from caqtus.types.data import (
     UInt32,
     UInt64,
     ArrayDataType,
+    ArrayInnerType,
     List,
     Struct,
     Boolean,
+    Float,
+    Int,
 )
 
 
 def data_types() -> SearchStrategy[DataType]:
     return recursive(
-        one_of(numeric_data_types(), arrays()), nested_data_types, max_leaves=3
+        one_of(scalar_data_types(), arrays()), nested_data_types, max_leaves=3
     )
 
 
-def numeric_data_types() -> SearchStrategy[NumericDataType]:
+def scalar_data_types() -> SearchStrategy[ScalarDataType]:
     return sampled_from(
         [
             Boolean(),
-            Float32(),
-            Float64(),
-            Int8(),
-            Int16(),
-            Int32(),
-            Int64(),
-            UInt8(),
-            UInt16(),
-            UInt32(),
-            UInt64(),
+            Int(),
+            Float(),
         ]
     )
 
@@ -66,7 +61,25 @@ def structs(dtype: SearchStrategy[DataType]) -> SearchStrategy[Struct]:
 
 
 def arrays() -> SearchStrategy[ArrayDataType]:
-    return builds(ArrayDataType, inner=numeric_data_types(), shape=_array_shape)
+    return builds(ArrayDataType, inner=array_dtypes(), shape=_array_shape)
+
+
+def array_dtypes() -> SearchStrategy[ArrayInnerType]:
+    return sampled_from(
+        [
+            Boolean(),
+            Float32(),
+            Float64(),
+            Int8(),
+            Int16(),
+            Int32(),
+            Int64(),
+            UInt8(),
+            UInt16(),
+            UInt32(),
+            UInt64(),
+        ]
+    )
 
 
 def lists() -> SearchStrategy[List]:

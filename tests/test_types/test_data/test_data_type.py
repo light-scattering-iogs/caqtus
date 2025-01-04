@@ -1,9 +1,10 @@
 from hypothesis import given
-from .data_type import data_types
-from .data_values import data_values, dtypes_and_values
+
+from .data_values import dtypes_and_values
 
 
 @given(dtypes_and_values())
 def test_data_values(args):
     dtype, value = args
-    print(dtype, value)
+    validator = dtype.validator()
+    assert validator(value)

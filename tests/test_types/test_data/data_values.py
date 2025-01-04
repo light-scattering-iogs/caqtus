@@ -13,19 +13,11 @@ from hypothesis.strategies import (
 
 from caqtus.types.data import (
     DataType,
-    NumericDataType,
+    ScalarDataType,
     NestedDataType,
     Boolean,
-    Float32,
-    Float64,
-    Int8,
-    Int16,
-    Int32,
-    Int64,
-    UInt8,
-    UInt16,
-    UInt32,
-    UInt64,
+    Int,
+    Float,
     is_numeric_dtype,
     ArrayDataType,
     List,
@@ -57,30 +49,14 @@ def _data_values(dtype: DataType) -> SearchStrategy:
         return nested_data_values(dtype)
 
 
-def numeric_data_values(dtype: NumericDataType) -> SearchStrategy:
+def numeric_data_values(dtype: ScalarDataType) -> SearchStrategy:
     match dtype:
         case Boolean():
             return booleans()
-        case Float32():
-            return floats(width=32)
-        case Float64():
-            return floats(width=64)
-        case Int8():
-            return integers(min_value=-(2**7), max_value=2**7 - 1)
-        case Int16():
-            return integers(min_value=-(2**15), max_value=2**15 - 1)
-        case Int32():
-            return integers(min_value=-(2**31), max_value=2**31 - 1)
-        case Int64():
-            return integers(min_value=-(2**63), max_value=2**63 - 1)
-        case UInt8():
-            return integers(min_value=0, max_value=2**8 - 1)
-        case UInt16():
-            return integers(min_value=0, max_value=2**16 - 1)
-        case UInt32():
-            return integers(min_value=0, max_value=2**32 - 1)
-        case UInt64():
-            return integers(min_value=0, max_value=2**64 - 1)
+        case Float():
+            return floats()
+        case Int():
+            return integers()
         case _:
             assert_never(dtype)
 
