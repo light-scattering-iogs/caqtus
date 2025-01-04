@@ -10,14 +10,14 @@ from typing_extensions import TypeIs
 ARRAY_TYPE = 1
 
 type ScalarDataType = Boolean | Float | Int
-type NestedDataType = ArrayDataType | Struct | List
+type NestedDataType = ArrayDataType | Struct[DataType] | List
 type DataType = ScalarDataType | NestedDataType
 
 
 @attrs.frozen
 class Float:
     def dumps(self, value) -> bytes:
-        return msgpack.dumps(self.unstructure_hook(value))
+        return msgpack.dumps(self.unstructure_hook(value))  # type: ignore[reportReturnType]
 
     def loads(self, data: bytes) -> float:
         return self.structure_hook(msgpack.loads(data))
@@ -40,7 +40,7 @@ class Float:
 @attrs.frozen
 class Int:
     def dumps(self, value) -> bytes:
-        return msgpack.dumps(self.unstructure_hook(value))
+        return msgpack.dumps(self.unstructure_hook(value))  # type: ignore[reportReturnType]
 
     def loads(self, data: bytes) -> int:
         return self.structure_hook(msgpack.loads(data))
@@ -63,7 +63,7 @@ class Int:
 @attrs.frozen
 class Boolean:
     def dumps(self, value) -> bytes:
-        return msgpack.dumps(self.unstructure_hook(value))
+        return msgpack.dumps(self.unstructure_hook(value))  # type: ignore[reportReturnType]
 
     def loads(self, data: bytes) -> bool:
         return self.structure_hook(msgpack.loads(data))
@@ -164,10 +164,10 @@ class ArrayDataType:
     shape: Sequence[int] = attrs.field()
 
     def dumps(self, value) -> bytes:
-        return msgpack.dumps(self.unstructure_hook(value))
+        return msgpack.dumps(self.unstructure_hook(value))  # type: ignore[reportReturnType]
 
     def loads(self, data: bytes) -> np.ndarray:
-        return self.structure_hook(msgpack.loads(data))
+        return self.structure_hook(msgpack.loads(data))  # type: ignore[reportArgumentType]
 
     @shape.validator  # type: ignore
     def _shape_validator(self, attribute, value):
@@ -212,10 +212,10 @@ class List:
     inner: DataType
 
     def dumps(self, value) -> bytes:
-        return msgpack.dumps(self.unstructure_hook(value))
+        return msgpack.dumps(self.unstructure_hook(value))  # type: ignore[reportReturnType]
 
     def loads(self, data: bytes) -> list:
-        return self.structure_hook(msgpack.loads(data))
+        return self.structure_hook(msgpack.loads(data))  # type: ignore[reportArgumentType]
 
     @cached_property
     def unstructure_hook(self) -> Callable[[Any], tuple]:
@@ -237,7 +237,7 @@ class List:
 
 
 @attrs.define(init=False)
-class Struct:
+class Struct[T: DataType]:
     """Composite data type.
 
     Args:
@@ -246,17 +246,17 @@ class Struct:
 
     """
 
-    fields: dict[str, DataType] = attrs.field()
+    fields: dict[str, T] = attrs.field()
 
-    def __init__(self, **fields: DataType):
+    def __init__(self, **fields: T):
         sorted_names = sorted(fields.keys())
         self.fields = {name: fields[name] for name in sorted_names}
 
     def dumps(self, value) -> bytes:
-        return msgpack.dumps(self.unstructure_hook(value))
+        return msgpack.dumps(self.unstructure_hook(value))  # type: ignore[reportReturnType]
 
     def loads(self, data: bytes) -> dict:
-        return self.structure_hook(msgpack.loads(data))
+        return self.structure_hook(msgpack.loads(data))  # type: ignore[reportArgumentType]
 
     @fields.validator  # type: ignore
     def _fields_validator(self, attribute, value):
