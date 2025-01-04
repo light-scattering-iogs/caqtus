@@ -1,4 +1,8 @@
-"""This module define the type of data that can be saved for a shot."""
+"""This module define the type of data that can be saved for a shot.
+
+In particular, it defines :class:`DataType` and its subclasses, which are used to
+indicate the type of data that is generated for each shot of a sequence.
+"""
 
 from ._data_label import DataLabel, is_data_label
 from ._data_type import Data, Array, StructuredData
@@ -22,6 +26,7 @@ from ._schema import (
     ArrayInnerType,
     List,
     Struct,
+    DataSchema,
 )
 
 __all__ = [
@@ -49,4 +54,5 @@ __all__ = [
     "ArrayInnerType",
     "List",
     "Struct",
+    "DataSchema",
 ]
