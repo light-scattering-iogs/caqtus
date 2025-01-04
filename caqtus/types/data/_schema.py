@@ -1,6 +1,7 @@
 from collections.abc import Mapping, Sequence
 
 import attrs
+from typing_extensions import TypeIs
 
 type NumericDataType = (
     Boolean
@@ -126,3 +127,24 @@ class Struct:
 
 type DataSchema = Mapping[str, DataType]
 """Contains the name and type of each data field."""
+
+
+def is_numeric_dtype(dtype: DataType) -> TypeIs[NumericDataType]:
+    return isinstance(
+        dtype,
+        Boolean
+        | Float32
+        | Float64
+        | Int8
+        | Int16
+        | Int32
+        | Int64
+        | UInt8
+        | UInt16
+        | UInt32
+        | UInt64,
+    )
+
+
+def is_nested_dtype(dtype: DataType) -> TypeIs[NestedDataType]:
+    return isinstance(dtype, ArrayDataType | Struct | List)
