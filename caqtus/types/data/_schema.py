@@ -91,9 +91,20 @@ class List:
 
 @attrs.frozen
 class Struct:
-    """Composite data type."""
+    """Composite data type.
 
-    fields: Mapping[str, DataType]
+    Args:
+        fields: The name and type of each field.
+            It must contain at least one element.
+
+    """
+
+    fields: Mapping[str, DataType] = attrs.field()
+
+    @fields.validator  # type: ignore
+    def _fields_validator(self, attribute, value):
+        if len(value) == 0:
+            raise ValueError(f"fields must have at least one element, not {value}")
 
 
 type DataSchema = Mapping[str, DataType]
