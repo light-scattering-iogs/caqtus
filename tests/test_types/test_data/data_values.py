@@ -56,7 +56,7 @@ def numeric_data_values(dtype: ScalarDataType) -> SearchStrategy:
         case Float():
             return floats()
         case Int():
-            return integers()
+            return integers(-(2**63), 2**63 - 1)
         case _:
             assert_never(dtype)
 

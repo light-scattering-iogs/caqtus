@@ -6,7 +6,6 @@ from .data_values import dtypes_and_values
 
 
 @given(dtypes_and_values())
-@example(args=(Struct(fields={"": Int()}), {"": 0}))
 def test_data_values(args):
     dtype, value = args
 

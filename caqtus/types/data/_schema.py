@@ -236,7 +236,7 @@ class List:
         return hook
 
 
-@attrs.frozen
+@attrs.define(init=False)
 class Struct:
     """Composite data type.
 
@@ -247,6 +247,10 @@ class Struct:
     """
 
     fields: dict[str, DataType] = attrs.field()
+
+    def __init__(self, **fields: DataType):
+        sorted_names = sorted(fields.keys())
+        self.fields = {name: fields[name] for name in sorted_names}
 
     def dumps(self, value) -> bytes:
         return msgpack.dumps(self.unstructure_hook(value))
@@ -260,13 +264,13 @@ class Struct:
             raise ValueError(f"fields must have at least one element, not {value}")
 
     @cached_property
-    def unstructure_hook(self) -> Callable[[Any], dict]:
+    def unstructure_hook(self) -> Callable[[Any], tuple]:
         field_hooks = {
             name: dtype.unstructure_hook for name, dtype in self.fields.items()
         }
 
         def hook(value):
-            return {name: hook(value[name]) for name, hook in field_hooks.items()}
+            return tuple(hook(value[name]) for name, hook in field_hooks.items())
 
         return hook
 
@@ -276,8 +280,11 @@ class Struct:
             name: dtype.structure_hook for name, dtype in self.fields.items()
         }
 
-        def hook(value):
-            return {name: hook(value[name]) for name, hook in field_hooks.items()}
+        def hook(values):
+            return {
+                name: hook(value)
+                for (name, hook), value in zip(field_hooks.items(), values, strict=True)
+            }
 
         return hook
 
