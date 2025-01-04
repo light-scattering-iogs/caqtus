@@ -65,3 +65,7 @@ class Struct:
     """Composite data type."""
 
     fields: Mapping[str, DataType]
+
+
+type DataSchema = Mapping[str, DataType]
+"""Contains the name and type of each data field."""
