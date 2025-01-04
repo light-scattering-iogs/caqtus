@@ -1,4 +1,4 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 import attrs
 
@@ -59,7 +59,7 @@ class Array:
     """
 
     inner: NumericDataType
-    shape: tuple[int, ...] = attrs.field()
+    shape: Sequence[int] = attrs.field()
 
     @shape.validator  # type: ignore
     def _shape_validator(self, attribute, value):
