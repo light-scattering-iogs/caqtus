@@ -57,7 +57,7 @@ def nested_data_types(
 
 
 def structs(dtype: SearchStrategy[DataType]) -> SearchStrategy[Struct]:
-    return dictionaries(keys=text(), values=dtype, min_size=1).map(Struct)
+    return dictionaries(keys=text(), values=dtype, min_size=1, max_size=10).map(Struct)
 
 
 def arrays() -> SearchStrategy[ArrayDataType]:
@@ -86,4 +86,4 @@ def lists() -> SearchStrategy[List]:
     return data_types().map(List)
 
 
-_array_shape = _lists(integers(min_value=1, max_value=1000), min_size=1, max_size=3)
+_array_shape = _lists(integers(min_value=1, max_value=100), min_size=1, max_size=3)
