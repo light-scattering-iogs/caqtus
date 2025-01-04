@@ -18,6 +18,8 @@ from ._schema import (
     UInt32,
     UInt64,
     ArrayDataType,
+    List,
+    Struct,
 )
 
 __all__ = [
@@ -41,4 +43,6 @@ __all__ = [
     "UInt32",
     "UInt64",
     "ArrayDataType",
+    "List",
+    "Struct",
 ]
