@@ -21,6 +21,8 @@ from ._schema import (
     ArrayDataType,
     List,
     Struct,
+    is_numeric_dtype,
+    is_nested_dtype,
 )
 
 __all__ = [
@@ -47,4 +49,6 @@ __all__ = [
     "ArrayDataType",
     "List",
     "Struct",
+    "is_numeric_dtype",
+    "is_nested_dtype",
 ]

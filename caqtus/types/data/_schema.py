@@ -1,6 +1,8 @@
 from collections.abc import Mapping, Sequence
+from typing import assert_never
 
 import attrs
+import numpy as np
 from typing_extensions import TypeIs
 
 type NumericDataType = (
@@ -148,3 +150,31 @@ def is_numeric_dtype(dtype: DataType) -> TypeIs[NumericDataType]:
 
 def is_nested_dtype(dtype: DataType) -> TypeIs[NestedDataType]:
     return isinstance(dtype, ArrayDataType | Struct | List)
+
+
+def to_numpy_dtype(dtype: NumericDataType) -> np.dtype:
+    match dtype:
+        case Boolean():
+            return np.dtype(np.bool)
+        case Float32():
+            return np.dtype(np.float32)
+        case Float64():
+            return np.dtype(np.float64)
+        case Int8():
+            return np.dtype(np.int8)
+        case Int16():
+            return np.dtype(np.int16)
+        case Int32():
+            return np.dtype(np.int32)
+        case Int64():
+            return np.dtype(np.int64)
+        case UInt8():
+            return np.dtype(np.uint8)
+        case UInt16():
+            return np.dtype(np.uint16)
+        case UInt32():
+            return np.dtype(np.uint32)
+        case UInt64():
+            return np.dtype(np.uint64)
+        case _:
+            assert_never(dtype)
