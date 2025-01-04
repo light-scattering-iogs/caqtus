@@ -3,5 +3,36 @@
 from ._data_label import DataLabel, is_data_label
 from ._data_type import Data, Array, StructuredData
 from ._is_data import is_data
+from ._schema import (
+    DataType,
+    Float32,
+    Float64,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+)
 
-__all__ = ["Data", "Array", "StructuredData", "is_data", "DataLabel", "is_data_label"]
+__all__ = [
+    "Data",
+    "Array",
+    "StructuredData",
+    "is_data",
+    "DataLabel",
+    "is_data_label",
+    "DataType",
+    "Float32",
+    "Float64",
+    "Int8",
+    "Int16",
+    "Int32",
+    "Int64",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+]
