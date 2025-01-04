@@ -52,6 +52,7 @@ dependencies = [
     "setuptools",
     "caqtus-parsing>=0.4.0",
     "msgpack>=1.1.0",
+    "hypothesis[numpy]>=6.103.1",
 ]
 
 [project.urls]
@@ -82,7 +83,6 @@ dependencies = [
     "pyright>=1.1.391",
     "pytest>=8.1.1",
     "pytest-qt>=4.4.0",
-    "hypothesis[numpy]>=6.103.1",
     "pytest-postgresql>=6.0",
     "isort"
 ]
