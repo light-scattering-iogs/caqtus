@@ -49,8 +49,24 @@ class UInt64:
 
 @attrs.frozen
 class Array:
+    """Fixed shape array type.
+
+    Attributes:
+        inner: The type of the array elements.
+        shape: The shape of the array.
+            Each element of the tuple is the size of the corresponding dimension.
+            Each element must be a strictly positive integer.
+    """
+
     inner: NumericDataType
-    shape: tuple[int, ...]
+    shape: tuple[int, ...] = attrs.field()
+
+    @shape.validator  # type: ignore
+    def _shape_validator(self, attribute, value):
+        if not all(isinstance(i, int) for i in value):
+            raise ValueError(f"shape must be a tuple of integers, not {value}")
+        if not all(i > 0 for i in value):
+            raise ValueError(f"shape must be a tuple of positive integers, not {value}")
 
 
 @attrs.frozen
