@@ -54,6 +54,7 @@ class Array:
     Attributes:
         inner: The type of the array elements.
         shape: The shape of the array.
+            It must contain at least one element.
             Each element of the tuple is the size of the corresponding dimension.
             Each element must be a strictly positive integer.
     """
@@ -63,6 +64,8 @@ class Array:
 
     @shape.validator  # type: ignore
     def _shape_validator(self, attribute, value):
+        if len(value) == 0:
+            raise ValueError(f"shape must have at least one element, not {value}")
         if not all(isinstance(i, int) for i in value):
             raise ValueError(f"shape must be a tuple of integers, not {value}")
         if not all(i > 0 for i in value):
