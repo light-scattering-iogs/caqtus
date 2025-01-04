@@ -5,8 +5,6 @@ from ._data_type import Data, Array, StructuredData
 from ._is_data import is_data
 from ._schema import (
     DataType,
-    ScalarDataType,
-    NestedDataType,
     Boolean,
     Int,
     Float,
@@ -24,8 +22,6 @@ from ._schema import (
     ArrayInnerType,
     List,
     Struct,
-    is_numeric_dtype,
-    is_nested_dtype,
 )
 
 __all__ = [
@@ -36,8 +32,6 @@ __all__ = [
     "DataLabel",
     "is_data_label",
     "DataType",
-    "ScalarDataType",
-    "NestedDataType",
     "Boolean",
     "Int",
     "Float",
@@ -55,6 +49,4 @@ __all__ = [
     "ArrayInnerType",
     "List",
     "Struct",
-    "is_numeric_dtype",
-    "is_nested_dtype",
 ]
