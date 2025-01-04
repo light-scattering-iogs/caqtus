@@ -4,6 +4,9 @@ from typing import assert_never, Any
 import attrs
 import numpy as np
 from typing_extensions import TypeIs
+import msgpack
+
+ARRAY_TYPE = 1
 
 type ScalarDataType = Boolean | Float | Int
 type NestedDataType = ArrayDataType | Struct | List
@@ -13,22 +16,22 @@ type DataType = ScalarDataType | NestedDataType
 @attrs.frozen
 class Float:
     @staticmethod
-    def validator() -> Callable[[Any], bool]:
-        return lambda x: isinstance(x, float)
+    def get_unstructure_hook() -> Callable[[Any], float]:
+        return float
 
 
 @attrs.frozen
 class Int:
     @staticmethod
-    def validator() -> Callable[[Any], bool]:
-        return lambda x: isinstance(x, int)
+    def get_unstructure_hook() -> Callable[[Any], int]:
+        return int
 
 
 @attrs.frozen
 class Boolean:
     @staticmethod
-    def validator() -> Callable[[Any], bool]:
-        return lambda x: isinstance(x, bool)
+    def get_unstructure_hook() -> Callable[[Any], bool]:
+        return bool
 
 
 type ArrayInnerType = (
@@ -120,14 +123,17 @@ class ArrayDataType:
         if not all(i > 0 for i in value):
             raise ValueError(f"shape must be a tuple of positive integers, not {value}")
 
-    def validator(self) -> Callable[[Any], bool]:
+    def get_unstructure_hook(self) -> Callable[[Any], msgpack.ExtType]:
         numpy_dtype = to_numpy_dtype(self.inner)
         shape = tuple(self.shape)
 
-        def fun(x):
-            return x.shape == shape and x.dtype == numpy_dtype
+        def hook(value):
+            if value.shape != shape:
+                raise ValueError(f"expected shape {shape}, not {value.shape}")
+            data = value.astype(numpy_dtype).tobytes()
+            return msgpack.ExtType(ARRAY_TYPE, data)
 
-        return fun
+        return hook
 
 
 @attrs.frozen
@@ -136,13 +142,13 @@ class List:
 
     inner: DataType
 
-    def validator(self) -> Callable[[Any], bool]:
-        inner_validator = self.inner.validator()
+    def get_unstructure_hook(self) -> Callable[[Any], tuple]:
+        inner_hook = self.inner.get_unstructure_hook()
 
-        def fun(x):
-            return all(inner_validator(i) for i in x)
+        def hook(value):
+            return tuple(inner_hook(x) for x in value)
 
-        return fun
+        return hook
 
 
 @attrs.frozen
@@ -155,26 +161,22 @@ class Struct:
 
     """
 
-    fields: Mapping[str, DataType] = attrs.field()
+    fields: dict[str, DataType] = attrs.field()
 
     @fields.validator  # type: ignore
     def _fields_validator(self, attribute, value):
         if len(value) == 0:
             raise ValueError(f"fields must have at least one element, not {value}")
 
-    def validator(self) -> Callable[[Any], bool]:
-        field_validators = {
-            name: dtype.validator() for name, dtype in self.fields.items()
+    def get_unstructure_hook(self) -> Callable[[Any], dict]:
+        field_hooks = {
+            name: dtype.get_unstructure_hook() for name, dtype in self.fields.items()
         }
 
-        def validate(x):
-            if not isinstance(x, Mapping):
-                return False
-            if x.keys() != self.fields.keys():
-                return False
-            return all(field_validators[name](value) for name, value in x.items())
+        def hook(value):
+            return {name: hook(value[name]) for name, hook in field_hooks.items()}
 
-        return validate
+        return hook
 
 
 type DataSchema = Mapping[str, DataType]
