@@ -2,11 +2,10 @@ import abc
 import copy
 from typing import Optional
 
-from PySide6.QtWidgets import QWidget, QFormLayout, QLineEdit
+from PySide6.QtWidgets import QWidget, QFormLayout
 
 import caqtus.gui.qtutil.qabc as qabc
 from caqtus.device import DeviceConfiguration
-from caqtus.device.configuration import DeviceServerName
 
 
 class DeviceConfigurationEditor[T: DeviceConfiguration](
@@ -39,10 +38,6 @@ class FormDeviceConfigurationEditor[T: DeviceConfiguration](
         super().__init__(parent)
         self.form = QFormLayout()
         self.device_configuration = copy.deepcopy(device_configuration)
-        self.remote_server_line_edit = QLineEdit(self)
-        self.remote_server_line_edit.setPlaceholderText("None")
-        self.set_remote_server(self.device_configuration.remote_server)
-        self.form.addRow("Remote server", self.remote_server_line_edit)
         self.setLayout(self.form)
 
     def append_row(self, label: str, widget: QWidget):
@@ -66,18 +61,4 @@ class FormDeviceConfigurationEditor[T: DeviceConfiguration](
         """
 
         configuration = copy.deepcopy(self.device_configuration)
-        configuration.remote_server = self.read_remote_server()
         return configuration
-
-    def set_remote_server(self, remote_server: Optional[DeviceServerName]) -> None:
-        """Set the remote server name in the editor."""
-
-        self.remote_server_line_edit.setText(remote_server or "")
-
-    def read_remote_server(self) -> Optional[DeviceServerName]:
-        """Read the remote server name from the editor."""
-
-        text = self.remote_server_line_edit.text()
-        if text == "":
-            return None
-        return DeviceServerName(text)
