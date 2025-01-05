@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import abc
 from typing import (
     TypeVar,
     Optional,
@@ -18,7 +19,7 @@ DeviceServerName = NewType("DeviceServerName", str)
 DeviceType = TypeVar("DeviceType", bound=Device)
 
 
-@attrs.define
+@attrs.define(eq=False)
 class DeviceConfiguration(Generic[DeviceType]):
     """Contains static information about a device.
 
@@ -33,14 +34,12 @@ class DeviceConfiguration(Generic[DeviceType]):
 
     Subclasses should add necessary attributes depending on the device.
 
-    The dunder method :meth:`__eq__` should be implemented.
-
-    Attributes:
-        remote_server: Indicates the name of the computer on which the device should be
-            instantiated.
+    The dunder method :meth:`__eq__` must be implemented.
     """
 
-    remote_server: Optional[DeviceServerName] = attrs.field()
+    @abc.abstractmethod
+    def __eq__(self, other):
+        raise NotImplementedError
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
