@@ -5,11 +5,11 @@ from typing import Generic
 
 import attrs
 
-from caqtus.device import DeviceConfiguration, Device, DeviceController
+from caqtus.device import DeviceConfiguration, Device, DeviceController, DeviceName
 from caqtus.device.configuration import DeviceConfigType as DeviceConfigT
 from caqtus.device.remote import DeviceProxy
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
-from caqtus.shot_compilation import DeviceCompiler
+from caqtus.shot_compilation import DeviceCompiler, SequenceContext
 from caqtus.utils.serialization import JSON
 
 
@@ -74,16 +74,13 @@ class DeviceExtension(Generic[DeviceConfigT]):
 
             This function needs to be pickleable as it will be sent to a remote process.
 
-        compiler_type: The type of compiler used to compile the parameters of the
-            device.
+        compiler_type: A function that creates a compiler used to compile the parameters
+            of the device.
 
-            When the sequence is launched, a compiler will be created for each device
-            configuration. The compiler
-            :meth:`~caqtus.shot_compilation.DeviceCompiler.__init__` method is
-            called with the name of the device and the context of the sequence.
-            If the initialization method raises :class:`DeviceNotUsedException`, no
-            further actions will be taken for this device, and it will be ignored for
-            the sequence.
+            The function will be called at the beginning of the sequence with the name
+            of the device and the context of the sequence as arguments.
+            If this functions raises :class:`DeviceNotUsedException`, no further actions
+            will be taken for this device, and it will be ignored for the sequence.
 
             The method
             :meth:`~caqtus.shot_compilation.DeviceCompiler.compile_initialization_parameters`
@@ -120,7 +117,9 @@ class DeviceExtension(Generic[DeviceConfigT]):
     )
 
     device_type: Callable[..., Device] = attrs.field()
-    compiler_type: type[DeviceCompiler] = attrs.field()
+    compiler_type: Callable[[DeviceName, SequenceContext], DeviceCompiler] = (
+        attrs.field()
+    )
     controller_type: type[DeviceController] = attrs.field()
     proxy_type: type[DeviceProxy] = attrs.field()
 

@@ -4,8 +4,7 @@ import abc
 from collections.abc import Mapping
 from typing import Protocol, Any, runtime_checkable
 
-from caqtus.device import DeviceName
-from .compilation_contexts import SequenceContext, ShotContext
+from .compilation_contexts import ShotContext
 
 
 @runtime_checkable
@@ -28,23 +27,6 @@ class DeviceCompiler(Protocol):
     device compiler should inherit from
     :class:`caqtus.device.sequencer.compilation.TriggerableDeviceCompiler`.
     """
-
-    @abc.abstractmethod
-    def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
-        """Initialize the device compiler.
-
-        Args:
-            device_name: The name of the device for which the compiler is being created.
-                The device name can be used to retrieve the device configuration in the
-                sequence context.
-            sequence_context: The context of the sequence being compiled.
-                It contains information about the current that can be useful to evaluate
-                device parameters.
-        Raises:
-            DeviceNotUsedException: If the device is not used in the current sequence.
-        """
-
-        pass
 
     @abc.abstractmethod
     def compile_initialization_parameters(self) -> Mapping[str, Any]:
