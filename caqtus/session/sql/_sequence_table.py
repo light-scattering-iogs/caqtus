@@ -159,6 +159,7 @@ class SQLDeviceConfiguration(Base):
     name: Mapped[str] = mapped_column(String(255))
     device_type: Mapped[str] = mapped_column(String(255))
     content = mapped_column(sqlalchemy.types.JSON)
+    device_server: Mapped[Optional[str]] = mapped_column()
 
     __table_args__ = (
         sqlalchemy.UniqueConstraint(sequence_id, name, name="device_configuration"),
