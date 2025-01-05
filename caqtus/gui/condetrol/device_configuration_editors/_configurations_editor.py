@@ -127,7 +127,6 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
             name: DeviceInfo(config=config, device_server=server)
             for name, (server, config) in self._model.get_devices().items()
         }
-        print(result)
         return result
 
     def set_device_configurations(
@@ -161,7 +160,9 @@ class ConfigEditor(QGroupBox):
 
     def set_config(self, config: DeviceConfiguration):
         if self._editor is not None:
+            self._layout.removeWidget(self._editor)
             self._editor.deleteLater()
+
         self._editor = self._extension.get_device_configuration_editor(config)
         self._layout.addWidget(self._editor)
 
