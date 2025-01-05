@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'device_configurations_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.3
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -45,8 +45,13 @@ from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QDialogButtonBox,
+    QFormLayout,
     QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListView,
     QSizePolicy,
+    QSplitter,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -57,9 +62,37 @@ class Ui_DeviceConfigurationsDialog(object):
     def setupUi(self, DeviceConfigurationsDialog):
         if not DeviceConfigurationsDialog.objectName():
             DeviceConfigurationsDialog.setObjectName("DeviceConfigurationsDialog")
-        DeviceConfigurationsDialog.resize(620, 319)
+        DeviceConfigurationsDialog.resize(775, 570)
         self.verticalLayout = QVBoxLayout(DeviceConfigurationsDialog)
         self.verticalLayout.setObjectName("verticalLayout")
+        self.splitter = QSplitter(DeviceConfigurationsDialog)
+        self.splitter.setObjectName("splitter")
+        self.splitter.setOrientation(Qt.Orientation.Horizontal)
+        self.listView = QListView(self.splitter)
+        self.listView.setObjectName("listView")
+        self.splitter.addWidget(self.listView)
+        self.device_widget = QWidget(self.splitter)
+        self.device_widget.setObjectName("device_widget")
+        self.verticalLayout_2 = QVBoxLayout(self.device_widget)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.form_layout = QFormLayout()
+        self.form_layout.setObjectName("form_layout")
+        self.deviceNameLabel = QLabel(self.device_widget)
+        self.deviceNameLabel.setObjectName("deviceNameLabel")
+
+        self.form_layout.setWidget(0, QFormLayout.LabelRole, self.deviceNameLabel)
+
+        self.deviceNameLineEdit = QLineEdit(self.device_widget)
+        self.deviceNameLineEdit.setObjectName("deviceNameLineEdit")
+
+        self.form_layout.setWidget(0, QFormLayout.FieldRole, self.deviceNameLineEdit)
+
+        self.verticalLayout_2.addLayout(self.form_layout)
+
+        self.splitter.addWidget(self.device_widget)
+
+        self.verticalLayout.addWidget(self.splitter)
+
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setSpacing(6)
         self.horizontalLayout.setObjectName("horizontalLayout")
@@ -75,9 +108,10 @@ class Ui_DeviceConfigurationsDialog(object):
 
         self.buttonBox = QDialogButtonBox(DeviceConfigurationsDialog)
         self.buttonBox.setObjectName("buttonBox")
-        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
         self.buttonBox.setStandardButtons(
-            QDialogButtonBox.Cancel | QDialogButtonBox.Save
+            QDialogButtonBox.StandardButton.Cancel
+            | QDialogButtonBox.StandardButton.Save
         )
 
         self.horizontalLayout.addWidget(self.buttonBox)
@@ -96,6 +130,11 @@ class Ui_DeviceConfigurationsDialog(object):
         DeviceConfigurationsDialog.setWindowTitle(
             QCoreApplication.translate(
                 "DeviceConfigurationsDialog", "Edit device configurations...", None
+            )
+        )
+        self.deviceNameLabel.setText(
+            QCoreApplication.translate(
+                "DeviceConfigurationsDialog", "Device name", None
             )
         )
         self.add_device_button.setText(

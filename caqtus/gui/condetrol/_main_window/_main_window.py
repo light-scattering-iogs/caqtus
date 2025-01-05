@@ -10,8 +10,14 @@ from PySide6 import QtGui, QtCore, QtWidgets
 from PySide6.QtCore import Qt
 
 from caqtus.__about__ import __version__
+from caqtus.device import DeviceName
 from caqtus.experiment_control.manager import ExperimentManager, Procedure
-from caqtus.session import ExperimentSessionMaker, PureSequencePath, TracebackSummary
+from caqtus.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    TracebackSummary,
+    ExperimentSession,
+)
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import (
     split_recoverable,
@@ -24,6 +30,7 @@ from .._path_view import EditablePathHierarchyView
 from .._sequence_widget import SequenceWidget
 from ..device_configuration_editors._configurations_editor import (
     DeviceConfigurationsDialog,
+    DeviceInfo,
 )
 from ..._common.exception_tree import ExceptionDialog
 from ..._common.waiting_widget import run_with_wip_widget
@@ -217,27 +224,30 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
 
     def open_device_configurations_editor(self) -> None:
         with self.session_maker() as session:
-            previous_device_configurations = dict(session.default_device_configurations)
+            previous_device_infos = get_device_infos(session)
         self.device_configurations_dialog.set_device_configurations(
-            previous_device_configurations
+            previous_device_infos
         )
         if (
             self.device_configurations_dialog.exec()
             == QtWidgets.QDialog.DialogCode.Accepted
         ):
-            new_device_configurations = (
+            edited_device_infos = (
                 self.device_configurations_dialog.get_device_configurations()
             )
             with self.session_maker() as session:
                 for device_name in session.default_device_configurations:
-                    if device_name not in new_device_configurations:
+                    if device_name not in edited_device_infos:
                         del session.default_device_configurations[device_name]
                 for (
                     device_name,
-                    device_configuration,
-                ) in new_device_configurations.items():
+                    device_info,
+                ) in edited_device_infos.items():
                     session.default_device_configurations[device_name] = (
-                        device_configuration
+                        device_info.config
+                    )
+                    session.default_device_configurations.set_device_server(
+                        device_name, device_info.device_server
                     )
 
     def closeEvent(self, event):  # noqa: N802
@@ -304,3 +314,17 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
             f"<p><i>caqtus-suite</i> version: {__version__}</p>"
             f"<p>Platform: {platform.platform()}</p>",
         )
+
+
+def get_device_infos(session: ExperimentSession) -> dict[DeviceName, DeviceInfo]:
+    previous_device_configurations = dict(session.default_device_configurations)
+    device_infos = {}
+    for device_name, device_configuration in previous_device_configurations.items():
+        device_server = session.default_device_configurations.get_device_server(
+            device_name
+        )
+        device_infos[device_name] = DeviceInfo(
+            config=device_configuration,
+            device_server=device_server,
+        )
+    return device_infos

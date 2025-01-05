@@ -22,6 +22,12 @@ class DeviceConfigurationEditor[T: DeviceConfiguration](
 
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def set_configuration(self, configuration: T) -> None:
+        """Set the configuration to be displayed."""
+
+        raise NotImplementedError
+
 
 class FormDeviceConfigurationEditor[T: DeviceConfiguration](
     DeviceConfigurationEditor[T]
@@ -62,3 +68,8 @@ class FormDeviceConfigurationEditor[T: DeviceConfiguration](
 
         configuration = copy.deepcopy(self.device_configuration)
         return configuration
+
+    def set_configuration(self, configuration: T) -> None:
+        """Set the configuration to be displayed."""
+
+        self.device_configuration = copy.deepcopy(configuration)
