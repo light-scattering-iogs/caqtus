@@ -51,6 +51,7 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
         device_name: The name of the device being controlled.
     """
 
+    @final
     def __init__(
         self,
         device_name: DeviceName,
