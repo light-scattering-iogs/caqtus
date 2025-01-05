@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import attrs
 import sqlalchemy
@@ -11,17 +11,21 @@ from ._serializer import SerializerProtocol
 from ._table_base import Base
 from .._device_configuration_collection import DeviceConfigurationCollection
 from ...device import DeviceName
+from ...device.configuration import DeviceServerName
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
 
 
 class SQLDefaultDeviceConfiguration(Base):
+    """Table for storing device configurations to use by default."""
+
     __tablename__ = "default_device_configurations"
 
     name: Mapped[str] = mapped_column(String(255), primary_key=True)
     device_type: Mapped[str] = mapped_column(String(255))
     content = mapped_column(sqlalchemy.types.JSON)
+    device_server: Mapped[str] = mapped_column(nullable=True)
 
 
 @attrs.frozen
@@ -52,17 +56,38 @@ class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
         self._get_sql_session().execute(stmt)
 
     def __getitem__(self, __key):
-        stmt = sqlalchemy.select(SQLDefaultDeviceConfiguration).where(
-            SQLDefaultDeviceConfiguration.name == str(__key)
-        )
-        result = self._get_sql_session().execute(stmt)
-        if found := result.scalar():
+        item = self._get_item(__key)
+        if item is None:
+            raise KeyError(__key)
+        else:
             device_config = self.serializer.load_device_configuration(
-                found.device_type, found.content
+                item.device_type, item.content
             )
             return device_config
-        else:
-            raise KeyError(__key)
+
+    def get_device_server(self, device_name: DeviceName) -> Optional[DeviceServerName]:
+        item = self._get_item(device_name)
+        if item is None:
+            raise KeyError(device_name)
+        return item.device_server
+
+    def set_device_server(
+        self, device_name: DeviceName, server_name: Optional[DeviceServerName]
+    ) -> None:
+        item = self._get_item(device_name)
+        if item is None:
+            raise KeyError(device_name)
+        item.device_server = server_name
+        self._get_sql_session().flush([item])
+
+    def _get_item(
+        self, device_name: DeviceName
+    ) -> Optional[SQLDefaultDeviceConfiguration]:
+        stmt = sqlalchemy.select(SQLDefaultDeviceConfiguration).where(
+            SQLDefaultDeviceConfiguration.name == str(device_name)
+        )
+        result = self._get_sql_session().execute(stmt)
+        return result.scalar()
 
     def __len__(self):
         stmt = sqlalchemy.select(
