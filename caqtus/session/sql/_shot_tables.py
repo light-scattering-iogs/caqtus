@@ -79,7 +79,7 @@ class SQLShotData(Base):
             The conversion to and from the actual data type is done by the data schema.
     """
 
-    __tablename__ = "shot.data"
+    __tablename__ = "data"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
     shot_id: Mapped[int] = mapped_column(
@@ -88,7 +88,7 @@ class SQLShotData(Base):
     )
     shot: Mapped[SQLShot] = relationship(back_populates="data")
     schema_id: Mapped[int] = mapped_column(
-        ForeignKey("sequence.data_schema.id", ondelete="CASCADE"),
+        ForeignKey("data_schema.id", ondelete="CASCADE"),
         index=True,
     )
     schema: Mapped["SQLDataSchema"] = relationship(back_populates="data")

@@ -150,7 +150,7 @@ class SQLTimelanes(Base):
 
 
 class SQLDeviceConfiguration(Base):
-    __tablename__ = "sequence.device_configurations"
+    __tablename__ = "device_config"
 
     id_: Mapped[int] = mapped_column(primary_key=True)
     sequence_id: Mapped[int] = mapped_column(
@@ -192,7 +192,8 @@ class SQLDataSchema(Base):
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
     device_configuration_id: Mapped[int] = mapped_column(
-        ForeignKey(SQLDeviceConfiguration.id_, ondelete="CASCADE"), index=True
+        ForeignKey(SQLDeviceConfiguration.id_, ondelete="CASCADE"),
+        index=True,
     )
     device_configuration: Mapped[SQLDeviceConfiguration] = relationship(
         back_populates="data_schemas"
@@ -206,7 +207,7 @@ class SQLDataSchema(Base):
     )
     retention_policy: Mapped[JsonDict] = mapped_column()
 
-    __tablename__ = "sequence.data_schema"
+    __tablename__ = "data_schema"
     __table_args__ = (UniqueConstraint(device_configuration_id, label),)
 
 
