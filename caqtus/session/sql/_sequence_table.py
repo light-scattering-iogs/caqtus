@@ -7,6 +7,7 @@ import sqlalchemy
 from sqlalchemy import ForeignKey, DateTime, UniqueConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from caqtus.utils.serialization import JsonDict
 from ._path_table import SQLSequencePath
 from ._shot_tables import SQLShot
 from ._table_base import Base
@@ -160,13 +161,18 @@ class SQLDeviceConfiguration(Base):
     device_type: Mapped[str] = mapped_column(String(255))
     content = mapped_column(sqlalchemy.types.JSON)
     device_server: Mapped[Optional[str]] = mapped_column()
+    data_schemas: Mapped[list[SQLDataSchema]] = relationship(
+        cascade="all, delete",
+        passive_deletes=True,
+        back_populates="device_configuration",
+    )
 
     __table_args__ = (
         sqlalchemy.UniqueConstraint(sequence_id, name, name="device_configuration"),
     )
 
 
-class SQLSequenceDataSchema(Base):
+class SQLDataSchema(Base):
     """Contains the schema for the data of a sequence.
 
     Attributes:
@@ -186,9 +192,12 @@ class SQLSequenceDataSchema(Base):
     device_configuration_id: Mapped[int] = mapped_column(
         ForeignKey(SQLDeviceConfiguration.id_, ondelete="CASCADE"), index=True
     )
+    device_configuration: Mapped[SQLDeviceConfiguration] = relationship(
+        back_populates="data_schemas"
+    )
     label: Mapped[str] = mapped_column()
-    data_type: Mapped[sqlalchemy.types.JSON] = mapped_column()
-    retention_policy: Mapped[sqlalchemy.types.JSON] = mapped_column()
+    data_type: Mapped[JsonDict] = mapped_column()
+    retention_policy: Mapped[JsonDict] = mapped_column()
 
     __tablename__ = "sequence.data_schema"
     __table_args__ = (UniqueConstraint(device_configuration_id, label),)
