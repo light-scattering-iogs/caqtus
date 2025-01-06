@@ -166,6 +166,34 @@ class SQLDeviceConfiguration(Base):
     )
 
 
+class SQLSequenceDataSchema(Base):
+    """Contains the schema for the data of a sequence.
+
+    Attributes:
+        id_: The unique identifier of the data schema.
+        device_configuration_id: The identifier of the device configuration that is
+            associated with the data.
+        label: The label of the schema.
+            For a given device configuration, the label must be unique.
+        data_type: The data type of the schema.
+            This is a JSON object that describes the data type of the schema.
+            The object maps the name of the data type to a JSON object that describes
+            the data type, like so: {"Array": {"dtype": "float64", "shape": [2, 3]}}
+        retention_policy: The retention policy of the data.
+    """
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    device_configuration_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLDeviceConfiguration.id_, ondelete="CASCADE"), index=True
+    )
+    label: Mapped[str] = mapped_column()
+    data_type: Mapped[sqlalchemy.types.JSON] = mapped_column()
+    retention_policy: Mapped[sqlalchemy.types.JSON] = mapped_column()
+
+    __tablename__ = "sequence.data_schema"
+    __table_args__ = (UniqueConstraint(device_configuration_id, label),)
+
+
 class SQLExceptionTraceback(Base):
     __tablename__ = "sequence.exception_tracebacks"
 
