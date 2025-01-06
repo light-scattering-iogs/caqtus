@@ -70,7 +70,9 @@ class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
         if item is None:
             raise KeyError(device_name)
         return (
-            DeviceName(item.device_server) if item.device_server is not None else None
+            DeviceServerName(item.device_server)
+            if item.device_server is not None
+            else None
         )
 
     def set_device_server(
