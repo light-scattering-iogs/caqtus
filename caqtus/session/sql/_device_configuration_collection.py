@@ -25,7 +25,7 @@ class SQLDefaultDeviceConfiguration(Base):
     name: Mapped[str] = mapped_column(String(255), primary_key=True)
     device_type: Mapped[str] = mapped_column(String(255))
     content = mapped_column(sqlalchemy.types.JSON)
-    device_server: Mapped[str] = mapped_column(nullable=True)
+    device_server: Mapped[Optional[str]] = mapped_column(nullable=True)
 
 
 @attrs.frozen
@@ -69,7 +69,9 @@ class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
         item = self._get_item(device_name)
         if item is None:
             raise KeyError(device_name)
-        return item.device_server
+        return (
+            DeviceName(item.device_server) if item.device_server is not None else None
+        )
 
     def set_device_server(
         self, device_name: DeviceName, server_name: Optional[DeviceServerName]
