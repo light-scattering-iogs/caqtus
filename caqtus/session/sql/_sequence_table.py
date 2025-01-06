@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from caqtus.utils.serialization import JsonDict
 from ._path_table import SQLSequencePath
-from ._shot_tables import SQLShot
+from ._shot_tables import SQLShot, SQLShotData
 from ._table_base import Base
 from .._state import State
 
@@ -186,6 +186,8 @@ class SQLDataSchema(Base):
             The object maps the name of the data type to a JSON object that describes
             the data type, like so: {"Array": {"dtype": "float64", "shape": [2, 3]}}
         retention_policy: The retention policy of the data.
+            Indicates if the data should be saved or not during the sequence, and for
+            how long it should be saved.
     """
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
@@ -197,6 +199,11 @@ class SQLDataSchema(Base):
     )
     label: Mapped[str] = mapped_column()
     data_type: Mapped[JsonDict] = mapped_column()
+    data: Mapped[list[SQLShotData]] = relationship(
+        cascade="all, delete",
+        passive_deletes=True,
+        back_populates="schema",
+    )
     retention_policy: Mapped[JsonDict] = mapped_column()
 
     __tablename__ = "sequence.data_schema"
