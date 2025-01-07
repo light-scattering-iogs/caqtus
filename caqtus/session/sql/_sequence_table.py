@@ -231,7 +231,9 @@ class SQLParameterSchema(Base):
         id_: The unique identifier of the parameter schema.
         sequence_id: The identifier of the sequence that is associated with the schema.
         sequence: A reference to the sequence that is associated with the schema.
-        content: The content of the schema.
+        parameter_name: The name of the parameter.
+            For a given sequence, the parameter name must be unique.
+        parameter_type: The content of the schema.
             This is a JSON object that describes an object of type `ParameterSchema`
             that defines the type of the parameters in the sequence.
     """
@@ -243,10 +245,11 @@ class SQLParameterSchema(Base):
     sequence: Mapped[SQLSequence] = relationship(
         back_populates="parameter_schema", single_parent=True
     )
-    content: Mapped[JsonDict]
+    parameter_name: Mapped[str] = mapped_column()
+    parameter_type: Mapped[JsonDict] = mapped_column()
 
     __tablename__ = "parameter_schema"
-    __table_args__ = (UniqueConstraint(sequence_id),)
+    __table_args__ = (UniqueConstraint(sequence_id, parameter_name),)
 
 
 class SQLExceptionTraceback(Base):

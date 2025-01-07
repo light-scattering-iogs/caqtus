@@ -5,6 +5,7 @@ from sqlalchemy import UniqueConstraint, ForeignKey, JSON, LargeBinary, DateTime
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from ._table_base import Base
+from caqtus.utils.serialization import JSON as Json
 
 if TYPE_CHECKING:
     from ._sequence_table import SQLSequence, SQLDataSchema
@@ -46,6 +47,25 @@ class SQLShot(Base):
         cascade="all, delete",
         passive_deletes=True,
     )
+
+
+class SQLParameter(Base):
+    """Contains the values of the parameters for each shot."""
+
+    __tablename__ = "shot_parameter"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    shot_id: Mapped[int] = mapped_column(
+        ForeignKey("shots.id", ondelete="CASCADE"),
+        index=True,
+    )
+    parameter_schema_id: Mapped[int] = mapped_column(
+        ForeignKey("parameter_schema.id", ondelete="CASCADE"),
+        index=True,
+    )
+    value: Mapped[Json] = mapped_column()
+
+    __table_args__ = (UniqueConstraint(shot_id, parameter_schema_id),)
 
 
 # Shot parameters are stored as a single JSON row per shot, which is a dictionary
