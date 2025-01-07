@@ -7,7 +7,15 @@ from ._analog_value import (
 )
 from ._parameter import Parameter, is_parameter, Parameters
 from ._parameter_namespace import ParameterNamespace
-from ._schema import ParameterSchema
+from ._schema import (
+    ParameterSchema,
+    ParameterType,
+    Boolean,
+    Integer,
+    Float,
+    Quantity,
+    Constant,
+)
 
 __all__ = [
     "AnalogValue",
@@ -20,4 +28,10 @@ __all__ = [
     "is_quantity",
     "NotQuantityError",
     "ParameterSchema",
+    "ParameterType",
+    "Boolean",
+    "Integer",
+    "Float",
+    "Quantity",
+    "Constant",
 ]

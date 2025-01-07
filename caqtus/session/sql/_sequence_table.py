@@ -22,8 +22,13 @@ class SQLSequence(Base):
         path_id: The identifier of the path that the sequence is associated with.
         path: A reference to the path that the sequence is associated with.
         state: The state of the sequence.
-        parameter_schema: A reference to the schema of the parameters of the sequence.
-            This is None if and only if the sequence is in the DRAFT state.
+        parameter_schema: A list of the parameter schemas of the sequence.
+            These values are set when the sequence transition to PREPARING.
+
+            .. versionadded:: 7.0.0
+
+                For sequences created for older versions, there will be no parameter.
+
         exception_traceback: The traceback of the exception that occurred while running
             the sequence.
 
@@ -31,7 +36,6 @@ class SQLSequence(Base):
 
             It can be None even if the sequence is in the CRASHED state if the traceback
             was not captured.
-
         parameters: A reference to the global parameters of the sequence at the time it
             was launched.
             It is None if the sequence is in the DRAFT state and is set when the
@@ -68,7 +72,7 @@ class SQLSequence(Base):
     exception_traceback: Mapped[Optional[SQLExceptionTraceback]] = relationship(
         cascade="all, delete", passive_deletes=True, back_populates="sequence"
     )
-    parameter_schema: Mapped[Optional[SQLParameterSchema]] = relationship(
+    parameter_schema: Mapped[list[SQLParameterSchema]] = relationship(
         cascade="all, delete",
         passive_deletes=True,
         back_populates="sequence",
@@ -115,16 +119,27 @@ class SQLSequence(Base):
 
 
 class SQLSequenceParameters(Base):
+    """Contains the definition of the parameters constant for a sequence.
+
+    Attributes:
+        id_: The unique identifier of the parameters.
+        sequence_id: The identifier of the sequence that is associated with the parameters.
+        sequence: A reference to the sequence that is associated with the parameters.
+        content: The content of the parameters.
+            This is a JSON object that describes the parameters.
+            It is None if and only if the sequence is in the DRAFT state.
+    """
+
     __tablename__ = "sequence.parameters"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
     sequence_id: Mapped[int] = mapped_column(
-        ForeignKey(SQLSequence.id_, ondelete="CASCADE"), index=True
+        ForeignKey(SQLSequence.id_, ondelete="CASCADE"), index=True, unique=True
     )
     sequence: Mapped[SQLSequence] = relationship(
         back_populates="parameters", single_parent=True
     )
-    content = mapped_column(sqlalchemy.types.JSON)
+    content: Mapped[Optional[JsonDict]] = mapped_column()
 
     __table_args__ = (UniqueConstraint(sequence_id),)
 

@@ -388,9 +388,7 @@ class StepsConfiguration(IterationConfiguration):
         except StopIteration:
             # In case there is not steps to walk, we return a schema made only of the
             # initial constant parameters.
-            return ParameterSchema(
-                _constant_schema=initial_parameters, _variable_schema={}
-            )
+            return ParameterSchema.create(constants=initial_parameters, variables={})
         variable_parameters = self.get_parameter_names()
         constant_parameters = set(initial_parameters) - variable_parameters
         constant_schema = {
@@ -401,8 +399,8 @@ class StepsConfiguration(IterationConfiguration):
             name: ParameterSchema.type_from_value(initial_values[name])
             for name in variable_parameters
         }
-        return ParameterSchema(
-            _constant_schema=constant_schema, _variable_schema=variable_schema
+        return ParameterSchema.create(
+            constants=constant_schema, variables=variable_schema
         )
 
 

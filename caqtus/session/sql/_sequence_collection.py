@@ -23,9 +23,14 @@ from caqtus.types.iteration import (
     IterationConfiguration,
     Unknown,
 )
-from caqtus.types.parameter import Parameter, ParameterNamespace
+from caqtus.types.parameter import (
+    Parameter,
+    ParameterNamespace,
+    ParameterSchema,
+    ParameterType,
+)
 from caqtus.types.timelane import TimeLanes
-from caqtus.types.units import Quantity
+from caqtus.types.units import Quantity, Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from caqtus.utils.result import (
@@ -36,6 +41,7 @@ from caqtus.utils.result import (
     is_failure,
     unwrap,
 )
+from caqtus.utils.serialization import JsonDict
 from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -45,6 +51,7 @@ from ._sequence_table import (
     SQLDeviceConfiguration,
     SQLSequenceParameters,
     SQLExceptionTraceback,
+    SQLParameterSchema,
 )
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
@@ -68,6 +75,7 @@ from .._sequence_collection import SequenceCollection
 from .._shot_id import ShotId
 from .._state import State
 from ...device import DeviceName, DeviceConfiguration
+from ...types.parameter._schema import Boolean, Integer, Float, QuantityType, Constant
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -293,13 +301,15 @@ class SQLSequenceCollection(SequenceCollection):
         path: PureSequencePath,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
         global_parameters: ParameterNamespace,
+        parameter_schema: ParameterSchema,
     ) -> (
         Success[None]
         | Failure[PathNotFoundError]
         | Failure[PathIsNotSequenceError]
         | Failure[InvalidStateTransitionError]
     ):
-        sequence_result = _query_sequence_model(self._get_sql_session(), path)
+        session = self._get_sql_session()
+        sequence_result = _query_sequence_model(session, path)
         if is_failure(sequence_result):
             return sequence_result
         sequence = sequence_result.value
@@ -312,7 +322,11 @@ class SQLSequenceCollection(SequenceCollection):
             )
         sequence.state = State.PREPARING
         self._set_device_configurations(path, device_configurations)
-        self._set_global_parameters(path, global_parameters)
+        assert sequence.parameters.content is None
+        sequence.parameters.content = unstructure_parameter_namespace(global_parameters)
+        assert len(sequence.parameter_schema) == 0
+        sequence.parameter_schema = unstructure_parameter_schema(parameter_schema)
+        session.flush()
         return Success(None)
 
     def set_running(
@@ -484,6 +498,27 @@ class SQLSequenceCollection(SequenceCollection):
             )
             device_configurations[device_configuration.name] = constructed
         return device_configurations
+
+    def get_parameter_schema(
+        self, path: PureSequencePath
+    ) -> (
+        Success[ParameterSchema]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        sequence_result = _query_sequence_model(self._get_sql_session(), path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.value
+
+        if sequence.state == State.DRAFT:
+            return Failure(
+                SequenceNotLaunchedError(f"Sequence at {path} is in DRAFT state")
+            )
+
+        schema_content = sequence.parameter_schema
+        return Success(structure_parameter_schema(schema_content))
 
     def get_stats(
         self, path: PureSequencePath
@@ -1038,6 +1073,11 @@ def _reset_to_draft(
     if sequence.exception_traceback:
         session.delete(sequence.exception_traceback)
         sequence.exception_traceback = None
+    session.execute(
+        sqlalchemy.delete(SQLParameterSchema).where(
+            SQLParameterSchema.sequence == sequence
+        )
+    )
     delete_device_configurations = sqlalchemy.delete(SQLDeviceConfiguration).where(
         SQLDeviceConfiguration.sequence == sequence
     )
@@ -1074,12 +1114,87 @@ def serialize_shot_parameters(
     shot_parameters: Mapping[DottedVariableName, Parameter]
 ) -> dict[str, serialization.JSON]:
     return {
-        str(variable_name): serialization.converters["json"].unstructure(
-            parameter, Parameter
-        )
+        str(variable_name): unstructure_parameter_value(parameter)
         for variable_name, parameter in shot_parameters.items()
     }
 
 
 def is_tz_aware(dt: datetime.datetime) -> bool:
     return dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None
+
+
+def unstructure_parameter_namespace(
+    namespace: ParameterNamespace,
+) -> JsonDict:
+    return serialization.converters["json"].unstructure(namespace, ParameterNamespace)
+
+
+def unstructure_parameter_schema(
+    schema: ParameterSchema,
+) -> list[SQLParameterSchema]:
+    return [
+        SQLParameterSchema(
+            parameter_name=str(name),
+            parameter_type=unstructure_parameter_type(parameter_type),
+        )
+        for name, parameter_type in schema.items()
+    ]
+
+
+def structure_parameter_schema(
+    schema: list[SQLParameterSchema],
+) -> ParameterSchema:
+    return ParameterSchema(
+        {
+            DottedVariableName(schema_entry.parameter_name): structure_parameter_type(
+                schema_entry.parameter_type
+            )
+            for schema_entry in schema
+        }
+    )
+
+
+def unstructure_parameter_type(
+    parameter_type: ParameterType,
+) -> JsonDict:
+    match parameter_type:
+        case Boolean():
+            return {"Boolean": {}}
+        case Integer():
+            return {"Integer": {}}
+        case Float():
+            return {"Float": {}}
+        case QuantityType(units=units):
+            return {"Quantity": {"units": format(units, "~")}}
+        case Constant(value=value):
+            return {"Constant": {"value": unstructure_parameter_value(value)}}
+        case _:
+            assert_never(parameter_type)
+
+
+def structure_parameter_type(
+    parameter_type: JsonDict,
+) -> ParameterType:
+    match parameter_type:
+        case {"Boolean": {}}:
+            return Boolean()
+        case {"Integer": {}}:
+            return Integer()
+        case {"Float": {}}:
+            return Float()
+        case {"Quantity": {"units": str(units)}}:
+            return QuantityType(units=Unit(units))
+        case {"Constant": {"value": value}}:
+            return Constant(value=structure_parameter_value(value))
+        case _:
+            raise AssertionError(f"Invalid parameter type: {parameter_type}")
+
+
+def unstructure_parameter_value(value: Parameter) -> serialization.JSON:
+    return serialization.converters["json"].unstructure(value, Parameter)
+
+
+def structure_parameter_value(value: serialization.JSON) -> Parameter:
+    return serialization.converters["json"].structure(
+        value, bool | int | float | Quantity
+    )
