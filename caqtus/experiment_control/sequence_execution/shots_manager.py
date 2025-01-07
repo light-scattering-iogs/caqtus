@@ -226,8 +226,8 @@ class ShotManager:
         *,
         task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
     ) -> None:
-        # Suppress BrokenResourceError because the stream if the stream is closed due
-        # to an error on the other side, we don't want to clutter the traceback.
+        # Suppress BrokenResourceError because if the stream is closed due to an error
+        # on the other side, we don't want to clutter the traceback.
         with contextlib.suppress(anyio.BrokenResourceError):
             async with shot_params_receive_stream:
                 task_status.started()

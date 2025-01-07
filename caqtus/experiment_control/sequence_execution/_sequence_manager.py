@@ -181,7 +181,7 @@ class SequenceManager:
 
             # We start the subprocesses while preparing the sequence to avoid
             # the overhead of starting when the sequence is launched.
-            await anyio.to_process.run_sync(nothing)
+            await anyio.to_process.run_sync(nothing, cancellable=True)
             async with (
                 self._shot_runner_factory(
                     sequence_context, shot_compiler, self._device_manager_extension
