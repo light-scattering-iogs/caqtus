@@ -81,10 +81,6 @@ async def run_sequence(
             compile shots.
     """
 
-    with session_maker.session() as session:
-        iteration = session.sequences.get_iteration_configuration(sequence)
-    if not isinstance(iteration, StepsConfiguration):
-        raise NotImplementedError("Only steps iteration is supported at the moment.")
     sequence_manager = SequenceManager(
         sequence=sequence,
         session_maker=session_maker,
@@ -95,9 +91,13 @@ async def run_sequence(
         shot_runner_factory=shot_runner_factory,
         shot_compiler_factory=shot_compiler_factory,
     )
-    initial_context = StepContext(sequence_manager.sequence_parameters.evaluate())
+    if not isinstance(sequence_manager.sequence_iteration, StepsConfiguration):
+        raise NotImplementedError("Only steps iteration is supported at the moment.")
+    initial_context = StepContext(sequence_manager.sequence_parameter_values)
     async with sequence_manager.run_sequence() as shot_scheduler:
-        await execute_steps(iteration, initial_context, shot_scheduler)
+        await execute_steps(
+            sequence_manager.sequence_iteration, initial_context, shot_scheduler
+        )
 
 
 class SequenceManager:
@@ -126,12 +126,20 @@ class SequenceManager:
             else:
                 self.sequence_parameters = copy.deepcopy(global_parameters)
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
+            self.sequence_iteration = session.sequences.get_iteration_configuration(
+                sequence
+            )
 
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
 
         self._shot_runner_factory = shot_runner_factory
         self._shot_compiler_factory = shot_compiler_factory
+
+        self.sequence_parameter_values = self.sequence_parameters.evaluate()
+        self.parameter_schema = self.sequence_iteration.get_parameter_schema(
+            self.sequence_parameter_values
+        )
 
     @contextlib.asynccontextmanager
     async def run_sequence(self) -> AsyncGenerator[ShotScheduler, None]:
@@ -159,6 +167,7 @@ class SequenceManager:
                 self._sequence_path,
                 self.device_configurations,
                 self.sequence_parameters,
+                parameter_schema=self.parameter_schema,
             )
         try:
             sequence_context = SequenceContext(

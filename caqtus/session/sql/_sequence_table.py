@@ -23,10 +23,7 @@ class SQLSequence(Base):
         path: A reference to the path that the sequence is associated with.
         state: The state of the sequence.
         parameter_schema: A reference to the schema of the parameters of the sequence.
-            This is None if the sequence is in the DRAFT or PREPARING state and is set
-            when the sequence is RUNNING, INTERRUPTED or FINISHED.
-            If the sequence is CRASHED, the schema will be None is the sequence crashed
-            before the schema was set.
+            This is None if and only if the sequence is in the DRAFT state.
         exception_traceback: The traceback of the exception that occurred while running
             the sequence.
 
