@@ -22,6 +22,11 @@ class SQLSequence(Base):
         path_id: The identifier of the path that the sequence is associated with.
         path: A reference to the path that the sequence is associated with.
         state: The state of the sequence.
+        parameter_schema: A reference to the schema of the parameters of the sequence.
+            This is None if the sequence is in the DRAFT or PREPARING state and is set
+            when the sequence is RUNNING, INTERRUPTED or FINISHED.
+            If the sequence is CRASHED, the schema will be None is the sequence crashed
+            before the schema was set.
         exception_traceback: The traceback of the exception that occurred while running
             the sequence.
 
@@ -30,7 +35,10 @@ class SQLSequence(Base):
             It can be None even if the sequence is in the CRASHED state if the traceback
             was not captured.
 
-        parameters: A reference to the parameters of the sequence.
+        parameters: A reference to the global parameters of the sequence at the time it
+            was launched.
+            It is None if the sequence is in the DRAFT state and is set when the
+            sequence is prepared.
         iteration: A reference to the iteration configuration of the sequence.
         time_lanes: A reference to the time lanes of the sequence.
         device_configurations: A reference to the device configurations of the sequence.
@@ -62,6 +70,11 @@ class SQLSequence(Base):
     state: Mapped[State]
     exception_traceback: Mapped[Optional[SQLExceptionTraceback]] = relationship(
         cascade="all, delete", passive_deletes=True, back_populates="sequence"
+    )
+    parameter_schema: Mapped[Optional[SQLParameterSchema]] = relationship(
+        cascade="all, delete",
+        passive_deletes=True,
+        back_populates="sequence",
     )
 
     parameters: Mapped[SQLSequenceParameters] = relationship(
@@ -209,6 +222,31 @@ class SQLDataSchema(Base):
 
     __tablename__ = "data_schema"
     __table_args__ = (UniqueConstraint(device_configuration_id, label),)
+
+
+class SQLParameterSchema(Base):
+    """Contains the schema for the parameters of a sequence.
+
+    Attributes:
+        id_: The unique identifier of the parameter schema.
+        sequence_id: The identifier of the sequence that is associated with the schema.
+        sequence: A reference to the sequence that is associated with the schema.
+        content: The content of the schema.
+            This is a JSON object that describes an object of type `ParameterSchema`
+            that defines the type of the parameters in the sequence.
+    """
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    sequence_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLSequence.id_, ondelete="CASCADE"), index=True
+    )
+    sequence: Mapped[SQLSequence] = relationship(
+        back_populates="parameter_schema", single_parent=True
+    )
+    content: Mapped[JsonDict]
+
+    __tablename__ = "parameter_schema"
+    __table_args__ = (UniqueConstraint(sequence_id),)
 
 
 class SQLExceptionTraceback(Base):
