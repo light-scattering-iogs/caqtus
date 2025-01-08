@@ -1,3 +1,4 @@
+import enum
 import typing
 from collections.abc import Callable
 
@@ -45,7 +46,7 @@ class EditorBuilder:
         If the type is not registered, but is an attrs class, an editor will be built
         for it by calling :func:`build_attrs_class_editor`.
 
-        If the type is not registered byr is a `typing.Literal`, an editor will be built
+        If the type is not registered but is a `typing.Literal`, an editor will be built
         for it by calling :func:`build_literal_editor`.
 
         Raises:
@@ -69,6 +70,10 @@ class EditorBuilder:
                 from ._literal import build_literal_editor
 
                 return build_literal_editor(*typing.get_args(type_))
+            elif issubclass(type_, enum.Enum):
+                from ._enum import EnumEditor, generate_enum_editor
+
+                return generate_enum_editor(type_)
             elif attrs.has(type_):
                 from ._attrs import build_attrs_class_editor
 

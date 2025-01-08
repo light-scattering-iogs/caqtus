@@ -108,3 +108,18 @@ def test_enum_editor(qtbot: QtBot):
     value = editor.read_value()
     typing.assert_type(value, MyEnum)
     assert value == MyEnum.B
+
+
+def test_enum_dispatch(qtbot: QtBot):
+    class MyEnum(enum.Enum):
+        A = 1
+        B = 2
+        C = 3
+
+    builder = EditorBuilder()
+    factory = builder.build_editor(MyEnum)
+    editor = factory()
+    widget = editor.widget
+    qtbot.add_widget(widget)
+    editor.set_value(MyEnum.B)
+    assert editor.read_value() == MyEnum.B
