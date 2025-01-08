@@ -6,6 +6,7 @@ from ._editor_builder import (
     TypeNotRegisteredError,
     build_attrs_class_editor,
     build_literal_editor,
+    generate_enum_editor,
     AttributeOverride,
 )
 from ._int_editor import IntegerEditor
@@ -17,6 +18,7 @@ __all__ = [
     "build_device_configuration_editor",
     "build_attrs_class_editor",
     "build_literal_editor",
+    "generate_enum_editor",
     "get_editor_builder",
     "EditorBuilder",
     "IntegerEditor",
