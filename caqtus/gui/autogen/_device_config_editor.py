@@ -98,7 +98,7 @@ def build_device_configuration_editor[
     **overrides: AttributeOverride,
 ) -> DeviceConfigEditorFactory[C]:
     return generate_device_configuration_editor(
-        config_type, builder=builder, **overrides
+        config_type, generator=builder, **overrides
     )
 
 
