@@ -4,6 +4,7 @@ from typing import Optional, Protocol
 
 import attrs
 from PySide6.QtWidgets import QLineEdit, QVBoxLayout
+from typing_extensions import deprecated
 
 from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration import DeviceServerName
@@ -55,21 +56,21 @@ class DeviceConfigEditorFactory[C: DeviceConfiguration](Protocol):
 _builder = EditorBuilder()
 
 
-def build_device_configuration_editor[
+def generate_device_configuration_editor[
     C: DeviceConfiguration
 ](
     config_type: type[C],
-    builder: EditorBuilder = _builder,
+    generator: EditorBuilder = _builder,
     **overrides: AttributeOverride,
 ) -> DeviceConfigEditorFactory[C]:
-    """Builds a device configuration editor for the given configuration type.
+    """Generate a device configuration editor for the given configuration type.
 
     For more documentation, see :func:`~caqtus.gui.autogen.build_attrs_class_editor`.
 
     Args:
         config_type: The type of configuration to construct the editor for.
             Must be an attrs class.
-        builder: Used to build editors for the fields of the configuration.
+        generator: Used to generate editors for the fields of the configuration.
 
     Returns:
         An automatically generated class of type
@@ -81,10 +82,23 @@ def build_device_configuration_editor[
         raise TypeError("config_type must be an attrs class")
 
     config_editor_factory = build_attrs_class_editor(
-        config_type, builder=builder, **overrides
+        config_type, builder=generator, **overrides
     )
     return functools.partial(
         GeneratedConfigEditor, editor_factory=config_editor_factory
+    )
+
+
+@deprecated("Use generate_device_configuration_editor instead")
+def build_device_configuration_editor[
+    C: DeviceConfiguration
+](
+    config_type: type[C],
+    builder: EditorBuilder = _builder,
+    **overrides: AttributeOverride,
+) -> DeviceConfigEditorFactory[C]:
+    return generate_device_configuration_editor(
+        config_type, generator=builder, **overrides
     )
 
 

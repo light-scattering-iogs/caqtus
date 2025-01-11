@@ -81,7 +81,7 @@ class ShotCompiler(ShotCompilerProtocol):
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         # We add a deadline to shot compilation to not hang indefinitely in case of
         # a bug.
-        with anyio.move_on_after(5):
+        with anyio.move_on_after(10):
             return await anyio.to_process.run_sync(
                 self.compile_shot_sync, shot_parameters.parameters, cancellable=True
             )

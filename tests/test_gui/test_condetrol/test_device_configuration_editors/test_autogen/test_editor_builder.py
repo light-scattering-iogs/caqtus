@@ -1,3 +1,4 @@
+import enum
 import typing
 
 import attrs
@@ -10,6 +11,7 @@ from caqtus.gui.autogen import (
     StringEditor,
     TypeNotRegisteredError,
     IntegerEditor,
+    generate_enum_editor,
 )
 
 
@@ -87,3 +89,37 @@ def test_literal_editor(qtbot: QtBot):
     assert isinstance(widget, QtWidgets.QComboBox)
     widget.setCurrentIndex(1)
     assert editor.read_value() == 123
+
+
+def test_enum_editor(qtbot: QtBot):
+    class MyEnum(enum.Enum):
+        A = 1
+        B = 2
+        C = 3
+
+    editor_factory = generate_enum_editor(MyEnum)
+
+    editor = editor_factory()
+    widget = editor.widget
+
+    qtbot.add_widget(widget)
+    widget.setCurrentIndex(1)
+    assert widget.currentText() == "MyEnum.B"
+    value = editor.read_value()
+    typing.assert_type(value, MyEnum)
+    assert value == MyEnum.B
+
+
+def test_enum_dispatch(qtbot: QtBot):
+    class MyEnum(enum.Enum):
+        A = 1
+        B = 2
+        C = 3
+
+    builder = EditorBuilder()
+    factory = builder.build_editor(MyEnum)
+    editor = factory()
+    widget = editor.widget
+    qtbot.add_widget(widget)
+    editor.set_value(MyEnum.B)
+    assert editor.read_value() == MyEnum.B
