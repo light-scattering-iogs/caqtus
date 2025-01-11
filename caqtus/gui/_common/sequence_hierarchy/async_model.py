@@ -25,17 +25,15 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from caqtus.session import (
     ExperimentSessionMaker,
+    State,
     PureSequencePath,
     ExperimentSession,
     AsyncExperimentSession,
     PathIsRootError,
     PathHasChildrenError,
-)
-from caqtus.session import (
-    PathNotFoundError,
     PathIsSequenceError,
     PathIsNotSequenceError,
-    State,
+    PathNotFoundError,
 )
 from caqtus.session._sequence_collection import SequenceStats
 from caqtus.types.iteration import (

@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from datetime import datetime
-from typing import Protocol, TYPE_CHECKING
+from typing import Protocol
 
 from caqtus.utils.result import Success, Failure
+from ._exceptions import (
+    SequenceRunningError,
+    PathExistsError,
+    RecursivePathMoveError,
+    PathIsSequenceError,
+    PathNotFoundError,
+    PathIsRootError,
+)
 from ._path import PureSequencePath
-
-if TYPE_CHECKING:
-    from ._sequence_collection import PathIsSequenceError, SequenceRunningError
 
 
 class PathHierarchy(Protocol):
@@ -173,39 +178,3 @@ class PathHierarchy(Protocol):
         """
 
         raise NotImplementedError
-
-
-class PathError(RuntimeError):
-    """Base class for all path errors."""
-
-    pass
-
-
-class PathNotFoundError(PathError):
-    """Raised when a path is not found in the session."""
-
-    pass
-
-
-class PathIsRootError(PathError):
-    """Raised when an invalid operation is performed on the root path."""
-
-    pass
-
-
-class PathHasChildrenError(PathError):
-    """Raised when an invalid operation is performed on a path that has children."""
-
-    pass
-
-
-class PathExistsError(PathError):
-    """Raised when a path already exists in the session."""
-
-    pass
-
-
-class RecursivePathMoveError(PathError):
-    """Raised when an invalid move operation is performed."""
-
-    pass

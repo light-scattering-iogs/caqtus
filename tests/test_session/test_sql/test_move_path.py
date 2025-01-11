@@ -1,8 +1,12 @@
 import pytest
 
-from caqtus.session import PureSequencePath, PathIsSequenceError
-from caqtus.session._path_hierarchy import PathExistsError, RecursivePathMoveError
-from caqtus.session._sequence_collection import SequenceRunningError
+from caqtus.session import (
+    PureSequencePath,
+    PathIsSequenceError,
+    SequenceRunningError,
+    PathExistsError,
+    RecursivePathMoveError,
+)
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils.result import unwrap
 

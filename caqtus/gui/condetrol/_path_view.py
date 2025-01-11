@@ -28,10 +28,10 @@ from caqtus.session import (
     PureSequencePath,
     PathIsRootError,
     PathNotFoundError,
-)
-from caqtus.session import (
     PathIsSequenceError,
     PathHasChildrenError,
+)
+from caqtus.session import (
     State,
 )
 from caqtus.types.expression import Expression

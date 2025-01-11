@@ -18,16 +18,14 @@ from PySide6.QtWidgets import (
 
 from caqtus.session import (
     ExperimentSessionMaker,
+    State,
     PureSequencePath,
     ExperimentSession,
     AsyncExperimentSession,
     TracebackSummary,
-)
-from caqtus.session import (
-    PathNotFoundError,
-    SequenceNotEditableError,
     PathIsNotSequenceError,
-    State,
+    SequenceNotEditableError,
+    PathNotFoundError,
 )
 from caqtus.types.iteration import (
     IterationConfiguration,

@@ -4,26 +4,41 @@ from . import copy
 from . import sql
 from ._device_configuration_collection import DeviceConfigurationCollection
 from ._exception_summary import TracebackSummary
-from ._experiment_session import ExperimentSession
-from ._path import PureSequencePath, InvalidPathFormatError
-from ._path_hierarchy import (
-    PathError,
-    PathNotFoundError,
-    PathIsRootError,
-    PathHasChildrenError,
-)
-from ._path_hierarchy import PathHierarchy
-from ._sequence import Sequence, Shot
-from ._sequence_collection import (
-    SequenceCollection,
+from ._exceptions import (
     PathIsSequenceError,
     PathIsNotSequenceError,
     DataNotFoundError,
     SequenceStateError,
     InvalidStateTransitionError,
     SequenceNotEditableError,
-    ShotNotFoundError,
     SequenceNotCrashedError,
+    ShotNotFoundError,
+    PathError,
+    PathNotFoundError,
+    PathIsRootError,
+    PathHasChildrenError,
+    PathExistsError,
+    SequenceNotLaunchedError,
+    SequenceNotCrashedError,
+    SequenceNotEditableError,
+    InvalidStateTransitionError,
+    DataNotFoundError,
+    SequenceStateError,
+    PathError,
+    PathNotFoundError,
+    PathIsRootError,
+    PathHasChildrenError,
+    PathExistsError,
+    PathIsSequenceError,
+    SequenceRunningError,
+    RecursivePathMoveError,
+)
+from ._experiment_session import ExperimentSession
+from ._path import PureSequencePath, InvalidPathFormatError
+from ._path_hierarchy import PathHierarchy
+from ._sequence import Sequence, Shot
+from ._sequence_collection import (
+    SequenceCollection,
 )
 from ._session_maker import ExperimentSessionMaker, StorageManager
 from ._state import State
@@ -42,19 +57,34 @@ __all__ = [
     "SequenceCollection",
     "DeviceConfigurationCollection",
     "AsyncExperimentSession",
+    "TracebackSummary",
+    "sql",
+    "copy",
     "PathIsSequenceError",
     "PathIsNotSequenceError",
     "DataNotFoundError",
     "SequenceStateError",
     "InvalidStateTransitionError",
     "SequenceNotEditableError",
+    "SequenceNotCrashedError",
     "ShotNotFoundError",
     "PathError",
     "PathNotFoundError",
     "PathIsRootError",
     "PathHasChildrenError",
-    "TracebackSummary",
+    "PathExistsError",
+    "SequenceNotLaunchedError",
     "SequenceNotCrashedError",
-    "sql",
-    "copy",
+    "SequenceNotEditableError",
+    "InvalidStateTransitionError",
+    "DataNotFoundError",
+    "SequenceStateError",
+    "PathError",
+    "PathNotFoundError",
+    "PathIsRootError",
+    "PathHasChildrenError",
+    "PathExistsError",
+    "PathIsSequenceError",
+    "SequenceRunningError",
+    "RecursivePathMoveError",
 ]

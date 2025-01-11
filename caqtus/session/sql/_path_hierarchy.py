@@ -17,13 +17,16 @@ from caqtus.utils.result import (
 from ._path_table import SQLSequencePath
 from .._path import PureSequencePath
 from .._path_hierarchy import (
-    PathNotFoundError,
-    PathIsRootError,
     PathHierarchy,
+)
+from .._exceptions import (
+    SequenceRunningError,
     PathExistsError,
     RecursivePathMoveError,
+    PathIsSequenceError,
+    PathNotFoundError,
+    PathIsRootError,
 )
-from .._sequence_collection import PathIsSequenceError, SequenceRunningError
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession

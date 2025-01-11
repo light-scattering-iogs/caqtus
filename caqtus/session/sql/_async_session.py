@@ -37,17 +37,20 @@ from ._sequence_collection import (
 from ._serializer import SerializerProtocol
 from .._data_id import DataId
 from .._exception_summary import TracebackSummary
+from .._exceptions import (
+    SequenceNotRunningError,
+    SequenceNotLaunchedError,
+    PathIsSequenceError,
+    PathIsNotSequenceError,
+    InvalidStateTransitionError,
+    SequenceNotCrashedError,
+    PathNotFoundError,
+    PathIsRootError,
+)
 from .._experiment_session import ExperimentSessionNotActiveError
 from .._path import PureSequencePath
-from .._path_hierarchy import PathNotFoundError, PathIsRootError
 from .._sequence_collection import (
-    PathIsSequenceError,
     SequenceStats,
-    PathIsNotSequenceError,
-    SequenceNotCrashedError,
-    SequenceNotRunningError,
-    InvalidStateTransitionError,
-    SequenceNotLaunchedError,
 )
 from .._shot_id import ShotId
 from ..async_session import (
