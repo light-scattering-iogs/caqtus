@@ -1,6 +1,6 @@
 """Contains the copy function to transfer data between two sessions."""
 
-from typing import assert_never, assert_type
+from typing import assert_never
 
 import tqdm
 
@@ -16,7 +16,6 @@ from .._exceptions import (
     PathIsSequenceError,
     PathIsNotSequenceError,
     SequenceStateError,
-    InvalidStateTransitionError,
     SequenceNotCrashedError,
     PathNotFoundError,
     PathIsRootError,
@@ -143,20 +142,16 @@ def copy_sequence(
         return Success(None)
     device_configs = source_session.sequences.get_device_configurations(path)
     global_parameters = unwrap(source_session.sequences.get_global_parameters(path))
-    preparing_result = destination_session.sequences.set_preparing(
+    sequence_reference = destination_session.sequences.set_preparing(
         path, device_configs, global_parameters
-    )
-    assert not is_failure_type(preparing_result, PathNotFoundError)
-    assert not is_failure_type(preparing_result, PathIsNotSequenceError)
-    assert not is_failure_type(preparing_result, InvalidStateTransitionError)
-    assert_type(preparing_result, Success[None])
+    ).unwrap()
 
     assert stats.start_time is not None
-    running_result = destination_session.sequences.set_running(
-        path, start_time=stats.start_time
+    sequence_reference = (
+        sequence_reference.bind(destination_session)
+        .unwrap()
+        .transition_running(stats.start_time)
     )
-    assert not is_failure_type(running_result, PathNotFoundError)
-    assert not is_failure_type(running_result, PathIsNotSequenceError)
 
     for shot_index in tqdm.trange(stats.number_completed_shots):
         shot_parameters = source_session.sequences.get_shot_parameters(path, shot_index)
@@ -175,10 +170,14 @@ def copy_sequence(
 
     if state == State.FINISHED:
         assert stats.stop_time is not None
-        destination_session.sequences.set_finished(path, stop_time=stats.stop_time)
+        sequence_reference.bind(destination_session).unwrap().transition_finished(
+            stats.stop_time
+        )
     elif state == State.INTERRUPTED:
         assert stats.stop_time is not None
-        destination_session.sequences.set_interrupted(path, stop_time=stats.stop_time)
+        sequence_reference.bind(destination_session).unwrap().transition_interrupted(
+            stats.stop_time
+        )
     elif state == State.CRASHED:
         exception_result = source_session.sequences.get_exception(path)
         assert not is_failure_type(exception_result, PathNotFoundError)
@@ -188,13 +187,11 @@ def copy_sequence(
         if exception is None:
             exception = TracebackSummary.from_exception(RuntimeError("Unknown error"))
         assert stats.stop_time is not None
-        crashed_result = destination_session.sequences.set_crashed(
-            path, exception, stop_time=stats.stop_time
+        sequence_reference = (
+            sequence_reference.bind(destination_session)
+            .unwrap()
+            .transition_crashed(exception, stats.stop_time)
         )
-        assert not is_failure_type(crashed_result, PathNotFoundError)
-        assert not is_failure_type(crashed_result, PathIsNotSequenceError)
-        assert not is_failure_type(crashed_result, InvalidStateTransitionError)
-        assert_type(crashed_result, Success[None])
     else:
         assert_never(state)  # type: ignore[reportArgumentType]
 

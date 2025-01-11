@@ -24,7 +24,7 @@ from ._exceptions import (
     InvalidStateTransitionError,
     SequenceNotCrashedError,
     PathNotFoundError,
-    PathHasChildrenError,
+    PathHasChildrenError, SequenceStateError,
 )
 from ._path import PureSequencePath
 from ._shot_id import ShotId
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from ._experiment_session import ExperimentSession
 
 
-class SequenceCollection(Protocol):
+class SequenceCollection[S: "ExperimentSession"](Protocol):
     """A collection of sequences inside a session.
 
     This abstract class defines the interface to read and write sequences in a session.
@@ -47,7 +47,7 @@ class SequenceCollection(Protocol):
     """
 
     @property
-    def parent_session(self) -> "ExperimentSession":
+    def parent_session(self) -> S:
         """The session that this collection belongs to."""
 
         ...
@@ -195,7 +195,7 @@ class SequenceCollection(Protocol):
         global_parameters: ParameterNamespace,
         parameter_schema: ParameterSchema,
     ) -> (
-        Success[None]
+        Success[SequenceReference[S, PreparingHandle[S]]]
         | Failure[PathNotFoundError]
         | Failure[PathIsNotSequenceError]
         | Failure[InvalidStateTransitionError]
@@ -435,3 +435,52 @@ class SequenceStats:
     stop_time: Optional[datetime.datetime]
     number_completed_shots: int
     expected_number_shots: int | Unknown
+
+
+class SequenceReference[S: "ExperimentSession", H](Protocol):
+    def bind(
+        self, session: S
+    ) -> (
+        Success[H]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceStateError]
+    ): ...
+
+
+class PreparingHandle[S: "ExperimentSession"](Protocol):
+    def transition_running(
+        self, start_time: datetime.datetime
+    ) -> SequenceReference[S, RunningHandle]: ...
+
+    def transition_crashed(
+        self, tb_summary: TracebackSummary, stop_time: datetime.datetime
+    ) -> SequenceReference[S, CrashedHandle]: ...
+
+class RunningHandle[S: "ExperimentSession"](Protocol):
+    def transition_finished(
+        self, stop_time: datetime.datetime
+    ) -> SequenceReference[S, FinishedHandle]: ...
+
+    def transition_interrupted(
+        self, stop_time: datetime.datetime
+    ) -> SequenceReference[S, InterruptedHandle]: ...
+
+    def transition_crashed(
+        self, tb_summary: TracebackSummary, stop_time: datetime.datetime
+    ) -> SequenceReference[S, CrashedHandle]: ...
+
+class CrashedHandle(Protocol):
+    pass
+
+class InterruptedHandle(Protocol):
+    pass
+
+class FinishedHandle(Protocol):
+    pass
+
+
+def now() -> datetime.datetime:
+    """Return the current time as a timezone-aware datetime object."""
+
+    return datetime.datetime.now(tz=datetime.timezone.utc)

@@ -34,6 +34,11 @@ class Success(Generic[T]):
 
         return self.value
 
+    def unwrap(self) -> T:
+        """Return the wrapped successful value."""
+
+        return self.value
+
 
 def is_success(result: Success[T] | Failure[Any]) -> TypeIs[Success[T]]:
     """Check if a result is a success."""
@@ -66,6 +71,11 @@ class Failure(Generic[E]):
 
     def __str__(self) -> str:
         return str(self._error)
+
+    def unwrap(self: Failure[Exception]) -> Never:
+        """Raise the wrapped exception."""
+
+        raise self._error
 
 
 @overload

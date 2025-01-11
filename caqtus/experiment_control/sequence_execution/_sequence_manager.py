@@ -29,6 +29,7 @@ from ._shot_runner import ShotRunnerFactory, create_shot_runner
 from .sequence_runner import execute_steps
 from .shots_manager import ShotManager, ShotData, ShotScheduler, ShotRetryConfig
 from ..device_manager_extension import DeviceManagerExtensionProtocol
+from ...session._sequence_collection import now
 from ...types.iteration._step_context import StepContext
 
 logger = logging.getLogger(__name__)
@@ -163,12 +164,12 @@ class SequenceManager:
         """
 
         with self._session_maker() as session:
-            session.sequences.set_preparing(
+            sequence_reference = session.sequences.set_preparing(
                 self._sequence_path,
                 self.device_configurations,
                 self.sequence_parameters,
                 parameter_schema=self.parameter_schema,
-            )
+            ).unwrap()
         try:
             sequence_context = SequenceContext(
                 device_configurations=self.device_configurations,  # pyright: ignore[reportCallIssue]
@@ -196,7 +197,11 @@ class SequenceManager:
                 ),
             ):
                 with self._session_maker() as session:
-                    session.sequences.set_running(self._sequence_path, start_time="now")
+                    sequence_reference = (
+                        sequence_reference.bind(session)
+                        .unwrap()
+                        .transition_running(now())
+                    )
                 async with (
                     anyio.create_task_group() as tg,
                     scheduler_cm as scheduler,
@@ -205,15 +210,15 @@ class SequenceManager:
                     yield scheduler
         except* anyio.get_cancelled_exc_class():
             with self._session_maker() as session:
-                session.sequences.set_interrupted(self._sequence_path, stop_time="now")
+                sequence_reference.bind(session).unwrap().transition_interrupted(now())
             raise
         except* BaseException as e:
             tb_summary = TracebackSummary.from_exception(e)
             with self._session_maker() as session:
-                unwrap(
-                    session.sequences.set_crashed(
-                        self._sequence_path, tb_summary, stop_time="now"
-                    )
+                (
+                    sequence_reference.bind(session)
+                    .unwrap()
+                    .transition_crashed(tb_summary, now())
                 )
             recoverable, non_recoverable = split_recoverable(e)
             if non_recoverable:
@@ -223,10 +228,9 @@ class SequenceManager:
                     "A recoverable error occurred while running the sequence.",
                     exc_info=recoverable,
                 )
-
         else:
             with self._session_maker() as session:
-                session.sequences.set_finished(self._sequence_path, stop_time="now")
+                sequence_reference.bind(session).unwrap().transition_finished(now())
 
     async def _store_shots(
         self,
