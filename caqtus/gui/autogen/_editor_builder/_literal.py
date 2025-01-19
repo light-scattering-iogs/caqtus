@@ -8,7 +8,7 @@ from PySide6 import QtWidgets
 from ._editor_builder import EditorFactory, ValueEditor
 
 
-def build_literal_editor(*values) -> EditorFactory[LiteralEditor]:
+def build_literal_editor(*values) -> EditorFactory:
     """Build an editor for a predefined set of values.
 
     The editor will be a combo box proposing the given values.

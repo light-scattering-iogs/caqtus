@@ -44,8 +44,7 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
     def set_configuration(self, configuration: C) -> None:
         self._editor.set_value(configuration)
 
-    # TODO: Understand why need to silence pyright
-    def get_configuration(self) -> C:  # type: ignore[reportIncompatibleMethodOverride]
+    def get_configuration(self) -> C:
         return self._editor.read_value()
 
     def set_editable(self, editable: bool) -> None:
@@ -105,7 +104,7 @@ def build_device_configuration_editor[
     )
 
 
-class DeviceServerNameEditor(ValueEditor[Optional[DeviceServerName]]):
+class DeviceServerNameEditor(ValueEditor[DeviceServerName | None]):
     def __init__(self) -> None:
         self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText("None")

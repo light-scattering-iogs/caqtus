@@ -98,9 +98,8 @@ class AttrsEditor[T: attrs.AttrsInstance](ValueEditor[T]):
             assert isinstance(editor, ValueEditor)
             editor.set_value(getattr(value, ui_spec.field_name))
 
-    # TODO: Figure out why pyright report this method as an incompatible override
     @typing.override
-    def read_value(self) -> T:  # type: ignore[reportIncompatibleMethodOverride]
+    def read_value(self) -> T:
         attribute_values = {}
         for ui_spec in self._ui_specs:
             editor = getattr(self, ui_spec.editor_name)

@@ -4,7 +4,10 @@ from PySide6.QtWidgets import QWidget
 
 
 class ValueEditor[T](abc.ABC):
-    """Allows to edit a value of type T."""
+    """Allows to edit a value of type T.
+
+    Note that it is strictly invariant in T.
+    """
 
     @abc.abstractmethod
     def set_value(self, value: T) -> None:

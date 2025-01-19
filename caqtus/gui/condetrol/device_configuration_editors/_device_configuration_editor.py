@@ -1,18 +1,16 @@
 import abc
 import copy
-from typing import Optional, Generic
+from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QFormLayout
-from typing_extensions import TypeVar
 
 import caqtus.gui.qtutil.qabc as qabc
 from caqtus.device import DeviceConfiguration
 
 
-T = TypeVar("T", bound=DeviceConfiguration, default=DeviceConfiguration)
-
-
-class DeviceConfigurationEditor(QWidget, Generic[T], metaclass=qabc.QABCMeta):
+class DeviceConfigurationEditor[T: DeviceConfiguration](
+    QWidget, metaclass=qabc.QABCMeta
+):
     """A widget that allows to edit the configuration of a device.
 
     This class is generic in the type of the device configuration it allows to edit.
