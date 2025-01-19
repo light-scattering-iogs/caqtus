@@ -2,16 +2,13 @@ import decimal
 from abc import ABC, abstractmethod
 from typing import (
     Type,
-    TypeVar,
-    Generic,
 )
 
 import attrs
 
 from caqtus.device.configuration import DeviceConfiguration
-from ..timing import TimeStep
 from ..channel_commands import ChannelOutput
-from ..runtime import Sequencer
+from ..timing import TimeStep
 from ..trigger import Trigger, is_trigger
 
 
@@ -64,13 +61,8 @@ def validate_trigger(instance, attribute, value):
         raise TypeError(f"Trigger {value} is not of type Trigger")
 
 
-SequencerType = TypeVar("SequencerType", bound=Sequencer)
-
-
 @attrs.define
-class SequencerConfiguration(
-    DeviceConfiguration[SequencerType], ABC, Generic[SequencerType]
-):
+class SequencerConfiguration(DeviceConfiguration, ABC):
     """Abstract class for the configuration of a sequencer.
 
     This class defines the attributes that a configuration of a sequencer must have.

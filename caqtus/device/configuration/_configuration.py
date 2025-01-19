@@ -5,22 +5,16 @@ from __future__ import annotations
 import abc
 from typing import (
     TypeVar,
-    Optional,
     NewType,
-    Generic,
 )
 
 import attrs
 
-from caqtus.device.runtime import Device
-
 DeviceServerName = NewType("DeviceServerName", str)
-
-DeviceType = TypeVar("DeviceType", bound=Device)
 
 
 @attrs.define(eq=False)
-class DeviceConfiguration(Generic[DeviceType]):
+class DeviceConfiguration:
     """Contains static information about a device.
 
     This is an abstract class, generic in :data:`DeviceType` that stores the information

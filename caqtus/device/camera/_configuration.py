@@ -3,12 +3,11 @@ from typing import TypeVar
 import attrs
 
 from caqtus.types.image.roi import RectangularROI
-from ._runtime import Camera
 from ..configuration import DeviceConfiguration
 
 
 @attrs.define
-class CameraConfiguration[C: Camera](DeviceConfiguration[C]):
+class CameraConfiguration(DeviceConfiguration):
     """Contains the necessary information about a camera.
 
     Attributes:

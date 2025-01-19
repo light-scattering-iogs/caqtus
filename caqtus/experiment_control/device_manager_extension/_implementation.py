@@ -24,12 +24,10 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
     ) -> None:
         self._compiler_types[configuration_type] = compiler_type
 
-    def register_device[
-        D: Device
-    ](
+    def register_device(
         self,
-        configuration_type: type[DeviceConfiguration[D]],
-        device_type: Callable[..., D],
+        configuration_type: type[DeviceConfiguration],
+        device_type: Callable[..., Device],
     ) -> None:
         self._device_types[configuration_type] = device_type
 
