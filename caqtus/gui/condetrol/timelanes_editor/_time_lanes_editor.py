@@ -5,7 +5,7 @@ from typing import Optional
 
 import yaml
 from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
-from PySide6.QtGui import QAction, QFont
+from PySide6.QtGui import QAction, QFont, QUndoStack
 from PySide6.QtWidgets import (
     QTableView,
     QMenu,
@@ -83,6 +83,10 @@ class TimeLanesEditor(QWidget):
 
         font = QFont("JetBrains Mono")
         self.setFont(font)
+
+    @property
+    def undo_stack(self) -> QUndoStack:
+        return self.view.undo_stack
 
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
@@ -286,6 +290,10 @@ class TimeLanesView(QTableView):
         self.verticalHeader().setFixedWidth(200)
         self._steps_table.verticalHeader().setFixedWidth(200)
 
+    @property
+    def undo_stack(self) -> QUndoStack:
+        return self._model.undo_stack
+
     def moveCursor(self, cursorAction, modifiers):  # noqa: N802, N803
         current = super().moveCursor(cursorAction, modifiers)
 
@@ -439,7 +447,7 @@ class TimeLanesView(QTableView):
             remove_lane_action = QAction("Remove")
             menu.addAction(remove_lane_action)
             remove_lane_action.triggered.connect(
-                lambda: self._model.removeRow(index, QModelIndex())
+                lambda: self._model.remove_lane(index - 2)
             )
             for action in self._model.get_lane_header_context_actions(index - 2):
                 if isinstance(action, QAction):
