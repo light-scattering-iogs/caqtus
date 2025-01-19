@@ -45,8 +45,6 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
 
     @_spanned_values.validator  # type: ignore
     def validate_spanned_values(self, _, value):
-        if not value:
-            raise ValueError("Spanned values must not be empty")
         if not all(span >= 1 for _, span in value):
             raise ValueError("Span must be at least 1")
 
