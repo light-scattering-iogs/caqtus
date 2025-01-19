@@ -380,6 +380,10 @@ class TimeLanes:
         on_setattr=attrs.setters.validate,
     )
 
+    @classmethod
+    def empty(cls) -> Self:
+        return cls([], [], {})
+
     @step_names.validator  # type: ignore
     def validate_step_names(self, _, value):
         if not all(isinstance(v, str) for v in value):
