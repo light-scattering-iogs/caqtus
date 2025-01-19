@@ -1,3 +1,17 @@
-from ._sequence_devices_editor import SequenceDevicesEditor, WidgetState, NoSequenceSet
+from ._sequence_devices_editor import (
+    SequenceDevicesEditor,
+    RequestedState,
+    IntoNoSequenceSet,
+    IntoDraftSequence,
+    DraftSequence,
+    NoSequenceSet,
+)
 
-__all__ = ["SequenceDevicesEditor", "WidgetState", "NoSequenceSet"]
+__all__ = [
+    "SequenceDevicesEditor",
+    "RequestedState",
+    "IntoNoSequenceSet",
+    "IntoDraftSequence",
+    "DraftSequence",
+    "NoSequenceSet",
+]

@@ -1,27 +1,43 @@
 # pyright: strict
 from __future__ import annotations
 
-from typing import assert_never
+from collections.abc import Mapping
+from typing import assert_never, Any
 
 import attrs
 from PySide6 import QtWidgets
 
-type WidgetState = NoSequenceSet
+from caqtus.device import DeviceName, DeviceConfiguration
+
+type RequestedState = IntoNoSequenceSet | IntoDraftSequence
 """Describes the state of a SequenceDevicesEditor widget."""
 
-type _WidgetState = _NoSequenceSet
+type InternalState = NoSequenceSet | DraftSequence
 
 
 @attrs.frozen
-class NoSequenceSet:
+class IntoNoSequenceSet:
     """The widget is in a state where no sequence has been set."""
 
     pass
 
 
 @attrs.frozen
-class _NoSequenceSet(NoSequenceSet):
+class IntoDraftSequence:
+    """The widget is in a state where the sequence devices can be edited."""
+
+    device_configurations: Mapping[DeviceName, DeviceConfiguration[Any]]
+
+
+@attrs.frozen
+class NoSequenceSet:
     pass
+
+
+@attrs.frozen
+class DraftSequence:
+    def device_configurations(self) -> Mapping[DeviceName, DeviceConfiguration[Any]]:
+        raise NotImplementedError
 
 
 class SequenceDevicesEditor(QtWidgets.QWidget):
@@ -36,13 +52,13 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
 
         self._setup_ui()
 
-        self._state: _WidgetState = _NoSequenceSet()
+        self._state: InternalState = NoSequenceSet()
 
     def _setup_ui(self) -> None:
         self.setLayout(self._layout)
         self._layout.addWidget(self._tab_widget)
 
-    def transition(self, state: WidgetState) -> None:
+    def transition(self, state: RequestedState) -> None:
         """Changes the state of the widget to the given state.
 
         Changes the state of the widget to the given state.
@@ -51,16 +67,17 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
         new_state = None
 
         match state:
-            case NoSequenceSet():
+            case IntoNoSequenceSet():
                 clear_and_disable_tab_widget(self._tab_widget)
-                new_state = _NoSequenceSet()
+                new_state = NoSequenceSet()
+            case IntoDraftSequence():
+                raise NotImplementedError
             case _:
                 assert_never(state)
 
         self._state = new_state
 
-    @property
-    def state(self) -> WidgetState:
+    def state(self) -> InternalState:
         """The current state of the widget.
 
         Returns:
