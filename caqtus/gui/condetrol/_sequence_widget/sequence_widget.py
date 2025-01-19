@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Set
 from typing import Optional, Literal, assert_never
 
 import anyio
@@ -29,13 +28,9 @@ from caqtus.session import (
     PathIsNotSequenceError,
     State,
 )
-from caqtus.types.iteration import (
-    IterationConfiguration,
-    StepsConfiguration,
-)
+from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
-from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.result import is_failure_type
 from caqtus.utils.result import unwrap
 from .sequence_widget_ui import Ui_SequenceWidget
@@ -45,6 +40,67 @@ from .._sequence_iteration_editors import StepsIterationEditor
 from ..timelanes_editor import TimeLanesEditor
 from ..timelanes_editor.extension import CondetrolLaneExtensionProtocol
 from ..._common.exception_tree import ExceptionDialog
+
+type State = SequenceNotSet | DraftSequence | FinishedSequence | CrashedSequence
+
+type LiveState = SequenceNotSet | _DraftSequence | _FinishedSequence | _CrashedSequence
+
+
+@attrs.frozen
+class SequenceNotSet:
+    pass
+
+
+@attrs.frozen
+class SequenceSetBase:
+    sequence_path: PureSequencePath
+    iterations: IterationConfiguration
+    time_lanes: TimeLanes
+    parameters: ParameterNamespace
+
+
+@attrs.frozen
+class DraftSequence(SequenceSetBase):
+    pass
+
+
+@attrs.frozen
+class FinishedSequence(SequenceSetBase):
+    pass
+
+
+@attrs.frozen
+class CrashedSequence(SequenceSetBase):
+    traceback: TracebackSummary
+
+
+@attrs.define
+class _LiveStateBase:
+    parent: SequenceWidget
+
+
+@attrs.define
+class _SetSequenceBase(_LiveStateBase):
+    sequence_path: PureSequencePath
+
+    def update_global_parameters(self, parameters: ParameterNamespace) -> None:
+        self.parent.iteration_editor.set_available_parameter_names(parameters.names())
+        self.parent.parameters_editor.set_parameters(parameters)
+
+
+@attrs.frozen
+class _DraftSequence(_SetSequenceBase):
+    pass
+
+
+@attrs.frozen
+class _FinishedSequence(_SetSequenceBase):
+    pass
+
+
+@attrs.frozen
+class _CrashedSequence(_SetSequenceBase):
+    traceback: TracebackSummary
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
@@ -72,7 +128,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     def __init__(
         self,
-        session_maker: ExperimentSessionMaker,
         extension: CondetrolLaneExtensionProtocol,
         parent: Optional[QWidget] = None,
     ):
@@ -80,31 +135,17 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         The sequence widget will initially be associated with no sequence.
 
-        Args:
-            session_maker: It is used to connect to the storage system in which to look
-            for the sequence.
+        Args:.
             extension: The extension that provides time lanes customization.
             parent: The parent widget.
         """
 
         super().__init__(parent)
         self.setupUi(self)
-        self.session_maker = session_maker
 
-        with self.session_maker() as session:
-            device_configurations = dict(session.default_device_configurations)
-            self._global_parameters = session.get_global_parameters()
-
-        self._state: _State = _SequenceNotSetState()
-        self._state_lock = anyio.Lock()
-
+        self._state: LiveState = SequenceNotSet()
         self.parameters_editor = ParameterNamespaceEditor(self)
-        self.parameters_editor.set_read_only(True)
-        self.time_lanes_editor = TimeLanesEditor(
-            extension,
-            device_configurations,
-            self,
-        )
+        self.time_lanes_editor = TimeLanesEditor(extension, self)
         self.iteration_editor = StepsIterationEditor(self)
 
         self.tabWidget.clear()
@@ -112,11 +153,12 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.addTab(self.iteration_editor, "&Parameters")
         self.tabWidget.addTab(self.time_lanes_editor, "Time &lanes")
 
+        self.parameters_editor.set_read_only(True)
+
         self.setup_connections()
 
         self.tool_bar = QToolBar(self)
         self.status_widget = IconLabel(icon_position="left")
-
         self.warning_action = self.tool_bar.addAction(
             get_icon("mdi6.alert", color=QColor(205, 22, 17)), "warning"
         )
@@ -129,10 +171,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         )
         self.start_sequence_action.triggered.connect(self._on_start_sequence_requested)
         self.start_sequence_action.setShortcut(QKeySequence("F5"))
-        self.interrupt_sequence_action = self.tool_bar.addAction(
-            get_icon("stop"), "interrupt"
-        )
-        self.interrupt_sequence_action.setVisible(False)
         self.verticalLayout.insertWidget(0, self.tool_bar)
         self.stacked = QStackedWidget(self)
         self.stacked.addWidget(QWidget(self))
@@ -144,28 +182,53 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self.tabWidget.currentChanged.connect(self.stacked.setCurrentIndex)
 
-        self._transition(_SequenceNotSetState())
-
         self._exception_dialog = ExceptionDialog(self)
 
-    def update_global_parameters(self, parameters: ParameterNamespace) -> None:
-        """Update the table of parameters that the editor uses.
-
-        Whenever the global parameters change externally, this method must be called to
-        reflect the change.
-        """
-
-        self._global_parameters = parameters
-        self.set_available_parameter_names(parameters.names())
-        if isinstance(self._state, _SequenceNotSetState | _SequenceEditableState):
-            self.parameters_editor.set_parameters(parameters)
-
-    def set_available_parameter_names(
-        self, parameter_names: Set[DottedVariableName]
-    ) -> None:
-        """Set the names of the parameters that are defined externally."""
-
-        self.iteration_editor.set_available_parameter_names(parameter_names)
+    def set_fresh_state(self, state: State) -> None:
+        match state:
+            case SequenceNotSet():
+                self.setVisible(False)
+                self.start_sequence_action.setEnabled(False)
+                new_state = SequenceNotSet()
+            case SequenceSetBase(
+                sequence_path=path,
+                iterations=iterations,
+                time_lanes=time_lanes,
+                parameters=parameters,
+            ) as set_state:
+                self.iteration_editor.set_iteration(iterations)
+                self.time_lanes_editor.set_time_lanes(time_lanes)
+                self.parameters_editor.set_parameters(parameters)
+                self.setVisible(True)
+                match set_state:
+                    case DraftSequence():
+                        self.start_sequence_action.setEnabled(True)
+                        self.time_lanes_editor.set_read_only(False)
+                        self.iteration_editor.set_read_only(False)
+                        self.warning_action.setVisible(False)
+                        self._set_status_widget(path, True)
+                        new_state = _DraftSequence(self, sequence_path=path)
+                    case FinishedSequence():
+                        self.start_sequence_action.setEnabled(False)
+                        self.time_lanes_editor.set_read_only(True)
+                        self.iteration_editor.set_read_only(True)
+                        self.warning_action.setVisible(False)
+                        self._set_status_widget(path, False)
+                        new_state = _FinishedSequence(self, sequence_path=path)
+                    case CrashedSequence(traceback=tb):
+                        self.start_sequence_action.setEnabled(False)
+                        self.time_lanes_editor.set_read_only(True)
+                        self.iteration_editor.set_read_only(True)
+                        self.warning_action.setVisible(True)
+                        self._set_status_widget(path, False)
+                        new_state = _CrashedSequence(
+                            self, sequence_path=path, traceback=tb
+                        )
+                    case _:
+                        assert_never(set_state)
+            case _:
+                assert_never(state)
+        self._state = new_state
 
     async def exec_async(self) -> None:
         while True:
@@ -190,66 +253,24 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         else:
             raise AssertionError("Invalid state")
 
-    def _transition(self, new_state: _State) -> None:
-        match new_state:
-            case _SequenceNotSetState():
-                self.setVisible(False)
-                self.start_sequence_action.setEnabled(False)
-                self.interrupt_sequence_action.setEnabled(False)
-                self.warning_action.setVisible(False)
-                self.parameters_editor.set_parameters(self._global_parameters)
-            case _SequenceSetState(
-                iterations=iterations,
-                time_lanes=time_lanes,
-                sequence_state=state,
-                sequence_path=path,
-            ):
-                if not isinstance(iterations, StepsConfiguration):
-                    raise NotImplementedError(f"Only supports {StepsConfiguration}")
-                self.iteration_editor.set_iteration(iterations)
-                self.time_lanes_editor.set_time_lanes(time_lanes)
-                self._set_status_widget(path, state)
-                if isinstance(new_state, _SequenceEditableState):
-                    self.start_sequence_action.setEnabled(True)
-                    self.interrupt_sequence_action.setEnabled(False)
-                    self.time_lanes_editor.set_read_only(False)
-                    self.iteration_editor.set_read_only(False)
-                    self.warning_action.setVisible(False)
-                    self.parameters_editor.set_parameters(self._global_parameters)
-                elif isinstance(new_state, _SequenceNotEditableState):
-                    self.start_sequence_action.setEnabled(False)
-                    self.interrupt_sequence_action.setEnabled(False)
-                    self.time_lanes_editor.set_read_only(True)
-                    self.iteration_editor.set_read_only(True)
-                    self.parameters_editor.set_parameters(new_state.parameters)
-                    if isinstance(new_state, _SequenceCrashedState):
-                        self.warning_action.setVisible(True)
-                    else:
-                        self.warning_action.setVisible(False)
-
-                self.setVisible(True)
-            case _:
-                assert_never(new_state)
-        self._state = new_state
-
     def _on_warning_action_triggered(self) -> None:
         """Display the sequence traceback in a dialog."""
 
-        assert isinstance(self._state, _SequenceCrashedState)
+        assert isinstance(self._state, _CrashedSequence)
 
         color = QApplication.palette().color(QPalette.ColorRole.Accent).name()
         self._exception_dialog.set_message(
             f"An error occurred while running the sequence "
             f"<b><font color='{color}'>{self._state.sequence_path}</font></b>."
         )
-        traceback = self._state.exception_traceback
+        traceback = self._state.traceback
         self._exception_dialog.set_exception(traceback)
         self._exception_dialog.show()
 
-    def _set_status_widget(self, path: PureSequencePath, state: State) -> None:
+    def _set_status_widget(self, path: PureSequencePath, editable: bool) -> None:
         text = " > ".join(path.parts)
         color = self.palette().text().color()
-        if state.is_editable():
+        if editable:
             icon = get_icon("editable-sequence", color=color)
         else:
             icon = get_icon("read-only-sequence", color=color)
@@ -257,15 +278,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.status_widget.set_icon(icon)
 
     def _on_start_sequence_requested(self):
-        assert isinstance(self._state, _SequenceEditableState)
+        assert isinstance(self._state, _DraftSequence)
         self.sequence_start_requested.emit(self._state.sequence_path)
-
-    def set_sequence(self, sequence_path: Optional[PureSequencePath]) -> None:
-        if sequence_path is None:
-            new_state = _SequenceNotSetState()
-        else:
-            new_state = _query_state_sync(sequence_path, self.session_maker)
-        self._transition(new_state)
 
     def setup_connections(self):
         self.time_lanes_editor.time_lanes_edited.connect(self.on_time_lanes_edited)
@@ -302,38 +316,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 )
             else:
                 self._state = attrs.evolve(self._state, time_lanes=time_lanes)
-
-
-@attrs.frozen
-class _SequenceNotSetState:
-    pass
-
-
-@attrs.frozen
-class _SequenceSetState:
-    sequence_path: PureSequencePath
-    sequence_state: State
-
-    iterations: IterationConfiguration
-    time_lanes: TimeLanes
-
-
-@attrs.frozen
-class _SequenceNotEditableState(_SequenceSetState):
-    parameters: ParameterNamespace
-
-
-@attrs.frozen
-class _SequenceCrashedState(_SequenceNotEditableState):
-    exception_traceback: Optional[TracebackSummary]
-
-
-@attrs.frozen
-class _SequenceEditableState(_SequenceSetState):
-    pass
-
-
-type _State = _SequenceNotSetState | _SequenceSetState
 
 
 async def _query_state_async(
@@ -385,23 +367,20 @@ async def _query_sequence_state_async(
             )
 
 
-def _query_state_sync(
-    path: PureSequencePath, session_maker: ExperimentSessionMaker
-) -> _State:
-    with session_maker() as session:
-        is_sequence_result = session.sequences.is_sequence(path)
-        if is_failure_type(is_sequence_result, PathNotFoundError):
-            return _SequenceNotSetState()
+def _query_state_sync(path: PureSequencePath, session: ExperimentSession) -> State:
+    is_sequence_result = session.sequences.is_sequence(path)
+    if is_failure_type(is_sequence_result, PathNotFoundError):
+        return SequenceNotSet()
+    else:
+        if is_sequence_result.result():
+            return _query_sequence_state_sync(path, session)
         else:
-            if is_sequence_result.result():
-                return _query_sequence_state_sync(path, session)
-            else:
-                return _SequenceNotSetState()
+            return SequenceNotSet()
 
 
 def _query_sequence_state_sync(
     path: PureSequencePath, session: ExperimentSession
-) -> _SequenceSetState:
+) -> DraftSequence | FinishedSequence | CrashedSequence:
     # These results can be unwrapped safely because we checked that the sequence
     # exists in the session.
     state = unwrap(session.sequences.get_state(path))
@@ -409,28 +388,27 @@ def _query_sequence_state_sync(
     time_lanes = session.sequences.get_time_lanes(path)
 
     if state.is_editable():
-        return _SequenceEditableState(
-            path, iterations=iterations, time_lanes=time_lanes, sequence_state=state
+        parameters = session.get_global_parameters()
+        return DraftSequence(
+            path, iterations=iterations, time_lanes=time_lanes, parameters=parameters
         )
     else:
         parameters = unwrap(session.sequences.get_global_parameters(path))
         if state == State.CRASHED:
             traceback_summary = unwrap(session.sequences.get_exception(path))
-            return _SequenceCrashedState(
+            return CrashedSequence(
                 path,
                 iterations=iterations,
                 time_lanes=time_lanes,
                 parameters=parameters,
-                sequence_state=state,
-                exception_traceback=traceback_summary,
+                traceback=traceback_summary,
             )
         else:
-            return _SequenceNotEditableState(
+            return FinishedSequence(
                 path,
                 iterations=iterations,
                 time_lanes=time_lanes,
                 parameters=parameters,
-                sequence_state=state,
             )
 
 
