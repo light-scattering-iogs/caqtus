@@ -155,8 +155,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self.parameters_editor.set_read_only(True)
 
-        self.setup_connections()
-
         self.tool_bar = QToolBar(self)
         self.status_widget = IconLabel(icon_position="left")
         self.warning_action = self.tool_bar.addAction(
@@ -281,12 +279,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     def _on_start_sequence_requested(self):
         assert isinstance(self._state, _DraftSequence)
         self.sequence_start_requested.emit(self._state.sequence_path)
-
-    def setup_connections(self):
-        self.time_lanes_editor.time_lanes_edited.connect(self.on_time_lanes_edited)
-        self.iteration_editor.iteration_edited.connect(
-            self.on_sequence_iteration_edited
-        )
 
     def on_sequence_iteration_edited(self, iterations: IterationConfiguration):
         assert isinstance(self._state, _SequenceEditableState)
