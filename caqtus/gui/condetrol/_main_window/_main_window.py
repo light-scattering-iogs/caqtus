@@ -22,6 +22,7 @@ from .._logger import logger
 from .._parameter_tables_editor import ParameterNamespaceEditor
 from .._path_view import EditablePathHierarchyView
 from .._sequence_widget import SequenceWidget
+from .._sequence_widget.sequence_widget import _query_state_sync
 from ..device_configuration_editors._configurations_editor import (
     DeviceConfigurationsDialog,
 )
@@ -194,7 +195,9 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         )
 
     def set_edited_sequence(self, path: PureSequencePath):
-        self.sequence_widget.set_sequence(path)
+        with self.session_maker() as session:
+            state = _query_state_sync(path, session)
+        self.sequence_widget.set_fresh_state(state)
 
     def on_procedure_exception(self, exception: Exception):
         recoverable, non_recoverable = split_recoverable(exception)
