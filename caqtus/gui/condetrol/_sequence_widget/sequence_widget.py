@@ -147,6 +147,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.parameters_editor = ParameterNamespaceEditor(self)
         self.time_lanes_editor = TimeLanesEditor(extension, {}, self)
         self.undoView.setStack(self.time_lanes_editor.undo_stack)
+        self.undoView.setCleanIcon(
+            get_icon("mdi6.content-save", color=Qt.GlobalColor.gray)
+        )
         self.iteration_editor = StepsIterationEditor(self)
 
         self.tabWidget.clear()
