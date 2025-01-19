@@ -7,10 +7,12 @@ from pytestqt.qtbot import QtBot
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.device.camera import CameraConfiguration
+from caqtus.gui.autogen import generate_device_configuration_editor
 from caqtus.gui.condetrol._sequence_devices_editor import (
     SequenceDevicesEditor,
     DraftSequence,
 )
+from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.types.image import Width, Height
 from caqtus.types.image.roi import RectangularROI
 
@@ -31,10 +33,24 @@ def device_configurations() -> Mapping[DeviceName, DeviceConfiguration]:
     return {DeviceName("camera"): MockDeviceConfiguration.default()}
 
 
+mock_configuration_editor_factory = generate_device_configuration_editor(
+    MockDeviceConfiguration
+)
+
+
+def editor_factory(
+    device_configuration: DeviceConfiguration,
+) -> DeviceConfigurationEditor:
+    if isinstance(device_configuration, MockDeviceConfiguration):
+        return mock_configuration_editor_factory(device_configuration)
+    else:
+        raise NotImplementedError
+
+
 def test_transition_to_draft_sets_device_configurations(
     qtbot: QtBot, device_configurations
 ):
-    editor = SequenceDevicesEditor()
+    editor = SequenceDevicesEditor(editor_factory)
     qtbot.addWidget(editor)
 
     editor.transition(DraftSequence(device_configurations=device_configurations))

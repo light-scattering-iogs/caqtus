@@ -1,7 +1,7 @@
 # pyright: strict
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Callable
 from typing import assert_never
 
 import attrs
@@ -36,9 +36,16 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
         SequenceDevicesEditor._NoSequenceSet | SequenceDevicesEditor._DraftSequence
     )
 
-    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
+    def __init__(
+        self,
+        device_editor_factory: Callable[
+            [DeviceConfiguration], DeviceConfigurationEditor
+        ],
+        parent: QtWidgets.QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
 
+        self._device_editor_factory = device_editor_factory
         self._layout = QtWidgets.QVBoxLayout()
         self.tab_widget = QtWidgets.QTabWidget()
         clear_and_disable_tab_widget(self.tab_widget)
@@ -105,7 +112,14 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
         def create_and_apply(
             cls, parent: SequenceDevicesEditor, state: DraftSequence
         ) -> SequenceDevicesEditor._DraftSequence:
-            raise NotImplementedError
+            delete_all_tabs(parent.tab_widget)
+            for name, config in state.device_configurations.items():
+                editor = parent._device_editor_factory(config)
+                editor.set_configuration(config)
+                parent.tab_widget.addTab(editor, name)
+            parent.tab_widget.setTabsClosable(True)
+            parent.tab_widget.setEnabled(True)
+            return cls(parent)
 
         def read(self) -> DraftSequence:
             configurations = dict[DeviceName, DeviceConfiguration]()
