@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Self
+from typing import Self, reveal_type
 
 import attrs
 import pytest
@@ -47,13 +47,13 @@ def editor_factory(
         raise NotImplementedError
 
 
-def test_transition_to_draft_sets_device_configurations(
+def test_set_fresh_draft_sets_device_configurations(
     qtbot: QtBot, device_configurations
 ):
     editor = SequenceDevicesEditor(editor_factory)
     qtbot.addWidget(editor)
 
-    editor.transition(DraftSequence(device_configurations=device_configurations))
+    editor.set_fresh_state(DraftSequence(device_configurations=device_configurations))
 
     state = editor.state()
 

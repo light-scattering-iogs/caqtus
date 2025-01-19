@@ -1,4 +1,3 @@
-# pyright: strict
 from __future__ import annotations
 
 from collections.abc import Mapping, Callable
@@ -58,13 +57,22 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
         self.setLayout(self._layout)
         self._layout.addWidget(self.tab_widget)
 
-    def transition(self, state: WidgetState) -> None:
+    def set_fresh_state(self, state: WidgetState) -> None:
         """Changes the state of the widget to the given state.
 
-        Changes the state of the widget to the given state.
+        This method discards the current state of the widget and replaces it with the
+        given state.
         """
 
-        self._state = self._state.transition(state)
+        match state:
+            case NoSequenceSet():
+                new_state = self._NoSequenceSet.create_fresh(self)
+            case DraftSequence():
+                new_state = self._DraftSequence.create_fresh(self, state)
+            case _:
+                assert_never(state)
+
+        self._state = new_state
 
     def state(self) -> WidgetState:
         """The current state of the widget.
@@ -82,7 +90,7 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
         parent: SequenceDevicesEditor
 
         @classmethod
-        def create_and_apply(
+        def create_fresh(
             cls, parent: SequenceDevicesEditor
         ) -> SequenceDevicesEditor._NoSequenceSet:
             clear_and_disable_tab_widget(parent.tab_widget)
@@ -91,25 +99,12 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
         def read(self) -> NoSequenceSet:
             return NoSequenceSet()
 
-        def transition(
-            self, state: WidgetState
-        ) -> SequenceDevicesEditor._InternalState:
-            match state:
-                case NoSequenceSet():
-                    return self.create_and_apply(self.parent)
-                case DraftSequence():
-                    return SequenceDevicesEditor._DraftSequence.create_and_apply(
-                        self.parent, state
-                    )
-                case _:
-                    assert_never(state)
-
     @attrs.frozen
     class _DraftSequence:
         parent: SequenceDevicesEditor
 
         @classmethod
-        def create_and_apply(
+        def create_fresh(
             cls, parent: SequenceDevicesEditor, state: DraftSequence
         ) -> SequenceDevicesEditor._DraftSequence:
             delete_all_tabs(parent.tab_widget)
@@ -127,8 +122,7 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
                 widget = self.parent.tab_widget.widget(widget_index)
                 name = self.parent.tab_widget.tabText(widget_index)
                 assert isinstance(widget, DeviceConfigurationEditor)
-                # TODO: Figure out why pyright cannot infer that config is a DeviceConfiguration
-                config = widget.get_configuration()  # type: ignore[reportUnknownVariableType]
+                config = widget.get_configuration()
                 if not isinstance(config, DeviceConfiguration):
                     raise with_note(
                         AssertionError(
@@ -140,19 +134,6 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
                     )
                 configurations[DeviceName(name)] = config
             return DraftSequence(device_configurations=configurations)
-
-        def transition(
-            self, state: WidgetState
-        ) -> SequenceDevicesEditor._InternalState:
-            match state:
-                case NoSequenceSet():
-                    return SequenceDevicesEditor._NoSequenceSet.create_and_apply(
-                        self.parent
-                    )
-                case DraftSequence():
-                    return self.create_and_apply(self.parent, state)
-                case _:
-                    assert_never(state)
 
 
 def delete_all_tabs(tab_widget: QtWidgets.QTabWidget) -> None:
