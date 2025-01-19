@@ -41,6 +41,9 @@ class GeneratedConfigEditor[C: DeviceConfiguration](DeviceConfigurationEditor[C]
         layout.addWidget(self._editor.widget)
         self.setLayout(layout)
 
+    def set_configuration(self, configuration: C) -> None:
+        self._editor.set_value(configuration)
+
     # TODO: Understand why need to silence pyright
     def get_configuration(self) -> C:  # type: ignore[reportIncompatibleMethodOverride]
         return self._editor.read_value()
