@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Self
+from typing import Self
 
 import attrs
 import pytest
@@ -9,7 +9,6 @@ from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.device.camera import CameraConfiguration
 from caqtus.gui.condetrol._sequence_devices_editor import (
     SequenceDevicesEditor,
-    IntoDraftSequence,
     DraftSequence,
 )
 from caqtus.types.image import Width, Height
@@ -28,7 +27,7 @@ class MockDeviceConfiguration(CameraConfiguration):
 
 
 @pytest.fixture
-def device_configurations() -> Mapping[DeviceName, DeviceConfiguration[Any]]:
+def device_configurations() -> Mapping[DeviceName, DeviceConfiguration]:
     return {DeviceName("camera"): MockDeviceConfiguration.default()}
 
 
@@ -38,9 +37,9 @@ def test_transition_to_draft_sets_device_configurations(
     editor = SequenceDevicesEditor()
     qtbot.addWidget(editor)
 
-    editor.transition(IntoDraftSequence(device_configurations=device_configurations))
+    editor.transition(DraftSequence(device_configurations=device_configurations))
 
     state = editor.state()
 
     assert isinstance(state, DraftSequence)
-    assert state.device_configurations() == device_configurations
+    assert state.device_configurations == device_configurations

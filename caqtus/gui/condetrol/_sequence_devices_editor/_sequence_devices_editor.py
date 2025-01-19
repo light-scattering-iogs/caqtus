@@ -2,82 +2,63 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import assert_never, Any
+from typing import assert_never
 
 import attrs
 from PySide6 import QtWidgets
 
 from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 
-type RequestedState = IntoNoSequenceSet | IntoDraftSequence
+type WidgetState = NoSequenceSet | DraftSequence
 """Describes the state of a SequenceDevicesEditor widget."""
-
-type InternalState = NoSequenceSet | DraftSequence
 
 
 @attrs.frozen
-class IntoNoSequenceSet:
+class NoSequenceSet:
     """The widget is in a state where no sequence has been set."""
 
     pass
 
 
 @attrs.frozen
-class IntoDraftSequence:
+class DraftSequence:
     """The widget is in a state where the sequence devices can be edited."""
 
-    device_configurations: Mapping[DeviceName, DeviceConfiguration[Any]]
-
-
-@attrs.frozen
-class NoSequenceSet:
-    pass
-
-
-@attrs.frozen
-class DraftSequence:
-    def device_configurations(self) -> Mapping[DeviceName, DeviceConfiguration[Any]]:
-        raise NotImplementedError
+    device_configurations: Mapping[DeviceName, DeviceConfiguration]
 
 
 class SequenceDevicesEditor(QtWidgets.QWidget):
     """A widget for displaying and editing the device configurations of a sequence."""
 
+    type _InternalState = (
+        SequenceDevicesEditor._NoSequenceSet | SequenceDevicesEditor._DraftSequence
+    )
+
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
         self._layout = QtWidgets.QVBoxLayout()
-        self._tab_widget = QtWidgets.QTabWidget()
-        clear_and_disable_tab_widget(self._tab_widget)
+        self.tab_widget = QtWidgets.QTabWidget()
+        clear_and_disable_tab_widget(self.tab_widget)
 
         self._setup_ui()
 
-        self._state: InternalState = NoSequenceSet()
+        self._state: SequenceDevicesEditor._InternalState = self._NoSequenceSet(self)
 
     def _setup_ui(self) -> None:
         self.setLayout(self._layout)
-        self._layout.addWidget(self._tab_widget)
+        self._layout.addWidget(self.tab_widget)
 
-    def transition(self, state: RequestedState) -> None:
+    def transition(self, state: WidgetState) -> None:
         """Changes the state of the widget to the given state.
 
         Changes the state of the widget to the given state.
         """
 
-        new_state = None
+        self._state = self._state.transition(state)
 
-        match state:
-            case IntoNoSequenceSet():
-                clear_and_disable_tab_widget(self._tab_widget)
-                new_state = NoSequenceSet()
-            case IntoDraftSequence():
-                raise NotImplementedError
-            case _:
-                assert_never(state)
-
-        self._state = new_state
-
-    def state(self) -> InternalState:
+    def state(self) -> WidgetState:
         """The current state of the widget.
 
         Returns:
@@ -86,7 +67,70 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
             state is called.
         """
 
-        return self._state
+        return self._state.read()
+
+    @attrs.frozen
+    class _NoSequenceSet:
+        parent: SequenceDevicesEditor
+
+        @classmethod
+        def create_and_apply(
+            cls, parent: SequenceDevicesEditor
+        ) -> SequenceDevicesEditor._NoSequenceSet:
+            clear_and_disable_tab_widget(parent.tab_widget)
+            return cls(parent)
+
+        def read(self) -> NoSequenceSet:
+            return NoSequenceSet()
+
+        def transition(
+            self, state: WidgetState
+        ) -> SequenceDevicesEditor._InternalState:
+            match state:
+                case NoSequenceSet():
+                    return self.create_and_apply(self.parent)
+                case DraftSequence():
+                    return SequenceDevicesEditor._DraftSequence.create_and_apply(
+                        self.parent, state
+                    )
+                case _:
+                    assert_never(state)
+
+    @attrs.frozen
+    class _DraftSequence:
+        parent: SequenceDevicesEditor
+
+        @classmethod
+        def create_and_apply(
+            cls, parent: SequenceDevicesEditor, state: DraftSequence
+        ) -> SequenceDevicesEditor._DraftSequence:
+            raise NotImplementedError
+
+        def read(self) -> DraftSequence:
+            configurations = dict[DeviceName, DeviceConfiguration]()
+            for widget_index in range(self.parent.tab_widget.count()):
+                widget = self.parent.tab_widget.widget(widget_index)
+                name = self.parent.tab_widget.tabText(widget_index)
+                assert isinstance(widget, DeviceConfigurationEditor)
+                # TODO: Figure out why pyright cannot infer that config is a DeviceConfiguration
+                config = widget.get_configuration()  # type: ignore[reportUnknownVariableType]
+                if not isinstance(config, DeviceConfiguration):
+                    raise AssertionError("config is not a DeviceConfiguration")
+                configurations[DeviceName(name)] = config
+            return DraftSequence(device_configurations=configurations)
+
+        def transition(
+            self, state: WidgetState
+        ) -> SequenceDevicesEditor._InternalState:
+            match state:
+                case NoSequenceSet():
+                    return SequenceDevicesEditor._NoSequenceSet.create_and_apply(
+                        self.parent
+                    )
+                case DraftSequence():
+                    return self.create_and_apply(self.parent, state)
+                case _:
+                    assert_never(state)
 
 
 def delete_all_tabs(tab_widget: QtWidgets.QTabWidget) -> None:
