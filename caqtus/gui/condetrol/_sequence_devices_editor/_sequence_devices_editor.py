@@ -9,6 +9,7 @@ from PySide6 import QtWidgets
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
+from caqtus.utils import with_note
 
 type WidgetState = NoSequenceSet | DraftSequence
 """Describes the state of a SequenceDevicesEditor widget."""
@@ -115,7 +116,14 @@ class SequenceDevicesEditor(QtWidgets.QWidget):
                 # TODO: Figure out why pyright cannot infer that config is a DeviceConfiguration
                 config = widget.get_configuration()  # type: ignore[reportUnknownVariableType]
                 if not isinstance(config, DeviceConfiguration):
-                    raise AssertionError("config is not a DeviceConfiguration")
+                    raise with_note(
+                        AssertionError(
+                            f"{widget.get_configuration} returned {config!r} instead "
+                            f"of a DeviceConfiguration."
+                        ),
+                        f"This means that the extension providing {type(widget)} needs "
+                        f"to be fixed.",
+                    )
                 configurations[DeviceName(name)] = config
             return DraftSequence(device_configurations=configurations)
 
