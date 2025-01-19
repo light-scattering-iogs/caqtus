@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Self, reveal_type
+from typing import Self
 
 import attrs
 import pytest
@@ -22,15 +22,18 @@ class MockDeviceConfiguration(CameraConfiguration):
     camera_id: int
 
     @classmethod
-    def default(cls) -> Self:
+    def default(cls, id) -> Self:
         return cls(
-            camera_id=0, roi=RectangularROI((Width(100), Height(100)), 0, 50, 10, 60)
+            camera_id=id, roi=RectangularROI((Width(100), Height(100)), 0, 50, 10, 60)
         )
 
 
 @pytest.fixture
 def device_configurations() -> Mapping[DeviceName, DeviceConfiguration]:
-    return {DeviceName("camera"): MockDeviceConfiguration.default()}
+    return {
+        DeviceName("camera 0"): MockDeviceConfiguration.default(0),
+        DeviceName("camera 1"): MockDeviceConfiguration.default(1),
+    }
 
 
 mock_configuration_editor_factory = generate_device_configuration_editor(
@@ -55,7 +58,26 @@ def test_set_fresh_draft_sets_device_configurations(
 
     editor.set_fresh_state(DraftSequence(device_configurations=device_configurations))
 
+    editor.show()
+    qtbot.stop()
+
     state = editor.state()
 
     assert isinstance(state, DraftSequence)
     assert state.device_configurations == device_configurations
+
+
+def test_close_tab_widget_removes_configuration(qtbot: QtBot, device_configurations):
+    editor = SequenceDevicesEditor(editor_factory)
+    qtbot.addWidget(editor)
+
+    editor.set_fresh_state(DraftSequence(device_configurations=device_configurations))
+
+    editor.tab_widget.tabCloseRequested.emit(0)
+
+    state = editor.state()
+
+    assert isinstance(state, DraftSequence)
+    result = dict(device_configurations)
+    result.pop(DeviceName("camera 0"))
+    assert state.device_configurations == result
