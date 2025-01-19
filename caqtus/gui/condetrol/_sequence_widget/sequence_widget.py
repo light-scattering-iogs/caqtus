@@ -135,7 +135,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         The sequence widget will initially be associated with no sequence.
 
-        Args:.
+        Args:
             extension: The extension that provides time lanes customization.
             parent: The parent widget.
         """
@@ -145,7 +145,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self._state: LiveState = SequenceNotSet()
         self.parameters_editor = ParameterNamespaceEditor(self)
-        self.time_lanes_editor = TimeLanesEditor(extension, self)
+        self.time_lanes_editor = TimeLanesEditor(extension, {}, self)
         self.iteration_editor = StepsIterationEditor(self)
 
         self.tabWidget.clear()
@@ -183,11 +183,12 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.currentChanged.connect(self.stacked.setCurrentIndex)
 
         self._exception_dialog = ExceptionDialog(self)
+        self.set_fresh_state(SequenceNotSet())
 
     def set_fresh_state(self, state: State) -> None:
         match state:
             case SequenceNotSet():
-                self.setVisible(False)
+                self.setEnabled(False)
                 self.start_sequence_action.setEnabled(False)
                 new_state = SequenceNotSet()
             case SequenceSetBase(
@@ -199,7 +200,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 self.iteration_editor.set_iteration(iterations)
                 self.time_lanes_editor.set_time_lanes(time_lanes)
                 self.parameters_editor.set_parameters(parameters)
-                self.setVisible(True)
+                self.setEnabled(True)
                 match set_state:
                     case DraftSequence():
                         self.start_sequence_action.setEnabled(True)
