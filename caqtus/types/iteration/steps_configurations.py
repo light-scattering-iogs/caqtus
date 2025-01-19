@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Iterable, Callable, Generator
 from collections.abc import Mapping, Iterator
-from typing import TypeAlias, TypeGuard, Any, assert_type, override, assert_never
+from typing import TypeAlias, TypeGuard, Any, assert_type, override, assert_never, Self
 
 import attrs
 import numpy
@@ -351,6 +351,10 @@ class StepsConfiguration(IterationConfiguration):
         ),
         on_setattr=attrs.setters.validate,
     )
+
+    @classmethod
+    def empty(cls) -> Self:
+        return cls(steps=[])
 
     def expected_number_shots(self) -> int | Unknown:
         """Returns the expected number of shots that will be executed by the sequence.
