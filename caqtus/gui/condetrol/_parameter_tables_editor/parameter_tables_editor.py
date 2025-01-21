@@ -15,7 +15,7 @@ from PySide6.QtGui import (
     QStandardItem,
     QPalette,
     QFocusEvent,
-    QFont,
+    QFont, QUndoStack,
 )
 from PySide6.QtWidgets import (
     QWidget,
@@ -69,6 +69,7 @@ class ParameterNamespaceEditor(QWidget):
         self.view = ParameterNamespaceView(self)
 
         self.tool_bar = QToolBar(self)
+        self.undo_stack = QUndoStack(self)
 
         self._model = ParameterNamespaceModel(self)
         self.view.setModel(self._model)

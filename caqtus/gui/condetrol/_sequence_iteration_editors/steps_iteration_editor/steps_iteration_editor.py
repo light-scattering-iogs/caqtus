@@ -5,7 +5,14 @@ from typing import Optional
 import yaml
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt, QPersistentModelIndex, QModelIndex
-from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont, QGuiApplication
+from PySide6.QtGui import (
+    QKeySequence,
+    QShortcut,
+    QAction,
+    QFont,
+    QGuiApplication,
+    QUndoStack,
+)
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
 from caqtus.gui.qtutil import block_signals
@@ -78,6 +85,8 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.header().hide()
         self._delegate = StepDelegate(self)
         self.setItemDelegate(self._delegate)
+
+        self.undo_stack = QUndoStack(self)
 
         self.setDragEnabled(True)
         self.setAcceptDrops(True)

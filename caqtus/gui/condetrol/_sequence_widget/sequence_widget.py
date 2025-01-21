@@ -5,7 +5,7 @@ from typing import Optional, Literal, assert_never
 import anyio
 import attrs
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QIcon, QColor, QPalette, QKeySequence
+from PySide6.QtGui import QIcon, QColor, QPalette, QKeySequence, QUndoGroup
 from PySide6.QtWidgets import (
     QWidget,
     QToolBar,
@@ -145,19 +145,25 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self._state: LiveState = SequenceNotSet()
         self.parameters_editor = ParameterNamespaceEditor(self)
-        self.time_lanes_editor = TimeLanesEditor(extension, {}, self)
-        self.undoView.setStack(self.time_lanes_editor.undo_stack)
-        self.undoView.setCleanIcon(
-            get_icon("mdi6.content-save", color=Qt.GlobalColor.gray)
-        )
+        self.parameters_editor.set_read_only(True)
         self.iteration_editor = StepsIterationEditor(self)
-
+        self.time_lanes_editor = TimeLanesEditor(extension, {}, self)
         self.tabWidget.clear()
         self.tabWidget.addTab(self.parameters_editor, "&Globals")
         self.tabWidget.addTab(self.iteration_editor, "&Parameters")
         self.tabWidget.addTab(self.time_lanes_editor, "Time &lanes")
 
-        self.parameters_editor.set_read_only(True)
+        # undo
+        self.undoView.setCleanIcon(
+            get_icon("mdi6.content-save", color=Qt.GlobalColor.gray)
+        )
+        self.undo_group = QUndoGroup(self)
+        self.undo_group.addStack(self.parameters_editor.undo_stack)
+        self.undo_group.addStack(self.time_lanes_editor.undo_stack)
+        self.undo_group.addStack(self.iteration_editor.undo_stack)
+        self.tabWidget.currentChanged.connect(self._on_tab_changed)
+        self.undo_group.setActiveStack(self.time_lanes_editor.undo_stack)
+        self.undoView.setGroup(self.undo_group)
 
         self.tool_bar = QToolBar(self)
         self.status_widget = IconLabel(icon_position="left")
@@ -173,6 +179,18 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         )
         self.start_sequence_action.triggered.connect(self._on_start_sequence_requested)
         self.start_sequence_action.setShortcut(QKeySequence("F5"))
+        self.tool_bar.addSeparator()
+        undo_action = self.undo_group.createUndoAction(self)
+        undo_icon = get_icon("mdi6.undo")
+        undo_action.setIcon(undo_icon)
+        undo_action.setShortcut(QKeySequence("Ctrl+Z"))
+        self.tool_bar.addAction(undo_action)
+        redo_action = self.undo_group.createRedoAction(self)
+        redo_icon = get_icon("mdi6.redo")
+        redo_action.setIcon(redo_icon)
+        redo_action.setShortcut(QKeySequence("Ctrl+Y"))
+        self.tool_bar.addAction(redo_action)
+
         self.verticalLayout.insertWidget(0, self.tool_bar)
         self.stacked = QStackedWidget(self)
         self.stacked.addWidget(QWidget(self))
@@ -186,6 +204,14 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self._exception_dialog = ExceptionDialog(self)
         self.set_fresh_state(SequenceNotSet())
+
+    def _on_tab_changed(self, index: int) -> None:
+        stacks = [
+            self.parameters_editor.undo_stack,
+            self.iteration_editor.undo_stack,
+            self.time_lanes_editor.undo_stack,
+        ]
+        self.undo_group.setActiveStack(stacks[index])
 
     def set_fresh_state(self, state: State) -> None:
         match state:
