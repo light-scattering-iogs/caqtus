@@ -229,10 +229,13 @@ class OverlayStepsView(QTableView):
             )
             menu.exec(QCursor.pos())
 
-    def is_read_only(self) -> bool:
-        model = self.model()
+    def model(self) -> TimeLanesModel:
+        model = super().model()
         assert isinstance(model, TimeLanesModel)
-        return model.is_read_only()
+        return model
+
+    def is_read_only(self) -> bool:
+        return self.model().is_read_only()
 
     def parent(self) -> TimeLanesView:
         p = super().parent()
