@@ -2,6 +2,7 @@ import copy
 import functools
 from typing import Optional
 
+import attrs
 from PySide6.QtCore import (
     QAbstractTableModel,
     QObject,
@@ -246,12 +247,43 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
                     0, Qt.Orientation.Horizontal, role
                 )
 
-    def insertColumn(self, column, parent=_DEFAULT_MODEL_INDEX) -> bool:
+    def insertColumn(self, column: int, parent=_DEFAULT_MODEL_INDEX) -> bool:
+        """Add a new time step at the requested column.
+
+        If performed, pushes the action on the model undo stack.
+
+        Returns:
+            False if no action was performed if the model is read only or if the column
+            index is not valid.
+            True otherwise if the action was performed.
+        """
+
         if self._read_only:
             return False
         if not (0 <= column <= self.columnCount()):
             return False
-        self.beginInsertColumns(parent, column, column)
+        self.undo_stack.push(self._InsertColumnCommand(self, column))
+        return True
+
+    @attrs.frozen(slots=False)
+    class _InsertColumnCommand(QUndoCommand):
+        model: "TimeLanesModel"
+        column: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"insert step {self.column}")
+
+        def redo(self) -> None:
+            self.model._insert_column(self.column)
+
+        def undo(self) -> None:
+            self.model._remove_column(self.column)
+
+    def _insert_column(self, column: int) -> None:
+        assert not self._read_only
+        assert 0 <= column <= self.columnCount()
+
+        self.beginInsertColumns(QModelIndex(), column, column)
         self._step_names_model.insertRow(column)
         self._step_durations_model.insertRow(column)
         for lane_model in self._lane_models:
@@ -259,21 +291,53 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         self.endInsertColumns()
         self.modelReset.emit()
 
-        return True
-
     def removeColumn(self, column, parent=_DEFAULT_MODEL_INDEX) -> bool:
+        """Remove a step from the model.
+
+        If an action was performed, pushes the action on the model undo stack.
+
+        Returns:
+            False if no action was performed if the model is read only or if the column
+            index is not valid.
+            True otherwise.
+        """
+
         if self._read_only:
             return False
         if not (0 <= column < self.columnCount()):
             return False
-        self.beginRemoveColumns(parent, column, column)
+        self.undo_stack.push(self._RemoveColumnCommand(self, column))
+        return True
+
+    def _remove_column(self, column: int) -> None:
+        self.beginRemoveColumns(QModelIndex(), column, column)
         self._step_names_model.removeRow(column)
         self._step_durations_model.removeRow(column)
         for lane_model in self._lane_models:
             lane_model.removeRow(column)
         self.endRemoveColumns()
         self.modelReset.emit()
-        return True
+
+    @attrs.define(slots=False)
+    class _RemoveColumnCommand(QUndoCommand):
+        # This command saves the full time lanes when it is applied.
+        # It is because it needs to be able to regenerate the column that was deleted
+        # when it is undone.
+        # TODO: save only the deleted column to save memory, but then need to also
+        #  store and regenerate if each row is merged with its neighbors or not.
+        model: "TimeLanesModel"
+        column: int
+        time_lanes: TimeLanes = attrs.field(init=False)
+
+        def __attrs_post_init__(self):
+            super().__init__(f"remove step {self.column}")
+            self.time_lanes = self.model.get_timelanes()
+
+        def redo(self) -> None:
+            self.model._remove_column(self.column)
+
+        def undo(self) -> None:
+            self.model.set_timelanes(self.time_lanes)
 
     def remove_lane(self, lane_index: int) -> bool:
         if self._read_only:
