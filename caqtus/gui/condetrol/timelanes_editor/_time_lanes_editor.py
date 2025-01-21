@@ -5,7 +5,7 @@ from typing import Optional
 
 import yaml
 from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
-from PySide6.QtGui import QAction, QFont, QUndoStack
+from PySide6.QtGui import QAction, QFont, QUndoStack, QCursor
 from PySide6.QtWidgets import (
     QTableView,
     QMenu,
@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.gui.condetrol._icons import get_icon
-from caqtus.gui.qtutil import block_signals
+from caqtus.gui.qtutil import block_signals, temporary_widget
 from caqtus.types.timelane import TimeLanes, TimeLane
 from ._delegate import TimeLaneDelegate
 from ._time_lanes_model import TimeLanesModel
@@ -184,6 +184,9 @@ class OverlayStepsView(QTableView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.horizontalHeader().hide()
+        self.verticalHeader().setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
 
         parent.horizontalHeader().sectionResized.connect(self.resize_columns)
         parent.verticalHeader().sectionResized.connect(self.resize_rows)
@@ -208,6 +211,28 @@ class OverlayStepsView(QTableView):
                 self.verticalScrollBar().minimum()
             )
         )
+        self.verticalHeader().customContextMenuRequested.connect(
+            self._on_steps_context_menu_requested
+        )
+
+    def _on_steps_context_menu_requested(self, _):
+        if self.is_read_only():
+            return
+
+        with temporary_widget(QMenu(self.horizontalHeader())) as menu:
+            add_step_action = QAction("Add step")
+            menu.addAction(add_step_action)
+            add_step_action.triggered.connect(
+                lambda: self.model().insertColumn(
+                    self.model().columnCount(), QModelIndex()
+                )
+            )
+            menu.exec(QCursor.pos())
+
+    def is_read_only(self) -> bool:
+        model = self.model()
+        assert isinstance(model, TimeLanesModel)
+        return model.is_read_only()
 
     def parent(self) -> TimeLanesView:
         p = super().parent()
