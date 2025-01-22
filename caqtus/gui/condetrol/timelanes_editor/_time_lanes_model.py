@@ -169,6 +169,11 @@ class TimeLanesModel(QAbstractTableModel):
         ]
         return count
 
+    def get_step_name(self, step: int) -> str:
+        return self._step_names_model.data(
+            self._step_names_model.index(step), Qt.ItemDataRole.DisplayRole
+        )
+
     def columnCount(self, parent=_DEFAULT_MODEL_INDEX) -> int:
         return self.number_steps()
 
@@ -350,7 +355,8 @@ class TimeLanesModel(QAbstractTableModel):
         time_lanes: TimeLanes = attrs.field(init=False)
 
         def __attrs_post_init__(self):
-            super().__init__(f"remove step {self.column}")
+            name = self.model.get_step_name(self.column)
+            super().__init__(f"remove step <{name}>")
             self.time_lanes = self.model.get_timelanes()
 
         def redo(self) -> None:
