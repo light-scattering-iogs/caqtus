@@ -294,7 +294,6 @@ class TimeLanesModel(QAbstractTableModel):
         for lane_model in self._lane_models:
             lane_model.insertRow(column)
         self.endInsertColumns()
-        self.modelReset.emit()
 
     def removeColumn(self, column, parent=_DEFAULT_MODEL_INDEX) -> bool:
         """Remove a step from the model.
@@ -321,7 +320,6 @@ class TimeLanesModel(QAbstractTableModel):
         for lane_model in self._lane_models:
             lane_model.removeRow(column)
         self.endRemoveColumns()
-        self.modelReset.emit()
 
     @attrs.define(slots=False)
     class _RemoveColumnCommand(QUndoCommand):
