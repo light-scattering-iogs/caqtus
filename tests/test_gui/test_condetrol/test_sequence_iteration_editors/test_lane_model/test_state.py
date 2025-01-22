@@ -76,6 +76,11 @@ class TimeLaneModelMachine(RuleBasedStateMachine):
 
         assert self.model.get_lane(lane_index)[step] == new_value
 
+    @precondition(lambda self: has_value(self.model))
+    @rule()
+    def simplify(self):
+        self.model.simplify()
+
 
 def has_value(model: TimeLanesModel):
     return (model.number_steps() > 0) and (model.lane_number() > 0)
