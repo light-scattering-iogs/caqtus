@@ -26,7 +26,7 @@ from .extension import CondetrolLaneExtensionProtocol
 _DEFAULT_MODEL_INDEX = QModelIndex()
 
 
-class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
+class TimeLanesModel(QAbstractTableModel):
     # Ignore some lint rules for this file as PySide6 models have a lot of camelCase
     # methods.
     # ruff: noqa: N802
