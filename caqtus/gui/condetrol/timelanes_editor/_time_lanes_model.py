@@ -45,9 +45,9 @@ class TimeLanesModel(QAbstractTableModel):
         self._lane_models: list[TimeLaneModel] = []
         self._extension = extension
 
-        self._step_names_model.dataChanged.connect(self.on_step_names_data_changed)
+        self._step_names_model.dataChanged.connect(self._on_step_names_data_changed)
         self._step_durations_model.dataChanged.connect(
-            self.on_step_durations_data_changed
+            self._on_step_durations_data_changed
         )
         self._read_only = False
         self.undo_stack = QUndoStack()
@@ -59,7 +59,7 @@ class TimeLanesModel(QAbstractTableModel):
     def is_read_only(self) -> bool:
         return self._read_only
 
-    def on_step_names_data_changed(
+    def _on_step_names_data_changed(
         self,
         top_left: QModelIndex,
         bottom_right: QModelIndex,
@@ -69,7 +69,7 @@ class TimeLanesModel(QAbstractTableModel):
             self.index(0, top_left.row()), self.index(0, bottom_right.row())
         )
 
-    def on_step_durations_data_changed(
+    def _on_step_durations_data_changed(
         self,
         top_left: QModelIndex,
         bottom_right: QModelIndex,
@@ -84,7 +84,7 @@ class TimeLanesModel(QAbstractTableModel):
         # even if it is readonly when swapping sequences.
         new_models = []
         for name, lane in timelanes.lanes.items():
-            lane_model = self.create_lane_model(name, lane)
+            lane_model = self._create_lane_model(name, lane)
             new_models.append(lane_model)
 
         self.beginResetModel()
@@ -94,7 +94,7 @@ class TimeLanesModel(QAbstractTableModel):
         self._lane_models.extend(new_models)
         self.endResetModel()
 
-    def create_lane_model(self, name: str, lane: TimeLane) -> TimeLaneModel:
+    def _create_lane_model(self, name: str, lane: TimeLane) -> TimeLaneModel:
         lane_model = self._extension.get_lane_model(lane, name)
         lane_model.setParent(self)
         lane_model.set_lane(lane)
@@ -103,16 +103,16 @@ class TimeLanesModel(QAbstractTableModel):
             # functools.partial(
             #     self.on_lane_model_data_changed, lane_model=lane_model
             # )
-            lambda top_left, bottom_right: self.on_lane_model_data_changed(
+            lambda top_left, bottom_right: self._on_lane_model_data_changed(
                 top_left, bottom_right, lane_model
             )
         )
         lane_model.headerDataChanged.connect(
-            functools.partial(self.on_lane_header_data_changed, lane_model=lane_model)
+            functools.partial(self._on_lane_header_data_changed, lane_model=lane_model)
         )
         return lane_model
 
-    def on_lane_model_data_changed(
+    def _on_lane_model_data_changed(
         self,
         top_left: QModelIndex,
         bottom_right: QModelIndex,
@@ -124,7 +124,7 @@ class TimeLanesModel(QAbstractTableModel):
             self.index(lane_index + 2, bottom_right.row()),
         )
 
-    def on_lane_header_data_changed(
+    def _on_lane_header_data_changed(
         self,
         orientation: Qt.Orientation,
         first: int,
@@ -340,7 +340,7 @@ class TimeLanesModel(QAbstractTableModel):
         )
 
     def _insert_time_lane(self, name: str, timelane: TimeLane, lane_index: int) -> None:
-        lane_model = self.create_lane_model(name, timelane)
+        lane_model = self._create_lane_model(name, timelane)
         assert 0 <= lane_index <= len(self._lane_models)
         self.beginInsertRows(QModelIndex(), lane_index + 2, lane_index + 2)
         self._lane_models.insert(lane_index, lane_model)
