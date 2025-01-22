@@ -111,10 +111,20 @@ class TimeLanesModel(QAbstractTableModel):
                 top_left, bottom_right, lane_model
             )
         )
+        lane_model.modelReset.connect(
+            functools.partial(self._on_lane_model_reset, lane_model=lane_model)
+        )
         lane_model.headerDataChanged.connect(
             functools.partial(self._on_lane_header_data_changed, lane_model=lane_model)
         )
         return lane_model
+
+    def _on_lane_model_reset(self, lane_model: TimeLaneModel):
+        lane_index = self._lane_models.index(lane_model)
+        self.dataChanged.emit(
+            self.index(lane_index + 2, 0),
+            self.index(lane_index + 2, self.columnCount() - 1),
+        )
 
     def _on_lane_model_data_changed(
         self,
@@ -475,11 +485,43 @@ class TimeLanesModel(QAbstractTableModel):
             return QSize(span.height(), span.width())
         return QSize(1, 1)
 
-    def expand_step(self, step: int, lane_index: int, start: int, stop: int):
+    def expand_step(self, step: int, lane_index: int, start: int, stop: int) -> bool:
         if self._read_only:
-            return
+            return False
+        self.undo_stack.push(
+            self._ExpandStepCommand(self, step, lane_index, start, stop)
+        )
+
+    def _expand_step(self, step: int, lane_index: int, start: int, stop: int):
+        assert not self._read_only
+
         lane_model = self._lane_models[lane_index]
         lane_model.expand_step(step, start, stop)
+
+    class _ExpandStepCommand(QUndoCommand):
+        def __init__(
+            self,
+            model: "TimeLanesModel",
+            step: int,
+            lane_index: int,
+            start: int,
+            stop: int,
+        ):
+            super().__init__(
+                f"expand step {step} in lane {lane_index} from {start} to {stop}"
+            )
+            self.model = model
+            self.step = step
+            self.lane_index = lane_index
+            self.start = start
+            self.stop = stop
+            self.time_lane = model.get_lane(lane_index)
+
+        def redo(self):
+            self.model._expand_step(self.step, self.lane_index, self.start, self.stop)
+
+        def undo(self):
+            self.model._lane_models[self.lane_index].set_lane(self.time_lane)
 
     def _map_to_source(self, index: QModelIndex | QPersistentModelIndex) -> QModelIndex:
         assert index.isValid()
