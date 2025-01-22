@@ -27,12 +27,17 @@ _DEFAULT_MODEL_INDEX = QModelIndex()
 
 
 class TimeLanesModel(QAbstractTableModel):
+    """Table model for time lanes of a sequence.
+
+    This model has an undo stack when actions are performed.
+    """
+
     # Ignore some lint rules for this file as PySide6 models have a lot of camelCase
     # methods.
     # ruff: noqa: N802
     def __init__(
         self,
-        extension: "CondetrolLaneExtensionProtocol",
+        extension: CondetrolLaneExtensionProtocol,
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
