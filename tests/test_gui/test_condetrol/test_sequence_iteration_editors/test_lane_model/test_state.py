@@ -4,9 +4,14 @@ from hypothesis.stateful import (
     rule,
     precondition,
 )
-from hypothesis.strategies import integers, data
+from hypothesis.strategies import integers, data, text, SearchStrategy, lists, booleans
 
 from caqtus.gui.condetrol.timelanes_editor._time_lanes_model import TimeLanesModel
+from caqtus.types.timelane import DigitalTimeLane
+
+
+def digital_lanes(length: int) -> SearchStrategy[DigitalTimeLane]:
+    return lists(booleans(), min_size=length, max_size=length).map(DigitalTimeLane)
 
 
 class TimeLaneModelMachine(RuleBasedStateMachine):
@@ -40,6 +45,25 @@ class TimeLaneModelMachine(RuleBasedStateMachine):
         self.model.undo_stack.setIndex(actions_count)
         current_time_lanes = self.model.get_timelanes()
         assert previous_time_lanes == current_time_lanes
+
+    @rule(data=data())
+    def add_lane(self, data):
+        already_used_names = self.model.lane_names()
+        name = data.draw(text().filter(lambda name: name not in already_used_names))
+        time_lane = data.draw(digital_lanes(length=self.model.number_steps()))
+        self.model.insert_time_lane(name, time_lane)
+
+    @precondition(lambda self: self.model.lane_number() > 0)
+    @rule(data=data())
+    def remove_lane(self, data):
+        lane_number = self.model.lane_number()
+        to_remove = data.draw(integers(0, lane_number - 1))
+        name = self.model.get_lane_name(to_remove)
+        previous_time_lanes = self.model.get_timelanes().lanes
+
+        self.model.remove_lane(to_remove)
+        previous_time_lanes.pop(name)
+        assert self.model.get_timelanes().lanes == previous_time_lanes
 
 
 def test_lane_model(lane_extension):

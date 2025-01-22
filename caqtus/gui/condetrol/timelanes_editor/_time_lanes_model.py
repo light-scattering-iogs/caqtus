@@ -14,7 +14,6 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QAction, QUndoStack, QUndoCommand
 from PySide6.QtWidgets import QMenu
 
-from caqtus.gui.qtutil import qabc as qabc
 from caqtus.types.timelane import TimeLanes, TimeLane
 from ._time_lane_model import TimeLaneModel
 from ._time_step_model import (
@@ -140,43 +139,6 @@ class TimeLanesModel(QAbstractTableModel):
                 lane_index + 2,
             )
 
-    def insert_time_lane(
-        self, name: str, timelane: TimeLane, index: Optional[int] = None
-    ):
-        if self._read_only:
-            return
-        if index is None:
-            index = len(self._lane_models)
-        if not (0 <= index <= len(self._lane_models)):
-            raise IndexError(f"Index {index} is out of range")
-        if len(timelane) != self.columnCount():
-            raise ValueError(
-                f"Length of time lane ({len(timelane)}) does not match "
-                f"number of columns ({self.columnCount()})"
-            )
-        already_used_names = {
-            model.headerData(0, Qt.Orientation.Horizontal)
-            for model in self._lane_models
-        }
-        if name in already_used_names:
-            raise ValueError(f"Name {name} is already used")
-        self.undo_stack.push(
-            InsertTimeLaneCommand(self, name, copy.deepcopy(timelane), index)
-        )
-
-    def _insert_time_lane(self, name: str, timelane: TimeLane, lane_index: int) -> None:
-        lane_model = self.create_lane_model(name, timelane)
-        assert 0 <= lane_index <= len(self._lane_models)
-        self.beginInsertRows(QModelIndex(), lane_index + 2, lane_index + 2)
-        self._lane_models.insert(lane_index, lane_model)
-        self.endInsertRows()
-
-    def _remove_time_lane(self, lane_index: int) -> None:
-        assert 0 <= lane_index < len(self._lane_models)
-        self.beginRemoveRows(QModelIndex(), lane_index + 2, lane_index + 2)
-        del self._lane_models[lane_index]
-        self.endRemoveRows()
-
     def get_lane(self, index: int) -> TimeLane:
         return self._lane_models[index].get_lane()
 
@@ -195,13 +157,16 @@ class TimeLanesModel(QAbstractTableModel):
             },
         )
 
-    def columnCount(self, parent=_DEFAULT_MODEL_INDEX) -> int:
+    def number_steps(self) -> int:
         count = self._step_names_model.rowCount()
         assert count == self._step_durations_model.rowCount()
         assert all(model.rowCount() == count for model in self._lane_models), [
             model.rowCount() for model in self._lane_models
         ]
         return count
+
+    def columnCount(self, parent=_DEFAULT_MODEL_INDEX) -> int:
+        return self.number_steps()
 
     def rowCount(self, parent=_DEFAULT_MODEL_INDEX) -> int:
         return len(self._lane_models) + 2
@@ -342,29 +307,87 @@ class TimeLanesModel(QAbstractTableModel):
         def undo(self) -> None:
             self.model.set_timelanes(self.time_lanes)
 
+    def lane_number(self) -> int:
+        return len(self._lane_models)
+
+    def lane_names(self) -> set[str]:
+        """Return the names of the lanes contained in the model."""
+
+        return set(
+            model.headerData(0, Qt.Orientation.Horizontal)
+            for model in self._lane_models
+        )
+
+    def insert_time_lane(
+        self, name: str, timelane: TimeLane, index: Optional[int] = None
+    ) -> bool:
+        if self._read_only:
+            return False
+        if index is None:
+            index = len(self._lane_models)
+        if not (0 <= index <= len(self._lane_models)):
+            raise IndexError(f"Index {index} is out of range")
+        if len(timelane) != self.columnCount():
+            raise ValueError(
+                f"Length of time lane ({len(timelane)}) does not match "
+                f"number of columns ({self.columnCount()})"
+            )
+
+        if name in self.lane_names():
+            raise ValueError(f"Name {name} is already used")
+        self.undo_stack.push(
+            self._InsertTimeLaneCommand(self, index, name, copy.deepcopy(timelane))
+        )
+
+    def _insert_time_lane(self, name: str, timelane: TimeLane, lane_index: int) -> None:
+        lane_model = self.create_lane_model(name, timelane)
+        assert 0 <= lane_index <= len(self._lane_models)
+        self.beginInsertRows(QModelIndex(), lane_index + 2, lane_index + 2)
+        self._lane_models.insert(lane_index, lane_model)
+        self.endInsertRows()
+
+    @attrs.define(slots=False)
+    class _InsertTimeLaneCommand(QUndoCommand):
+        model: "TimeLanesModel"
+        index: int
+        name: str
+        time_lane: TimeLane
+
+        def __attrs_post_init__(self):
+            super().__init__(f"insert time lane {self.index}")
+
+        def redo(self):
+            self.model._insert_time_lane(self.name, self.time_lane, self.index)
+
+        def undo(self):
+            self.model._remove_time_lane(self.index)
+
     def remove_lane(self, lane_index: int) -> bool:
         if self._read_only:
             return False
-        if not (0 <= lane_index < len(self._lane_models)):
+        if not (0 <= lane_index < self.lane_number()):
             return False
-        self.undo_stack.push(
-            RemoveTimeLaneCommand(
-                self,
-                self.get_lane_name(lane_index),
-                copy.deepcopy(self.get_lane(lane_index)),
-                lane_index,
-            )
-        )
+        self.undo_stack.push(self._RemoveTimeLaneCommand(self, lane_index))
 
-    def removeRow(self, row, parent=_DEFAULT_MODEL_INDEX) -> bool:
-        if self._read_only:
-            return False
-        if not (2 <= row < self.rowCount()):
-            return False
-        self.beginRemoveRows(parent, row, row)
-        del self._lane_models[row - 2]
+    def _remove_time_lane(self, lane_index: int) -> None:
+        assert 0 <= lane_index < len(self._lane_models)
+        self.beginRemoveRows(QModelIndex(), lane_index + 2, lane_index + 2)
+        del self._lane_models[lane_index]
         self.endRemoveRows()
-        return True
+
+    class _RemoveTimeLaneCommand(QUndoCommand):
+        def __init__(self, model: "TimeLanesModel", index: int):
+            self.name = model.get_lane_name(index)
+            super().__init__(f"remove lane {self.name}")
+            self.model = model
+            self.index = index
+            self.time_lane = self.model.get_lane(self.index)
+
+        def redo(self):
+            self.model._remove_time_lane(self.index)
+
+        def undo(self):
+            self.model._insert_time_lane(self.name, self.time_lane, self.index)
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():
@@ -415,40 +438,6 @@ class TimeLanesModel(QAbstractTableModel):
         for lane_model in self._lane_models:
             lane_model.simplify()
         self.endResetModel()
-
-
-class InsertTimeLaneCommand(QUndoCommand):
-    def __init__(
-        self, model: TimeLanesModel, name: str, timelane: TimeLane, index: int
-    ):
-        super().__init__(f"Insert lane: {name}")
-        self._model = model
-        self._name = name
-        self._timelane = timelane
-        self._index = index
-
-    def redo(self):
-        self._model._insert_time_lane(self._name, self._timelane, self._index)
-
-    def undo(self):
-        self._model._remove_time_lane(self._index)
-
-
-class RemoveTimeLaneCommand(QUndoCommand):
-    def __init__(
-        self, model: TimeLanesModel, name: str, time_lane: TimeLane, lane_index: int
-    ):
-        super().__init__(f"Remove lane: {model.get_lane_name(lane_index)}")
-        self._model = model
-        self._name = name
-        self._time_lane = time_lane
-        self._lane_index = lane_index
-
-    def redo(self):
-        self._model._remove_time_lane(self._lane_index)
-
-    def undo(self):
-        self._model._insert_time_lane(self._name, self._time_lane, self._lane_index)
 
 
 def get_lane_model_name(model: TimeLaneModel) -> str:
