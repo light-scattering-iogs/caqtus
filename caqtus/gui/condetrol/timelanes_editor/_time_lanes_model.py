@@ -59,6 +59,10 @@ class TimeLanesModel(QAbstractTableModel):
     def is_read_only(self) -> bool:
         return self._read_only
 
+    def cell_index(self, lane_index: int, step: int) -> QModelIndex:
+
+        return self.index(lane_index + 2, step)
+
     def _on_step_names_data_changed(
         self,
         top_left: QModelIndex,
@@ -176,13 +180,61 @@ class TimeLanesModel(QAbstractTableModel):
             return None
         return self._map_to_source(index).data(role)
 
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
         if self._read_only:
             return False
         if not index.isValid():
             return False
+        if role != Qt.ItemDataRole.EditRole:
+            return False
+        previous_value = self.data(index, role)
+        if previous_value != value:
+            self.undo_stack.push(
+                self._SetValueCommand(self, value, index.row(), index.column())
+            )
+            return True
+        return False
+
+    def _set_data(self, value, row: int, column: int) -> None:
+        index = self.index(row, column)
         mapped_index = self._map_to_source(index)
-        return mapped_index.model().setData(mapped_index, value, role)
+        result = mapped_index.model().setData(
+            mapped_index, value, Qt.ItemDataRole.EditRole
+        )
+        assert result
+
+    class _SetValueCommand(QUndoCommand):
+        def __init__(self, model: "TimeLanesModel", new_value, row: int, column: int):
+            self.previous_value = model.data(
+                model.index(row, column), Qt.ItemDataRole.EditRole
+            )
+            if row == 0:
+                msg = (
+                    f"change step {column} name from <{self.previous_value}> to "
+                    f"<{new_value}>"
+                )
+            elif row == 1:
+                msg = (
+                    f"change step {column} duration from <{self.previous_value}> to "
+                    f"<{new_value}>"
+                )
+            else:
+                msg = (
+                    f"change value of lane {model.get_lane_name(row-2)} from "
+                    f"<{self.previous_value}> to <{new_value}> for step {column}"
+                )
+
+            super().__init__(msg)
+            self.model = model
+            self.new_value = new_value
+            self.row = row
+            self.column = column
+
+        def redo(self) -> None:
+            self.model._set_data(self.new_value, self.row, self.column)
+
+        def undo(self) -> None:
+            self.model._set_data(self.previous_value, self.row, self.column)
 
     def flags(self, index) -> Qt.ItemFlag:
         if not index.isValid():
@@ -354,7 +406,7 @@ class TimeLanesModel(QAbstractTableModel):
         time_lane: TimeLane
 
         def __attrs_post_init__(self):
-            super().__init__(f"insert time lane {self.index}")
+            super().__init__(f"insert time lane {self.name}")
 
         def redo(self):
             self.model._insert_time_lane(self.name, self.time_lane, self.index)

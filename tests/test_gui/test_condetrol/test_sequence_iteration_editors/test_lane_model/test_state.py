@@ -65,6 +65,21 @@ class TimeLaneModelMachine(RuleBasedStateMachine):
         previous_time_lanes.pop(name)
         assert self.model.get_timelanes().lanes == previous_time_lanes
 
+    @precondition(lambda self: has_value(self.model))
+    @rule(data=data())
+    def set_value(self, data):
+        step = data.draw(integers(0, self.model.number_steps() - 1))
+        lane_index = data.draw(integers(0, self.model.lane_number() - 1))
+        new_value = data.draw(booleans())
+
+        self.model.setData(self.model.cell_index(lane_index, step), new_value)
+
+        assert self.model.get_lane(lane_index)[step] == new_value
+
+
+def has_value(model: TimeLanesModel):
+    return (model.number_steps() > 0) and (model.lane_number() > 0)
+
 
 def test_lane_model(lane_extension):
     run_state_machine_as_test(lambda: TimeLaneModelMachine(lane_extension))
