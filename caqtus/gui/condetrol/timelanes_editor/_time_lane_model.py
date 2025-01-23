@@ -50,6 +50,9 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
         self._name = name
         self._lane = lane
 
+    def name(self) -> str:
+        return self._name
+
     def get_lane(self) -> L:
         """Return a copy of the lane represented by this model."""
 
