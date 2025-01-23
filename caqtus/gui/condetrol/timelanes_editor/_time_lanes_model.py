@@ -298,22 +298,37 @@ class TimeLanesModel(QAbstractTableModel):
             return False
         if not (0 <= column <= self.columnCount()):
             return False
-        self.undo_stack.push(self._InsertColumnCommand(self, column))
+        commands = [
+            self._step_names_model.insert_step(column),
+            self._step_durations_model.insert_step(column),
+            *(model.insert_step(column) for model in self._lane_models),
+        ]
+        self.undo_stack.push(self._InsertStepCommand(self, column, commands))
         return True
 
     @attrs.frozen(slots=False)
-    class _InsertColumnCommand(QUndoCommand):
+    class _InsertStepCommand(QUndoCommand):
         model: "TimeLanesModel"
         column: int
+        commands: list[QUndoCommand]
 
         def __attrs_post_init__(self):
             super().__init__(f"insert step {self.column}")
 
         def redo(self) -> None:
-            self.model._insert_column(self.column)
+            assert not self.model._read_only
+            assert 0 <= self.column <= self.model.number_steps()
+
+            self.model.beginInsertColumns(QModelIndex(), self.column, self.column)
+            for command in self.commands:
+                command.redo()
+            self.model.endInsertColumns()
 
         def undo(self) -> None:
-            self.model._remove_column(self.column)
+            self.model.beginRemoveColumns(QModelIndex(), self.column, self.column)
+            for command in self.commands:
+                command.undo()
+            self.model.endRemoveColumns()
 
     def _insert_column(self, column: int) -> None:
         assert not self._read_only

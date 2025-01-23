@@ -1,16 +1,19 @@
 # Ignore some lint rules for this file as PySide6 models have a lot of camelCase
 # methods.
 # ruff: noqa: N802
+from __future__ import annotations
+
 import copy
 from typing import Optional
 
+import attrs
 from PySide6.QtCore import (
     QAbstractListModel,
     QObject,
     QModelIndex,
     Qt,
 )
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QUndoCommand
 
 from caqtus.types.expression import Expression
 
@@ -56,6 +59,23 @@ class TimeStepNameModel(QAbstractListModel):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+
+    def insert_step(self, step: int) -> QUndoCommand:
+        return self._InsertStepCommand(self, step)
+
+    @attrs.define(slots=False)
+    class _InsertStepCommand(QUndoCommand):
+        model: TimeStepNameModel
+        step: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"insert step {self.step}")
+
+        def redo(self) -> None:
+            self.model.insertRow(self.step)
+
+        def undo(self) -> None:
+            self.model.removeRow(self.step)
 
     def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         if not (0 <= row <= self.rowCount()):
@@ -124,6 +144,23 @@ class TimeStepDurationModel(QAbstractListModel):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+
+    def insert_step(self, step: int) -> QUndoCommand:
+        return self._InsertStepCommand(self, step)
+
+    @attrs.define(slots=False)
+    class _InsertStepCommand(QUndoCommand):
+        model: TimeStepDurationModel
+        step: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"insert step {self.step}")
+
+        def redo(self) -> None:
+            self.model.insertRow(self.step)
+
+        def undo(self) -> None:
+            self.model.removeRow(self.step)
 
     def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         if not (0 <= row <= self.rowCount()):

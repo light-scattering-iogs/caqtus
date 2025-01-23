@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import abc
 import copy
 from typing import Optional, Any, TypeVar, Generic, TYPE_CHECKING
 
+import attrs
 from PySide6.QtCore import (
     QObject,
     QModelIndex,
@@ -10,7 +13,7 @@ from PySide6.QtCore import (
     QSize,
     QSettings,
 )
-from PySide6.QtGui import QAction, QBrush, QColor, QFont
+from PySide6.QtGui import QAction, QBrush, QColor, QFont, QUndoCommand
 from PySide6.QtWidgets import QMenu, QColorDialog
 
 import caqtus.gui.qtutil.qabc as qabc
@@ -118,6 +121,23 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
             | Qt.ItemFlag.ItemIsEditable
             | Qt.ItemFlag.ItemIsSelectable
         )
+
+    def insert_step(self, step: int) -> QUndoCommand:
+        return self._InsertStepCommand(self, step)
+
+    @attrs.define(slots=False)
+    class _InsertStepCommand(QUndoCommand):
+        model: TimeLaneModel
+        step: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"insert step {self.step}")
+
+        def redo(self):
+            self.model.insertRow(self.step)
+
+        def undo(self):
+            self.model.removeRow(self.step)
 
     @abc.abstractmethod
     def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
