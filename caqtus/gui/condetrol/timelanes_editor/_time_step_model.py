@@ -13,7 +13,7 @@ from PySide6.QtCore import (
     QModelIndex,
     Qt,
 )
-from PySide6.QtGui import QFont, QUndoCommand
+from PySide6.QtGui import QFont, QUndoCommand, QUndoStack
 
 from caqtus.types.expression import Expression
 
@@ -21,9 +21,10 @@ _DEFAULT_INDEX = QModelIndex()
 
 
 class TimeStepNameModel(QAbstractListModel):
-    def __init__(self, parent: Optional[QObject] = None):
+    def __init__(self, undo_stak: QUndoStack, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._names: list[str] = []
+        self._undo_stack = undo_stak
 
     def set_names(self, names: list[str]):
         self.beginResetModel()
@@ -60,8 +61,11 @@ class TimeStepNameModel(QAbstractListModel):
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
-    def insert_step(self, step: int) -> QUndoCommand:
-        return self._InsertStepCommand(self, step)
+    def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
+        if not (0 <= row <= self.rowCount()):
+            return False
+        self._undo_stack.push(self._InsertStepCommand(self, row))
+        return True
 
     @attrs.define(slots=False)
     class _InsertStepCommand(QUndoCommand):
@@ -72,26 +76,42 @@ class TimeStepNameModel(QAbstractListModel):
             super().__init__(f"insert step {self.step}")
 
         def redo(self) -> None:
-            self.model.insertRow(self.step)
+            self.model._insert_row_without_undo(self.step)
 
         def undo(self) -> None:
-            self.model.removeRow(self.step)
+            self.model._remove_row_without_undo(self.step)
 
-    def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
-        if not (0 <= row <= self.rowCount()):
-            return False
-        self.beginInsertRows(parent, row, row)
+    def _insert_row_without_undo(self, row) -> None:
+        assert 0 <= row <= self.rowCount()
+        self.beginInsertRows(_DEFAULT_INDEX, row, row)
         self._names.insert(row, f"Step {row}")
         self.endInsertRows()
-        return True
 
     def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         if not (0 <= row < self.rowCount()):
             return False
-        self.beginRemoveRows(parent, row, row)
+        self._undo_stack.push(self._RemoveStepCommand(self, row))
+        return True
+
+    @attrs.define(slots=False)
+    class _RemoveStepCommand(QUndoCommand):
+        model: TimeStepNameModel
+        step: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"remove step {self.step}")
+
+        def redo(self) -> None:
+            self.model._remove_row_without_undo(self.step)
+
+        def undo(self) -> None:
+            self.model._insert_row_without_undo(self.step)
+
+    def _remove_row_without_undo(self, row) -> None:
+        assert 0 <= row < self.rowCount()
+        self.beginRemoveRows(_DEFAULT_INDEX, row, row)
         del self._names[row]
         self.endRemoveRows()
-        return True
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
@@ -106,9 +126,10 @@ class TimeStepNameModel(QAbstractListModel):
 
 
 class TimeStepDurationModel(QAbstractListModel):
-    def __init__(self, parent: Optional[QObject] = None):
+    def __init__(self, undo_stack: QUndoStack, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._durations: list[Expression] = []
+        self._undo_stack = undo_stack
 
     def set_durations(self, durations: list[Expression]):
         self.beginResetModel()
@@ -145,8 +166,11 @@ class TimeStepDurationModel(QAbstractListModel):
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
-    def insert_step(self, step: int) -> QUndoCommand:
-        return self._InsertStepCommand(self, step)
+    def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
+        if not (0 <= row <= self.rowCount()):
+            return False
+        self._undo_stack.push(self._InsertStepCommand(self, row))
+        return True
 
     @attrs.define(slots=False)
     class _InsertStepCommand(QUndoCommand):
@@ -157,18 +181,16 @@ class TimeStepDurationModel(QAbstractListModel):
             super().__init__(f"insert step {self.step}")
 
         def redo(self) -> None:
-            self.model.insertRow(self.step)
+            self.model._insert_row_without_undo(self.step)
 
         def undo(self) -> None:
-            self.model.removeRow(self.step)
+            self.model._remove_row_without_undo(self.step)
 
-    def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
-        if not (0 <= row <= self.rowCount()):
-            return False
-        self.beginInsertRows(parent, row, row)
+    def _insert_row_without_undo(self, row) -> None:
+        assert 0 <= row <= self.rowCount()
+        self.beginInsertRows(_DEFAULT_INDEX, row, row)
         self._durations.insert(row, Expression("..."))
         self.endInsertRows()
-        return True
 
     def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         if not (0 <= row < self.rowCount()):
@@ -177,6 +199,12 @@ class TimeStepDurationModel(QAbstractListModel):
         del self._durations[row]
         self.endRemoveRows()
         return True
+
+    def _remove_row_without_undo(self, row) -> None:
+        assert 0 <= row < self.rowCount()
+        self.beginRemoveRows(_DEFAULT_INDEX, row, row)
+        del self._durations[row]
+        self.endRemoveRows()
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:

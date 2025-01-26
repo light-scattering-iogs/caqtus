@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 from typing import Optional
 
@@ -39,8 +41,10 @@ class TimeLanesModel(QAbstractTableModel):
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
-        self._step_names_model = TimeStepNameModel(self)
-        self._step_durations_model = TimeStepDurationModel(self)
+        self.undo_stack = QUndoStack()
+        self.undo_stack.setClean()
+        self._step_names_model = TimeStepNameModel(self.undo_stack, self)
+        self._step_durations_model = TimeStepDurationModel(self.undo_stack, self)
         self._lane_models: list[TimeLaneModel] = []
         self._extension = extension
 
@@ -49,8 +53,6 @@ class TimeLanesModel(QAbstractTableModel):
             self._on_step_durations_data_changed
         )
         self._read_only = False
-        self.undo_stack = QUndoStack()
-        self.undo_stack.setClean()
 
     def set_read_only(self, read_only: bool) -> None:
         self._read_only = read_only
@@ -298,48 +300,48 @@ class TimeLanesModel(QAbstractTableModel):
             return False
         if not (0 <= column <= self.columnCount()):
             return False
-        commands = [
-            self._step_names_model.insert_step(column),
-            self._step_durations_model.insert_step(column),
-            *(model.insert_step(column) for model in self._lane_models),
-        ]
-        self.undo_stack.push(self._InsertStepCommand(self, column, commands))
+        self.undo_stack.beginMacro(f"insert step {column}")
+        self.undo_stack.push(self._BeginInsertColumnCommand(self, column))
+        self._step_names_model.insertRow(column)
+        self._step_durations_model.insertRow(column)
+        for model in self._lane_models:
+            model.insertRow(column)
+        self.undo_stack.push(self._EndInsertColumnCommand(self, column))
+        self.undo_stack.endMacro()
         return True
 
     @attrs.frozen(slots=False)
-    class _InsertStepCommand(QUndoCommand):
-        model: "TimeLanesModel"
+    class _BeginInsertColumnCommand(QUndoCommand):
+        model: TimeLanesModel
         column: int
-        commands: list[QUndoCommand]
 
         def __attrs_post_init__(self):
-            super().__init__(f"insert step {self.column}")
+            super().__init__(f"begin insert column {self.column}")
 
         def redo(self) -> None:
             assert not self.model._read_only
-            assert 0 <= self.column <= self.model.number_steps()
 
             self.model.beginInsertColumns(QModelIndex(), self.column, self.column)
-            for command in self.commands:
-                command.redo()
+
+        def undo(self) -> None:
+            assert not self.model._read_only
+            self.model.endRemoveColumns()
+
+    @attrs.frozen(slots=False)
+    class _EndInsertColumnCommand(QUndoCommand):
+        model: TimeLanesModel
+        column: int
+
+        def __attrs_post_init__(self):
+            super().__init__("end insert column {self.column}")
+
+        def redo(self) -> None:
+            assert not self.model._read_only
             self.model.endInsertColumns()
 
         def undo(self) -> None:
+            assert not self.model._read_only
             self.model.beginRemoveColumns(QModelIndex(), self.column, self.column)
-            for command in self.commands:
-                command.undo()
-            self.model.endRemoveColumns()
-
-    def _insert_column(self, column: int) -> None:
-        assert not self._read_only
-        assert 0 <= column <= self.columnCount()
-
-        self.beginInsertColumns(QModelIndex(), column, column)
-        self._step_names_model.insertRow(column)
-        self._step_durations_model.insertRow(column)
-        for lane_model in self._lane_models:
-            lane_model.insertRow(column)
-        self.endInsertColumns()
 
     def removeColumn(self, column, parent=_DEFAULT_MODEL_INDEX) -> bool:
         """Remove a step from the model.
