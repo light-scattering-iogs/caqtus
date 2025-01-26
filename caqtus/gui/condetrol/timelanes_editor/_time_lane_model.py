@@ -164,7 +164,10 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         new_value: Any
 
         def __attrs_post_init__(self):
-            super().__init__(f"set value for step {self.step}")
+            super().__init__(
+                f"change value for Step {self.step} of {self.model.name()} from "
+                f"<{self.previous_value}> to <{self.new_value}>"
+            )
 
         def redo(self):
             self.model._set_value_without_undo(self.step, self.new_value)
