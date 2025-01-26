@@ -58,19 +58,19 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
-        self._name = name
-        self._lane: L = lane
+        self.__name = name
+        self.__lane: L = lane
         self.__undo_stack = undo_stack
 
     def name(self) -> str:
         """Return the name of the lane represented by this model."""
 
-        return self._name
+        return self.__name
 
     def get_lane(self) -> L:
         """Return a copy of the lane represented by this model."""
 
-        return copy.deepcopy(self._lane)
+        return copy.deepcopy(self.__lane)
 
     def set_lane[
         L_contra: TimeLane
@@ -81,13 +81,13 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         """
 
         self.beginResetModel()
-        self._lane = copy.deepcopy(lane)
+        self.__lane = copy.deepcopy(lane)
         self.endResetModel()
 
     def rowCount(self, parent=_DEFAULT_INDEX) -> int:
         """Return the number of steps in the lane."""
 
-        return len(self._lane)
+        return len(self.__lane)
 
     @abc.abstractmethod
     def data(
@@ -110,7 +110,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
     def lane_value[T](self: TimeLaneModel[TimeLane[T]], step: int) -> T:
         """Return the value of the underlying lane at the given step."""
 
-        return self._lane[step]
+        return self.__lane[step]
 
     @abc.abstractmethod
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
@@ -136,7 +136,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
             True if the value was set successfully, False otherwise.
         """
 
-        if not (0 <= step < len(self._lane)):
+        if not (0 <= step < len(self.__lane)):
             return False
         self.__undo_stack.push(
             self.SetValueCommand(
@@ -161,18 +161,22 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
             super().__init__(f"set value for step {self.step}")
 
         def redo(self):
-            assert 0 <= self.step < len(self.model._lane)
-            self.model._lane[self.step] = self.new_value
-            self.model.dataChanged.emit(
-                self.model.index(self.step), self.model.index(self.step)
-            )
+            self.model._set_value_without_undo(self.step, self.new_value)
 
         def undo(self):
-            assert 0 <= self.step < len(self.model._lane)
-            self.model._lane[self.step] = self.previous_value
-            self.model.dataChanged.emit(
-                self.model.index(self.step), self.model.index(self.step)
-            )
+            self.model._set_value_without_undo(self.step, self.previous_value)
+
+    def _set_value_without_undo[
+        T
+    ](self: TimeLaneModel[TimeLane[T]], step: int, value: T) -> None:
+        """Set the value of the underlying lane at the given step without pushing an undo command.
+
+        The step must be a valid index for the lane.
+        """
+
+        assert 0 <= step < len(self.__lane)
+        self.__lane[step] = value
+        self.dataChanged.emit(self.index(step), self.index(step))
 
     def headerData(
         self,
@@ -225,7 +229,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         The action is pushed to the undo stack.
         """
 
-        if not (0 <= step <= len(self._lane)):
+        if not (0 <= step <= len(self.__lane)):
             return False
         self.__undo_stack.push(
             self.InsertValueCommand(model=self, step=step, new_value=value)
@@ -255,15 +259,15 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         The step must be a valid index for the lane.
         """
 
-        assert 0 <= step <= len(self._lane)
+        assert 0 <= step <= len(self.__lane)
         self.beginInsertRows(QModelIndex(), step, step)
-        if step == len(self._lane):
-            self._lane.append(value)
+        if step == len(self.__lane):
+            self.__lane.append(value)
         else:
-            start, stop = self._lane.get_bounds(Step(step))
-            self._lane.insert(step, value)
+            start, stop = self.__lane.get_bounds(Step(step))
+            self.__lane.insert(step, value)
             if start < step < stop:
-                self._lane[start : stop + 1] = self._lane[start]
+                self.__lane[start : stop + 1] = self.__lane[start]
         self.endInsertRows()
 
     def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
@@ -272,7 +276,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         The action is pushed to the undo stack.
         """
 
-        if not (0 <= row < len(self._lane)):
+        if not (0 <= row < len(self.__lane)):
             return False
         self.__undo_stack.push(
             self.RemoveStepCommand(model=self, step=row, value=self.lane_value(row))
@@ -300,9 +304,9 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         The step must be a valid index for the lane.
         """
 
-        assert 0 <= step < len(self._lane)
+        assert 0 <= step < len(self.__lane)
         self.beginRemoveRows(QModelIndex(), step, step)
-        del self._lane[step]
+        del self.__lane[step]
         self.endRemoveRows()
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
@@ -313,7 +317,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
     def span(self, index) -> QSize:
         """Return the span of the cell at the given index."""
 
-        start, stop = self._lane.get_bounds(Step(index.row()))
+        start, stop = self.__lane.get_bounds(Step(index.row()))
         if index.row() == start:
             return QSize(1, stop - start)
         else:
@@ -325,14 +329,14 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         The action is pushed to the undo stack.
         """
 
-        start, stop = self._lane.get_bounds(Step(index.row()))
+        start, stop = self.__lane.get_bounds(Step(index.row()))
         self.__undo_stack.push(
             self.BreakSpanCommand(model=self, step=index.row(), start=start, stop=stop)
         )
 
-        value = self._lane[index.row()]
+        value = self.__lane[index.row()]
         for i in range(start, stop):
-            self._lane[i] = value
+            self.__lane[i] = value
         self.dataChanged.emit(self.index(start), self.index(stop - 1))
         return True
 
@@ -353,9 +357,9 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
             self.model._expand_step_without_undo(self.step, self.start, self.stop)
 
     def _break_span_without_undo(self, step: int, start: int, stop: int) -> None:
-        value = self._lane[step]
+        value = self.__lane[step]
         for i in range(start, stop):
-            self._lane[i] = value
+            self.__lane[i] = value
         self.dataChanged.emit(self.index(start), self.index(stop - 1))
 
     def expand_step(self, step: int, start: int, stop: int) -> bool:
@@ -364,7 +368,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         The action is pushed to the undo stack.
         """
 
-        if not (0 <= step < len(self._lane)):
+        if not (0 <= step < len(self.__lane)):
             return False
         self.__undo_stack.push(
             self.ExpandStepCommand(model=self, step=step, start=start, stop=stop)
@@ -388,8 +392,8 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
             self.model._break_span_without_undo(self.step, self.start, self.stop)
 
     def _expand_step_without_undo(self, step: int, start: int, stop: int) -> None:
-        value = self._lane[step]
-        self._lane[start : stop + 1] = value
+        value = self.__lane[step]
+        self.__lane[start : stop + 1] = value
         self.dataChanged.emit(self.index(start), self.index(stop - 1))
 
     def get_header_context_actions(self) -> list[QAction | QMenu]:
@@ -404,7 +408,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         """
 
         self.__undo_stack.push(
-            self.SimplifyCommand(model=self, lane=copy.deepcopy(self._lane))
+            self.SimplifyCommand(model=self, lane=copy.deepcopy(self.__lane))
         )
 
     @attrs.define(slots=False)
@@ -426,9 +430,9 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
     def _simplify_without_undo(self) -> None:
         self.beginResetModel()
         start = 0
-        for i in range(1, len(self._lane)):
-            if self._lane[i] != self._lane[start]:
-                self._lane[start:i] = self._lane[start]
+        for i in range(1, len(self.__lane)):
+            if self.__lane[i] != self.__lane[start]:
+                self.__lane[start:i] = self.__lane[start]
                 start = i
-        self._lane[start:] = self._lane[start]
+        self.__lane[start:] = self.__lane[start]
         self.endResetModel()

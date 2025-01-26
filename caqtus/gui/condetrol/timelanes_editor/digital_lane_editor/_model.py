@@ -1,21 +1,23 @@
 from typing import Optional, Any, assert_never
 
 from PySide6.QtCore import QObject, QModelIndex, Qt, QPersistentModelIndex
-from PySide6.QtGui import QAction, QBrush, QPalette
+from PySide6.QtGui import QAction, QBrush, QPalette, QUndoStack
 from PySide6.QtWidgets import QMenu
 
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import DigitalTimeLane, Step
-from .._time_lane_model import ColoredTimeLaneModel
+from .._colored_time_lane_model import ColoredTimeLaneModel
 
 _DEFAULT_INDEX = QModelIndex()
 
 
 class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane]):
     # ruff: noqa: N802
-    def __init__(self, name: str, parent: Optional[QObject] = None):
+    def __init__(
+        self, name: str, undo_stack: QUndoStack, parent: Optional[QObject] = None
+    ):
         lane = DigitalTimeLane([False])
-        super().__init__(name, lane, parent)
+        super().__init__(name, lane, undo_stack, parent)
         if self._brush is None:
             # If no brush is set the button will be invisible, so we pick the
             # base color from the palette as default.

@@ -34,7 +34,7 @@ class ColoredTimeLaneModel[L: TimeLane](TimeLaneModel[L], metaclass=qabc.QABCMet
         super().__init__(name, lane, undo_stack, parent)
         self._brush: Optional[QBrush] = None
 
-        color = QSettings().value(f"lane color/{self._name}", None)
+        color = QSettings().value(f"lane color/{self.name()}", None)
         if color is not None:
             self._brush = QBrush(color)
         else:
@@ -66,10 +66,10 @@ class ColoredTimeLaneModel[L: TimeLane](TimeLaneModel[L], metaclass=qabc.QABCMet
 
     def _change_color(self):
         if self._brush is None:
-            color = QColorDialog.getColor(title=f"Select color for {self._name}")
+            color = QColorDialog.getColor(title=f"Select color for {self.name()}")
         else:
             color = QColorDialog.getColor(
-                self._brush.color(), title=f"Select color for {self._name}"
+                self._brush.color(), title=f"Select color for {self.name()}"
             )
         if color.isValid():
             self.setHeaderData(
@@ -85,12 +85,12 @@ class ColoredTimeLaneModel[L: TimeLane](TimeLaneModel[L], metaclass=qabc.QABCMet
             if isinstance(value, QColor):
                 self._brush = QBrush(value)
                 settings = QSettings()
-                settings.setValue(f"lane color/{self._name}", value)
+                settings.setValue(f"lane color/{self.name()}", value)
                 change = True
             elif value is None:
                 self._brush = None
                 settings = QSettings()
-                settings.remove(f"lane color/{self._name}")
+                settings.remove(f"lane color/{self.name()}")
                 change = True
         if change:
             self.headerDataChanged.emit(orientation, section, section)
