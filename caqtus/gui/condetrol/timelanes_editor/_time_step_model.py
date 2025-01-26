@@ -195,10 +195,22 @@ class TimeStepDurationModel(QAbstractListModel):
     def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         if not (0 <= row < self.rowCount()):
             return False
-        self.beginRemoveRows(parent, row, row)
-        del self._durations[row]
-        self.endRemoveRows()
+        self._undo_stack.push(self._RemoveStepCommand(self, row))
         return True
+
+    @attrs.define(slots=False)
+    class _RemoveStepCommand(QUndoCommand):
+        model: TimeStepDurationModel
+        step: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"remove step {self.step}")
+
+        def redo(self) -> None:
+            self.model._remove_row_without_undo(self.step)
+
+        def undo(self) -> None:
+            self.model._insert_row_without_undo(self.step)
 
     def _remove_row_without_undo(self, row) -> None:
         assert 0 <= row < self.rowCount()

@@ -286,8 +286,12 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
 
         if not (0 <= row < len(self.__lane)):
             return False
+
+        start, stop = self.__lane.get_bounds(Step(row))
         self.__undo_stack.push(
-            self.RemoveStepCommand(model=self, step=row, value=self.lane_value(row))
+            self.RemoveStepCommand(
+                model=self, step=row, value=self.lane_value(row), start=start, stop=stop
+            )
         )
         return True
 
@@ -296,6 +300,8 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         model: TimeLaneModel
         step: int
         value: Any
+        start: int
+        stop: int
 
         def __attrs_post_init__(self):
             super().__init__(f"remove step {self.step}")
@@ -304,7 +310,9 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
             self.model._remove_step_without_undo(self.step)
 
         def undo(self):
-            self.model._insert_lane_value_without_undo(self.step, self.value)
+            self.model._reinsert_step_without_undo(
+                self.step, self.value, self.start, self.stop
+            )
 
     def _remove_step_without_undo(self, step: int) -> None:
         """Remove a step at the given row index without pushing an undo command.
@@ -316,6 +324,15 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         self.beginRemoveRows(QModelIndex(), step, step)
         del self.__lane[step]
         self.endRemoveRows()
+
+    def _reinsert_step_without_undo(
+        self, step: int, value, start: int, stop: int
+    ) -> None:
+        assert 0 <= step <= len(self.__lane)
+        self.beginInsertRows(QModelIndex(), step, step)
+        self._insert_lane_value_without_undo(step, value)
+        self._expand_step_without_undo(step, start, stop - 1)
+        self.endInsertRows()
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         break_span_action = QAction("Break block")

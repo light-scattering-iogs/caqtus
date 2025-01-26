@@ -176,9 +176,6 @@ class TimeLanesModel(QAbstractTableModel):
     def number_steps(self) -> int:
         count = self._step_names_model.rowCount()
         assert count == self._step_durations_model.rowCount()
-        assert all(model.rowCount() == count for model in self._lane_models), [
-            model.rowCount() for model in self._lane_models
-        ]
         return count
 
     def get_step_name(self, step: int) -> str:
@@ -359,38 +356,47 @@ class TimeLanesModel(QAbstractTableModel):
             return False
         if not (0 <= column < self.columnCount()):
             return False
-        self.undo_stack.push(self._RemoveColumnCommand(self, column))
-        return True
-
-    def _remove_column(self, column: int) -> None:
-        self.beginRemoveColumns(QModelIndex(), column, column)
+        self.undo_stack.beginMacro(f"remove step {column}")
+        self.undo_stack.push(self._BeginRemoveColumnCommand(self, column))
         self._step_names_model.removeRow(column)
         self._step_durations_model.removeRow(column)
         for lane_model in self._lane_models:
             lane_model.removeRow(column)
-        self.endRemoveColumns()
+        self.undo_stack.push(self._EndRemoveColumnCommand(self, column))
+        self.undo_stack.endMacro()
+        return True
 
-    @attrs.define(slots=False)
-    class _RemoveColumnCommand(QUndoCommand):
-        # This command saves the full time lanes when it is applied.
-        # It is because it needs to be able to regenerate the column that was deleted
-        # when it is undone.
-        # TODO: save only the deleted column to save memory, but then need to also
-        #  store and regenerate if each row is merged with its neighbors or not.
-        model: "TimeLanesModel"
+    @attrs.frozen(slots=False)
+    class _BeginRemoveColumnCommand(QUndoCommand):
+        model: TimeLanesModel
         column: int
-        time_lanes: TimeLanes = attrs.field(init=False)
 
         def __attrs_post_init__(self):
-            name = self.model.get_step_name(self.column)
-            super().__init__(f"remove step <{name}>")
-            self.time_lanes = self.model.get_timelanes()
+            super().__init__(f"begin remove column {self.column}")
 
         def redo(self) -> None:
-            self.model._remove_column(self.column)
+            assert not self.model._read_only
+            self.model.beginRemoveColumns(QModelIndex(), self.column, self.column)
 
         def undo(self) -> None:
-            self.model.set_timelanes(self.time_lanes)
+            assert not self.model._read_only
+            self.model.endInsertColumns()
+
+    @attrs.frozen(slots=False)
+    class _EndRemoveColumnCommand(QUndoCommand):
+        model: TimeLanesModel
+        column: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"end remove column {self.column}")
+
+        def redo(self) -> None:
+            assert not self.model._read_only
+            self.model.endRemoveColumns()
+
+        def undo(self) -> None:
+            assert not self.model._read_only
+            self.model.beginInsertColumns(QModelIndex(), self.column, self.column)
 
     def lane_number(self) -> int:
         return len(self._lane_models)

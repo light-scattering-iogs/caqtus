@@ -260,7 +260,6 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
         else:
             raise TypeError(f"Invalid type for item: {type(key)}")
 
-    @assert_length_changed(-1)
     def delete_step(self, step: Step) -> None:
         """Delete a single step from the lane.
 
