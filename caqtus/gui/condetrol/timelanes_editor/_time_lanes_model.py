@@ -179,9 +179,11 @@ class TimeLanesModel(QAbstractTableModel):
         return count
 
     def get_step_name(self, step: int) -> str:
-        return self._step_names_model.data(
+        name = self._step_names_model.data(
             self._step_names_model.index(step), Qt.ItemDataRole.DisplayRole
         )
+        assert isinstance(name, str)
+        return name
 
     def columnCount(self, parent=_DEFAULT_MODEL_INDEX) -> int:
         return self.number_steps()
@@ -548,6 +550,7 @@ class TimeLanesModel(QAbstractTableModel):
         for lane_model in self._lane_models:
             lane_model.simplify()
         self.undo_stack.endMacro()
+        return True
 
 
 def get_lane_model_name(model: TimeLaneModel) -> str:
