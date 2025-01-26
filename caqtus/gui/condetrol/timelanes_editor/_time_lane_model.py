@@ -130,6 +130,8 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
     ](self: TimeLaneModel[TimeLane[T]], step: int, value: T) -> bool:
         """Set the value of the underlying lane at the given step.
 
+        The value of the whole block the step is part of is set to the new value.
+
         The change is pushed to the undo stack.
 
         Returns:
@@ -169,13 +171,15 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
     def _set_value_without_undo[
         T
     ](self: TimeLaneModel[TimeLane[T]], step: int, value: T) -> None:
-        """Set the value of the underlying lane at the given step without pushing an undo command.
+        """Set the value of the underlying lane without pushing an undo command.
 
         The step must be a valid index for the lane.
+        The value of the whole block the step is part of is set to the new value.
         """
 
         assert 0 <= step < len(self.__lane)
-        self.__lane[step] = value
+        start, stop = self.__lane.get_bounds(Step(step))
+        self.__lane[start:stop] = value
         self.dataChanged.emit(self.index(step), self.index(step))
 
     def headerData(
