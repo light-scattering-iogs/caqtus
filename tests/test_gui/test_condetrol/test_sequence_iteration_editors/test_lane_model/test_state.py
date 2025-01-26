@@ -34,17 +34,24 @@ class TimeLaneModelMachine(RuleBasedStateMachine):
         self.model.removeColumn(column)
         assert self.model.columnCount() == previous_number_steps - 1
 
-    @precondition(lambda self: self.model.undo_stack.count() > 0)
+    @precondition(lambda self: self.model.columnCount() > 0)
     @rule(data=data())
-    def undo_redo(self, data):
-        actions_count = self.model.undo_stack.count()
-        # index is defined this way such that it shrinks toward large index.
-        index = actions_count - data.draw(integers(1, actions_count))
-        previous_time_lanes = self.model.get_timelanes()
-        self.model.undo_stack.setIndex(index)
-        self.model.undo_stack.setIndex(actions_count)
-        current_time_lanes = self.model.get_timelanes()
-        assert previous_time_lanes == current_time_lanes
+    def change_step_name(self, data):
+        number_steps = self.model.columnCount()
+        column = data.draw(integers(0, number_steps - 1))
+        name = data.draw(text())
+        assert self.model.setData(self.model.index(0, column), name)
+        assert self.model.data(self.model.index(0, column)) == name
+
+    @precondition(lambda self: self.model.columnCount() > 0)
+    @rule(data=data())
+    def change_step_duration(self, data):
+        number_steps = self.model.columnCount()
+        column = data.draw(integers(0, number_steps - 1))
+        duration = data.draw(integers(0, 100))
+        duration = f"{duration} ms"
+        assert self.model.setData(self.model.index(1, column), duration)
+        assert self.model.data(self.model.index(1, column)) == duration
 
     @rule(data=data())
     def add_lane(self, data):
@@ -80,6 +87,18 @@ class TimeLaneModelMachine(RuleBasedStateMachine):
     @rule()
     def simplify(self):
         self.model.simplify()
+
+    @precondition(lambda self: self.model.undo_stack.count() > 0)
+    @rule(data=data())
+    def undo_redo(self, data):
+        actions_count = self.model.undo_stack.count()
+        # index is defined this way such that it shrinks toward large index.
+        index = actions_count - data.draw(integers(1, actions_count))
+        previous_time_lanes = self.model.get_timelanes()
+        self.model.undo_stack.setIndex(index)
+        self.model.undo_stack.setIndex(actions_count)
+        current_time_lanes = self.model.get_timelanes()
+        assert previous_time_lanes == current_time_lanes
 
 
 def has_value(model: TimeLanesModel):
