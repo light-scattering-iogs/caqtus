@@ -1,26 +1,28 @@
 from typing import Optional, Any, assert_never
 
 from PySide6.QtCore import QObject, QModelIndex, Qt, QPersistentModelIndex
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QUndoStack
 from PySide6.QtWidgets import QMenu
 
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import AnalogTimeLane, Ramp, Step
-from .._time_lane_model import ColoredTimeLaneModel
+from .._colored_time_lane_model import ColoredTimeLaneModel
 
 _DEFAULT_INDEX = QModelIndex()
 
 
 class AnalogTimeLaneModel(ColoredTimeLaneModel[AnalogTimeLane]):
     # ruff: noqa: N802
-    def __init__(self, name: str, parent: Optional[QObject] = None):
+    def __init__(
+        self, name: str, undo_stack: QUndoStack, parent: Optional[QObject] = None
+    ):
         lane = AnalogTimeLane([Expression("...")])
-        super().__init__(name, lane, parent)
+        super().__init__(name, lane, undo_stack, parent)
 
     def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-        value = self._lane[index.row()]
+        value = self.lane_value(index.row())
         if role == Qt.ItemDataRole.DisplayRole:
             if isinstance(value, Expression):
                 return str(value)
@@ -41,7 +43,7 @@ class AnalogTimeLaneModel(ColoredTimeLaneModel[AnalogTimeLane]):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         flags = super().flags(index)
-        if isinstance(self._lane[index.row()], Ramp):
+        if isinstance(self.lane_value(index.row()), Ramp):
             flags &= ~Qt.ItemFlag.ItemIsEditable
         return flags
 
@@ -49,30 +51,26 @@ class AnalogTimeLaneModel(ColoredTimeLaneModel[AnalogTimeLane]):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
-            start, stop = self._lane.get_bounds(Step(index.row()))
             if isinstance(value, str):
-                self._lane[start:stop] = Expression(value)
-                self.dataChanged.emit(index, index)
-                return True
+                new_value = Expression(value)
             elif isinstance(value, Ramp):
-                self._lane[start:stop] = value
-                self.dataChanged.emit(index, index)
-                return True
+                new_value = value
             else:
-                raise TypeError(f"Invalid type for value: {type(value)}")
+                raise AssertionError(f"Invalid type for value: {type(value)}")
+            return self.set_lane_value(index.row(), new_value)
         return False
 
     def insertRow(
         self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
     ) -> bool:
-        return self.insert_value(row, Expression("..."))
+        return self.insert_lane_value(row, Expression("..."))
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():
             return []
 
         cell_type_menu = QMenu("Cell type")
-        value = self._lane[index.row()]
+        value = self.lane_value(index.row())
         expr_action = cell_type_menu.addAction("expression")
         if isinstance(value, Expression):
             expr_action.setCheckable(True)
