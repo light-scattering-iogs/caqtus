@@ -359,13 +359,14 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
 
         start, stop = self.__lane.get_bounds(Step(index.row()))
         self.__undo_stack.push(
-            self.BreakSpanCommand(model=self, step=index.row(), start=start, stop=stop)
+            self.BreakSpanCommand(
+                model=self,
+                step=index.row(),
+                start=start,
+                stop=stop,
+                lane=self.get_lane(),
+            )
         )
-
-        value = self.__lane[index.row()]
-        for i in range(start, stop):
-            self.__lane[i] = value
-        self.dataChanged.emit(self.index(start), self.index(stop - 1))
         return True
 
     @attrs.define(slots=False)
@@ -374,6 +375,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         step: int
         start: int
         stop: int
+        lane: TimeLane
 
         def __attrs_post_init__(self):
             super().__init__(f"break span at step {self.step}")
@@ -382,7 +384,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
             self.model._break_span_without_undo(self.step, self.start, self.stop)
 
         def undo(self):
-            self.model._expand_step_without_undo(self.step, self.start, self.stop)
+            self.model.set_lane(self.lane)
 
     def _break_span_without_undo(self, step: int, start: int, stop: int) -> None:
         value = self.__lane[step]
@@ -399,7 +401,9 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         if not (0 <= step < len(self.__lane)):
             return False
         self.__undo_stack.push(
-            self.ExpandStepCommand(model=self, step=step, start=start, stop=stop)
+            self.ExpandStepCommand(
+                model=self, step=step, start=start, stop=stop, lane=self.get_lane()
+            )
         )
         return True
 
@@ -409,15 +413,16 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         step: int
         start: int
         stop: int
+        lane: TimeLane
 
         def __attrs_post_init__(self):
-            super().__init__(f"expand step at step {self.step}")
+            super().__init__(f"expand Step {self.step}")
 
         def redo(self):
             self.model._expand_step_without_undo(self.step, self.start, self.stop)
 
         def undo(self):
-            self.model._break_span_without_undo(self.step, self.start, self.stop)
+            self.model.set_lane(self.lane)
 
     def _expand_step_without_undo(self, step: int, start: int, stop: int) -> None:
         value = self.__lane[step]

@@ -524,40 +524,12 @@ class TimeLanesModel(QAbstractTableModel):
     def expand_step(self, step: int, lane_index: int, start: int, stop: int) -> bool:
         if self._read_only:
             return False
-        self.undo_stack.push(
-            self._ExpandStepCommand(self, step, lane_index, start, stop)
-        )
-
-    def _expand_step(self, step: int, lane_index: int, start: int, stop: int):
-        assert not self._read_only
-
+        if not (0 <= step < self.columnCount()):
+            return False
+        if not (0 <= lane_index < self.lane_number()):
+            return False
         lane_model = self._lane_models[lane_index]
-        lane_model.expand_step(step, start, stop)
-
-    class _ExpandStepCommand(QUndoCommand):
-        def __init__(
-            self,
-            model: "TimeLanesModel",
-            step: int,
-            lane_index: int,
-            start: int,
-            stop: int,
-        ):
-            super().__init__(
-                f"expand step {step} in lane {lane_index} from {start} to {stop}"
-            )
-            self.model = model
-            self.step = step
-            self.lane_index = lane_index
-            self.start = start
-            self.stop = stop
-            self.time_lane = model.get_lane(lane_index)
-
-        def redo(self):
-            self.model._expand_step(self.step, self.lane_index, self.start, self.stop)
-
-        def undo(self):
-            self.model._lane_models[self.lane_index].set_lane(self.time_lane)
+        return lane_model.expand_step(step, start, stop)
 
     def _map_to_source(self, index: QModelIndex | QPersistentModelIndex) -> QModelIndex:
         assert index.isValid()
