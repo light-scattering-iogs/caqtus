@@ -484,22 +484,19 @@ class TimeLanesView(QTableView):
         cell_actions = self._model.get_cell_context_actions(index)
         selection = self.selectionModel().selection()
 
-        menu = QMenu(self)
-        if selection.contains(index):
-            merge_action = menu.addAction(f"Expand step {index.column()}")
-            merge_action.triggered.connect(
-                lambda: self.expand_step(index.column(), selection)
-            )
+        with temporary_widget(QMenu(self)) as menu:
+            if selection.contains(index):
+                merge_action = menu.addAction(f"Expand step {index.column()}")
+                merge_action.triggered.connect(
+                    lambda: self.expand_step(index.column(), selection)
+                )
 
-        for action in cell_actions:
-            if isinstance(action, QAction):
-                menu.addAction(action)
-            elif isinstance(action, QMenu):
-                menu.addMenu(action)
-        menu.exec(self.viewport().mapToGlobal(pos))
-        menu.deleteLater()
-        # TODO: Deal with model change in the context menu better
-        self._model.modelReset.emit()
+            for action in cell_actions:
+                if isinstance(action, QAction):
+                    menu.addAction(action)
+                elif isinstance(action, QMenu):
+                    menu.addMenu(action)
+            menu.exec(self.viewport().mapToGlobal(pos))
 
     def expand_step(self, step: int, selection):
         indices: set[tuple[int, int]] = set()
