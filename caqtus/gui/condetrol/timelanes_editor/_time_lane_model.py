@@ -451,9 +451,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
             self.model._simplify_without_undo()
 
         def undo(self):
-            self.model.beginResetModel()
             self.model.set_lane(self.lane)
-            self.model.endResetModel()
 
     def _simplify_without_undo(self) -> None:
         self.beginResetModel()
