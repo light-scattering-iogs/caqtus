@@ -4,7 +4,7 @@ import itertools
 from typing import Optional
 
 import yaml
-from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
+from PySide6.QtCore import Qt, QModelIndex, QRect
 from PySide6.QtGui import QAction, QFont, QUndoStack, QCursor
 from PySide6.QtWidgets import (
     QTableView,
@@ -34,8 +34,6 @@ class TimeLanesEditor(QWidget):
         time_lanes_edited: Emitted when the user edits the time lanes.
     """
 
-    time_lanes_edited = Signal(TimeLanes)
-
     def __init__(
         self,
         extension: CondetrolLaneExtensionProtocol,
@@ -49,7 +47,6 @@ class TimeLanesEditor(QWidget):
             parent=self,
         )
         self._extension = extension
-        self.view.time_lanes_changed.connect(self._on_time_lanes_changed)
         self.toolbar = QToolBar(self)
         self.toolbar.setFloatable(False)
         self.toolbar.setMovable(False)
@@ -99,10 +96,6 @@ class TimeLanesEditor(QWidget):
         self.add_lane_action.setEnabled(not read_only)
         self.simplify_action.setEnabled(not read_only)
         self.paste_from_clipboard_action.setEnabled(not read_only)
-
-    def _on_time_lanes_changed(self, time_lanes: TimeLanes) -> None:
-        if not self.view.is_read_only():
-            self.time_lanes_edited.emit(time_lanes)
 
     def set_time_lanes(self, time_lanes: TimeLanes) -> None:
         """Set the time lanes to be edited.
@@ -275,8 +268,6 @@ class OverlayStepsView(QTableView):
 
 
 class TimeLanesView(QTableView):
-    time_lanes_changed = Signal(TimeLanes)
-
     def __init__(
         self,
         extension: CondetrolLaneExtensionProtocol,
@@ -368,7 +359,6 @@ class TimeLanesView(QTableView):
 
     def on_time_lanes_changed(self):
         self.update_spans()
-        self.time_lanes_changed.emit(self.get_time_lanes())
 
     def on_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
         self.on_time_lanes_changed()
