@@ -14,11 +14,9 @@ _DEFAULT_INDEX = QModelIndex()
 
 class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane]):
     # ruff: noqa: N802
-    def __init__(
-        self, name: str, undo_stack: QUndoStack, parent: Optional[QObject] = None
-    ):
+    def __init__(self, name: str, parent: Optional[QObject] = None):
         lane = CameraTimeLane([None])
-        super().__init__(name, lane, undo_stack, parent)
+        super().__init__(name, lane, parent)
         self._brush = None
         palette = QPalette()
         color = palette.text().color()

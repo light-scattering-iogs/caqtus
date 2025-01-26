@@ -13,11 +13,9 @@ _DEFAULT_INDEX = QModelIndex()
 
 class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane]):
     # ruff: noqa: N802
-    def __init__(
-        self, name: str, undo_stack: QUndoStack, parent: Optional[QObject] = None
-    ):
+    def __init__(self, name: str, parent: Optional[QObject] = None):
         lane = DigitalTimeLane([False])
-        super().__init__(name, lane, undo_stack, parent)
+        super().__init__(name, lane, parent)
         if self._brush is None:
             # If no brush is set the button will be invisible, so we pick the
             # base color from the palette as default.

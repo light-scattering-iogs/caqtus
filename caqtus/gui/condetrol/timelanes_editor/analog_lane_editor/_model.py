@@ -13,11 +13,9 @@ _DEFAULT_INDEX = QModelIndex()
 
 class AnalogTimeLaneModel(ColoredTimeLaneModel[AnalogTimeLane]):
     # ruff: noqa: N802
-    def __init__(
-        self, name: str, undo_stack: QUndoStack, parent: Optional[QObject] = None
-    ):
+    def __init__(self, name: str, parent: Optional[QObject] = None):
         lane = AnalogTimeLane([Expression("...")])
-        super().__init__(name, lane, undo_stack, parent)
+        super().__init__(name, lane, parent)
 
     def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():

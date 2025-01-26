@@ -28,10 +28,9 @@ class ColoredTimeLaneModel[L: TimeLane](TimeLaneModel[L], metaclass=qabc.QABCMet
         self,
         name: str,
         lane: L,
-        undo_stack: QUndoStack,
         parent: Optional[QObject] = None,
     ):
-        super().__init__(name, lane, undo_stack, parent)
+        super().__init__(name, lane, parent)
         self._brush: Optional[QBrush] = None
 
         color = QSettings().value(f"lane color/{self.name()}", None)

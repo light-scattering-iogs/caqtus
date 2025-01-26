@@ -54,12 +54,16 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         self,
         name: str,
         lane: L,
-        undo_stack: QUndoStack,
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self.__name = name
         self.__lane: L = lane
+        self.__undo_stack = QUndoStack(self)
+
+    def set_undo_stack(self, undo_stack: QUndoStack) -> None:
+        """Set the undo stack for the model."""
+
         self.__undo_stack = undo_stack
 
     def name(self) -> str:
