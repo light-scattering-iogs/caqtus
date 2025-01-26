@@ -103,6 +103,7 @@ class TimeLanesModel(QAbstractTableModel):
         lane_model = self._extension.get_lane_model(lane, name)
         lane_model.setParent(self)
         lane_model.set_lane(lane)
+        lane_model.set_undo_stack(self.undo_stack)
         lane_model.dataChanged.connect(
             # For some reason, functools.partial does not work here, but lambda does.
             # functools.partial(
@@ -423,44 +424,40 @@ class TimeLanesModel(QAbstractTableModel):
         self.undo_stack.push(self._InsertTimeLaneCommand(self, index, lane_model))
         return True
 
+    @attrs.define(slots=False)
+    class _InsertTimeLaneCommand(QUndoCommand):
+        model: TimeLanesModel
+        index: int
+        time_lane_model: TimeLaneModel
+
+        def __attrs_post_init__(self):
+            super().__init__(f"insert lane {self.time_lane_model.name()}")
+
+        def redo(self):
+            self.model._insert_lane_model(self.index, self.time_lane_model)
+
+        def undo(self):
+            self.model._pop_lane_model(self.index)
+
     def _insert_lane_model(self, index: int, lane_model: TimeLaneModel) -> None:
         assert 0 <= index <= self.lane_number()
         self.beginInsertRows(QModelIndex(), index + 2, index + 2)
         self._lane_models.insert(index, lane_model)
         self.endInsertRows()
 
-    @attrs.define(slots=False)
-    class _InsertTimeLaneCommand(QUndoCommand):
-        model: "TimeLanesModel"
-        index: int
-        time_lane_model: TimeLaneModel | None
-
-        def __attrs_post_init__(self):
-            assert self.time_lane_model is not None
-            super().__init__(f"insert time lane {self.time_lane_model.name()}")
-
-        def redo(self):
-            assert self.time_lane_model is not None
-            self.model._insert_lane_model(self.index, self.time_lane_model)
-            self.time_lane_model = None
-
-        def undo(self):
-            self.time_lane_model = self.model._pop_lane_model(self.index)
-
     def remove_lane(self, lane_index: int) -> bool:
+        """Remove a lane from the model.
+
+        This method replaces :meth:`removeRow` as not all rows can be removed.
+        Push the action on the model undo stack.
+        """
+
         if self._read_only:
             return False
         if not (0 <= lane_index < self.lane_number()):
             return False
         self.undo_stack.push(self._RemoveTimeLaneCommand(self, lane_index))
         return True
-
-    def _pop_lane_model(self, lane_index: int) -> TimeLaneModel:
-        assert 0 <= lane_index < len(self._lane_models)
-        self.beginRemoveRows(QModelIndex(), lane_index + 2, lane_index + 2)
-        model = self._lane_models.pop(lane_index)
-        self.endRemoveRows()
-        return model
 
     class _RemoveTimeLaneCommand(QUndoCommand):
         def __init__(self, model: "TimeLanesModel", index: int):
@@ -477,6 +474,13 @@ class TimeLanesModel(QAbstractTableModel):
             assert self.time_lane_model is not None
             self.model._insert_lane_model(self.index, self.time_lane_model)
             self.time_lane_model = None
+
+    def _pop_lane_model(self, lane_index: int) -> TimeLaneModel:
+        assert 0 <= lane_index < len(self._lane_models)
+        self.beginRemoveRows(QModelIndex(), lane_index + 2, lane_index + 2)
+        model = self._lane_models.pop(lane_index)
+        self.endRemoveRows()
+        return model
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():
