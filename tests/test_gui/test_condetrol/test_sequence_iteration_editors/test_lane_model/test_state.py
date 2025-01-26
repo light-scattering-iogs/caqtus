@@ -1,3 +1,4 @@
+from PySide6.QtCore import QSize
 from hypothesis.stateful import (
     RuleBasedStateMachine,
     run_state_machine_as_test,
@@ -99,6 +100,20 @@ class TimeLaneModelMachine(RuleBasedStateMachine):
         self.model.undo_stack.setIndex(actions_count)
         current_time_lanes = self.model.get_timelanes()
         assert previous_time_lanes == current_time_lanes
+
+    @precondition(
+        lambda self: self.model.lane_number() > 0 and self.model.number_steps() >= 2
+    )
+    @rule(data=data())
+    def merge_cells(self, data):
+        lane_index = data.draw(integers(0, self.model.lane_number() - 1))
+        start_index = data.draw(integers(0, self.model.number_steps() - 2))
+        end_index = data.draw(integers(start_index + 1, self.model.number_steps() - 1))
+        to_expend_index = data.draw(integers(start_index, end_index))
+        self.model.expand_step(to_expend_index, lane_index, start_index, end_index)
+        assert self.model.span(self.model.index(lane_index + 2, start_index)) == QSize(
+            end_index - start_index + 1, 1
+        )
 
 
 def has_value(model: TimeLanesModel):
