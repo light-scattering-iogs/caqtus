@@ -201,13 +201,18 @@ class TimeLanesModel(QAbstractTableModel):
             return False
         if role != Qt.ItemDataRole.EditRole:
             return False
-        previous_value = self.data(index, role)
-        if previous_value != value:
-            self.undo_stack.push(
-                self._SetValueCommand(self, value, index.row(), index.column())
+        if index.row() == 0:
+            return self._step_names_model.setData(
+                self._step_names_model.index(index.column()), value
             )
-            return True
-        return False
+        elif index.row() == 1:
+            return self._step_durations_model.setData(
+                self._step_durations_model.index(index.column()), value
+            )
+        else:
+            return self._lane_models[index.row() - 2].setData(
+                self._map_to_source(index), value
+            )
 
     def _set_data(self, value, row: int, column: int) -> None:
         index = self.index(row, column)
@@ -218,7 +223,7 @@ class TimeLanesModel(QAbstractTableModel):
         assert result
 
     class _SetValueCommand(QUndoCommand):
-        def __init__(self, model: "TimeLanesModel", new_value, row: int, column: int):
+        def __init__(self, model: TimeLanesModel, new_value, row: int, column: int):
             self.previous_value = model.data(
                 model.index(row, column), Qt.ItemDataRole.EditRole
             )

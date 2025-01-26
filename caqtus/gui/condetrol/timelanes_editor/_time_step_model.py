@@ -51,10 +51,36 @@ class TimeStepNameModel(QAbstractListModel):
         if role == Qt.ItemDataRole.EditRole:
             if not isinstance(value, str):
                 raise TypeError(f"Expected str, got {type(value)}")
-            self._names[index.row()] = value
-            self.dataChanged.emit(index, index)
+            self._undo_stack.push(
+                self.SetDataCommand(self, index.row(), self._names[index.row()], value)
+            )
             return True
         return False
+
+    @attrs.define(slots=False)
+    class SetDataCommand(QUndoCommand):
+        model: TimeStepNameModel
+        row: int
+        previous_value: str
+        new_value: str
+
+        def __attrs_post_init__(self):
+            super().__init__(
+                f"change name of Step 1 from <{self.previous_value}> to "
+                f"<{self.new_value}>"
+            )
+
+        def redo(self) -> None:
+            self.model._names[self.row] = self.new_value
+            self.model.dataChanged.emit(
+                self.model.index(self.row), self.model.index(self.row)
+            )
+
+        def undo(self) -> None:
+            self.model._names[self.row] = self.previous_value
+            self.model.dataChanged.emit(
+                self.model.index(self.row), self.model.index(self.row)
+            )
 
     def flags(self, index) -> Qt.ItemFlag:
         if not index.isValid():
@@ -76,27 +102,28 @@ class TimeStepNameModel(QAbstractListModel):
             super().__init__(f"insert step {self.step}")
 
         def redo(self) -> None:
-            self.model._insert_row_without_undo(self.step)
+            self.model._insert_row_without_undo(self.step, f"Step {self.step}")
 
         def undo(self) -> None:
             self.model._remove_row_without_undo(self.step)
 
-    def _insert_row_without_undo(self, row) -> None:
+    def _insert_row_without_undo(self, row, value: str) -> None:
         assert 0 <= row <= self.rowCount()
         self.beginInsertRows(_DEFAULT_INDEX, row, row)
-        self._names.insert(row, f"Step {row}")
+        self._names.insert(row, value)
         self.endInsertRows()
 
     def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         if not (0 <= row < self.rowCount()):
             return False
-        self._undo_stack.push(self._RemoveStepCommand(self, row))
+        self._undo_stack.push(self._RemoveStepCommand(self, row, self._names[row]))
         return True
 
     @attrs.define(slots=False)
     class _RemoveStepCommand(QUndoCommand):
         model: TimeStepNameModel
         step: int
+        value: str
 
         def __attrs_post_init__(self):
             super().__init__(f"remove step {self.step}")
@@ -105,7 +132,7 @@ class TimeStepNameModel(QAbstractListModel):
             self.model._remove_row_without_undo(self.step)
 
         def undo(self) -> None:
-            self.model._insert_row_without_undo(self.step)
+            self.model._insert_row_without_undo(self.step, self.value)
 
     def _remove_row_without_undo(self, row) -> None:
         assert 0 <= row < self.rowCount()
@@ -156,10 +183,38 @@ class TimeStepDurationModel(QAbstractListModel):
         if role == Qt.ItemDataRole.EditRole:
             if not isinstance(value, str):
                 raise TypeError(f"Expected str, got {type(value)}")
-            self._durations[index.row()] = Expression(value)
-            self.dataChanged.emit(index, index)
+            self._undo_stack.push(
+                self.SetDataCommand(
+                    self, index.row(), self._durations[index.row()], Expression(value)
+                )
+            )
             return True
         return False
+
+    @attrs.define(slots=False)
+    class SetDataCommand(QUndoCommand):
+        model: TimeStepDurationModel
+        row: int
+        previous_value: Expression
+        new_value: Expression
+
+        def __attrs_post_init__(self):
+            super().__init__(
+                f"change duration of Step 1 from <{self.previous_value}> to "
+                f"<{self.new_value}>"
+            )
+
+        def redo(self) -> None:
+            self.model._durations[self.row] = self.new_value
+            self.model.dataChanged.emit(
+                self.model.index(self.row), self.model.index(self.row)
+            )
+
+        def undo(self) -> None:
+            self.model._durations[self.row] = self.previous_value
+            self.model.dataChanged.emit(
+                self.model.index(self.row), self.model.index(self.row)
+            )
 
     def flags(self, index) -> Qt.ItemFlag:
         if not index.isValid():
@@ -181,27 +236,28 @@ class TimeStepDurationModel(QAbstractListModel):
             super().__init__(f"insert step {self.step}")
 
         def redo(self) -> None:
-            self.model._insert_row_without_undo(self.step)
+            self.model._insert_row_without_undo(self.step, Expression("..."))
 
         def undo(self) -> None:
             self.model._remove_row_without_undo(self.step)
 
-    def _insert_row_without_undo(self, row) -> None:
+    def _insert_row_without_undo(self, row, value: Expression) -> None:
         assert 0 <= row <= self.rowCount()
         self.beginInsertRows(_DEFAULT_INDEX, row, row)
-        self._durations.insert(row, Expression("..."))
+        self._durations.insert(row, value)
         self.endInsertRows()
 
     def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
         if not (0 <= row < self.rowCount()):
             return False
-        self._undo_stack.push(self._RemoveStepCommand(self, row))
+        self._undo_stack.push(self._RemoveStepCommand(self, row, self._durations[row]))
         return True
 
     @attrs.define(slots=False)
     class _RemoveStepCommand(QUndoCommand):
         model: TimeStepDurationModel
         step: int
+        value: Expression
 
         def __attrs_post_init__(self):
             super().__init__(f"remove step {self.step}")
@@ -210,7 +266,7 @@ class TimeStepDurationModel(QAbstractListModel):
             self.model._remove_row_without_undo(self.step)
 
         def undo(self) -> None:
-            self.model._insert_row_without_undo(self.step)
+            self.model._insert_row_without_undo(self.step, self.value)
 
     def _remove_row_without_undo(self, row) -> None:
         assert 0 <= row < self.rowCount()
