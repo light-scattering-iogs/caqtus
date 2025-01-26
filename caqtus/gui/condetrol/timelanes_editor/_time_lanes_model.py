@@ -572,26 +572,10 @@ class TimeLanesModel(QAbstractTableModel):
     def simplify(self) -> bool:
         if self._read_only:
             return False
-        self.undo_stack.push(self._SimplifyCommand(self))
-
-    def _simplify(self) -> None:
-        assert not self._read_only
-        self.beginResetModel()
+        self.undo_stack.beginMacro("simplify")
         for lane_model in self._lane_models:
             lane_model.simplify()
-        self.endResetModel()
-
-    class _SimplifyCommand(QUndoCommand):
-        def __init__(self, model: "TimeLanesModel"):
-            super().__init__("simplify")
-            self.model = model
-            self.time_lanes = self.model.get_timelanes()
-
-        def redo(self) -> None:
-            self.model._simplify()
-
-        def undo(self) -> None:
-            self.model.set_timelanes(self.time_lanes)
+        self.undo_stack.endMacro()
 
 
 def get_lane_model_name(model: TimeLaneModel) -> str:
