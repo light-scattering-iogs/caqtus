@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 import copy
-from typing import Optional, Any, TypeVar, Generic, TYPE_CHECKING
+from typing import Optional, Any, TypeVar
 
 import attrs
 from PySide6.QtCore import (
@@ -12,15 +12,13 @@ from PySide6.QtCore import (
     Qt,
     QSize,
     QSettings,
+    QPersistentModelIndex,
 )
-from PySide6.QtGui import QAction, QBrush, QColor, QFont, QUndoCommand
+from PySide6.QtGui import QAction, QBrush, QColor, QFont, QUndoCommand, QUndoStack
 from PySide6.QtWidgets import QMenu, QColorDialog
 
 import caqtus.gui.qtutil.qabc as qabc
 from caqtus.types.timelane import TimeLane, Step
-
-if TYPE_CHECKING:
-    pass
 
 T = TypeVar("T")
 L = TypeVar("L", bound=TimeLane)
@@ -28,7 +26,7 @@ L = TypeVar("L", bound=TimeLane)
 _DEFAULT_INDEX = QModelIndex()
 
 
-class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
+class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
     """An abstract list model to represent a time lane.
 
     This class inherits from :class:`PySide6.QtCore.QAbstractListModel` and can be
@@ -42,18 +40,32 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
     for the cells in the lane.
     The :meth:`get_cell_context_actions` method can be overridden to add context menu
     actions to the cells in the lane.
+
+    Warning:
+        All user edits to the data model should be done through the undo stack of
+        the model.
+
     """
 
-    # Ignore some lint rules for this file as PySide6 models have a lot of camelCase
+    # Ignore some lint rules for this class as PySide6 models have a lot of camelCase
     # methods.
     # ruff: noqa: N802
 
-    def __init__(self, name: str, lane: L, parent: Optional[QObject] = None):
+    def __init__(
+        self,
+        name: str,
+        lane: L,
+        undo_stack: QUndoStack,
+        parent: Optional[QObject] = None,
+    ):
         super().__init__(parent)
         self._name = name
-        self._lane = lane
+        self._lane: L = lane
+        self.__undo_stack = undo_stack
 
     def name(self) -> str:
+        """Return the name of the lane represented by this model."""
+
         return self._name
 
     def get_lane(self) -> L:
@@ -61,8 +73,13 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
 
         return copy.deepcopy(self._lane)
 
-    def set_lane(self, lane: L) -> None:
-        """Set the lane represented by this model."""
+    def set_lane[
+        L_contra: TimeLane
+    ](self: TimeLaneModel[L_contra], lane: L_contra) -> None:
+        """Set the lane represented by this model.
+
+        This method does not push changes to the undo stack.
+        """
 
         self.beginResetModel()
         self._lane = copy.deepcopy(lane)
@@ -74,22 +91,89 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
         return len(self._lane)
 
     @abc.abstractmethod
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole) -> Any:
-        """Return the data for the given index and role.
+    def data(
+        self,
+        index: QModelIndex | QPersistentModelIndex,
+        role=Qt.ItemDataRole.DisplayRole,
+    ) -> Any:
+        """Return the data to be shown to the user for the given index and role.
 
-        See :meth:`PySide6.QtCore.QAbstractItemModel.data` for more information.
+        See :meth:`PySide6.QtCore.QAbstractItemModel.data` for more information on the
+        roles that can be used.
+
+        This method must be implemented by subclasses, typically by calling the
+        :meth:`lane_value` method and returning the appropriate value for the given
+        role.
         """
 
         return None
+
+    def lane_value[T](self: TimeLaneModel[TimeLane[T]], step: int) -> T:
+        """Return the value of the underlying lane at the given step."""
+
+        return self._lane[step]
 
     @abc.abstractmethod
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
         """Set the data for the given index and role.
 
-        See :meth:`PySide6.QtCore.QAbstractItemModel.setData` for more information.
+        See :meth:`PySide6.QtCore.QAbstractItemModel.setData` for more information on
+        the roles that can be used.
+
+        This method must be implemented by subclasses, typically by calling the
+        :meth:`set_lane_value` method with an adequate value.
         """
 
         raise NotImplementedError
+
+    def set_lane_value[
+        T
+    ](self: TimeLaneModel[TimeLane[T]], step: int, value: T) -> bool:
+        """Set the value of the underlying lane at the given step.
+
+        The change is pushed to the undo stack.
+
+        Returns:
+            True if the value was set successfully, False otherwise.
+        """
+
+        if not (0 <= step < len(self._lane)):
+            return False
+        self.__undo_stack.push(
+            self.SetValueCommand(
+                model=self,
+                step=step,
+                previous_value=self.lane_value(step),
+                new_value=value,
+            )
+        )
+        return True
+
+    @attrs.define(slots=False, kw_only=True)
+    class SetValueCommand(QUndoCommand):
+        """An undo/redo command to set the value of a step in a time lane model."""
+
+        model: TimeLaneModel
+        step: int
+        previous_value: Any
+        new_value: Any
+
+        def __attrs_post_init__(self):
+            super().__init__(f"set value for step {self.step}")
+
+        def redo(self):
+            assert 0 <= self.step < len(self.model._lane)
+            self.model._lane[self.step] = self.new_value
+            self.model.dataChanged.emit(
+                self.model.index(self.step), self.model.index(self.step)
+            )
+
+        def undo(self):
+            assert 0 <= self.step < len(self.model._lane)
+            self.model._lane[self.step] = self.previous_value
+            self.model.dataChanged.emit(
+                self.model.index(self.step), self.model.index(self.step)
+            )
 
     def headerData(
         self,
@@ -97,11 +181,13 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
         orientation: Qt.Orientation,
         role=Qt.ItemDataRole.DisplayRole,
     ) -> Any:
+        """Return the data for the model header."""
+
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
-                return self._name
+                return self.name()
             elif orientation == Qt.Orientation.Vertical:
-                return section
+                return f"Step {section}"
         elif role == Qt.ItemDataRole.FontRole:
             font = QFont()
             font.setBold(True)
@@ -122,48 +208,103 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
             | Qt.ItemFlag.ItemIsSelectable
         )
 
-    def insert_step(self, step: int) -> QUndoCommand:
-        return self._InsertStepCommand(self, step)
+    @abc.abstractmethod
+    def insertRow(self, row: int, parent=_DEFAULT_INDEX) -> bool:
+        """Insert a row at the given row index.
+
+        This method must be implemented by subclasses, typically by calling the
+        :meth:`insert_lane_value` method with an adequate value.
+        """
+
+        raise NotImplementedError
+
+    def insert_lane_value[
+        T
+    ](self: TimeLaneModel[TimeLane[T]], step: int, value: T) -> bool:
+        """Insert a value at the given row index.
+
+        The action is pushed to the undo stack.
+        """
+
+        if not (0 <= step <= len(self._lane)):
+            return False
+        self.__undo_stack.push(
+            self.InsertValueCommand(model=self, step=step, new_value=value)
+        )
+        return True
 
     @attrs.define(slots=False)
-    class _InsertStepCommand(QUndoCommand):
+    class InsertValueCommand(QUndoCommand):
         model: TimeLaneModel
         step: int
+        new_value: Any
 
         def __attrs_post_init__(self):
             super().__init__(f"insert step {self.step}")
 
         def redo(self):
-            self.model.insertRow(self.step)
+            self.model._insert_lane_value_without_undo(self.step, self.new_value)
 
         def undo(self):
-            self.model.removeRow(self.step)
+            self.model._remove_step_without_undo(self.step)
 
-    @abc.abstractmethod
-    def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
-        raise NotImplementedError
+    def _insert_lane_value_without_undo[
+        T
+    ](self: TimeLaneModel[TimeLane[T]], step: int, value: T) -> None:
+        """Insert a value at the given row index without pushing an undo command.
 
-    def insert_value(self, row: int, value: Any) -> bool:
-        if not (0 <= row <= len(self._lane)):
-            return False
-        self.beginInsertRows(QModelIndex(), row, row)
-        if row == len(self._lane):
+        The step must be a valid index for the lane.
+        """
+
+        assert 0 <= step <= len(self._lane)
+        self.beginInsertRows(QModelIndex(), step, step)
+        if step == len(self._lane):
             self._lane.append(value)
         else:
-            start, stop = self._lane.get_bounds(Step(row))
-            self._lane.insert(row, value)
-            if start < row < stop:
+            start, stop = self._lane.get_bounds(Step(step))
+            self._lane.insert(step, value)
+            if start < step < stop:
                 self._lane[start : stop + 1] = self._lane[start]
         self.endInsertRows()
-        return True
 
     def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
+        """Remove a row at the given row index.
+
+        The action is pushed to the undo stack.
+        """
+
         if not (0 <= row < len(self._lane)):
             return False
-        self.beginRemoveRows(parent, row, row)
-        del self._lane[row]
-        self.endRemoveRows()
+        self.__undo_stack.push(
+            self.RemoveStepCommand(model=self, step=row, value=self.lane_value(row))
+        )
         return True
+
+    @attrs.define(slots=False)
+    class RemoveStepCommand(QUndoCommand):
+        model: TimeLaneModel
+        step: int
+        value: Any
+
+        def __attrs_post_init__(self):
+            super().__init__(f"remove step {self.step}")
+
+        def redo(self):
+            self.model._remove_step_without_undo(self.step)
+
+        def undo(self):
+            self.model._insert_lane_value_without_undo(self.step, self.value)
+
+    def _remove_step_without_undo(self, step: int) -> None:
+        """Remove a step at the given row index without pushing an undo command.
+
+        The step must be a valid index for the lane.
+        """
+
+        assert 0 <= step < len(self._lane)
+        self.beginRemoveRows(QModelIndex(), step, step)
+        del self._lane[step]
+        self.endRemoveRows()
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         break_span_action = QAction("Break block")
@@ -171,6 +312,8 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
         return [break_span_action]
 
     def span(self, index) -> QSize:
+        """Return the span of the cell at the given index."""
+
         start, stop = self._lane.get_bounds(Step(index.row()))
         if index.row() == start:
             return QSize(1, stop - start)
@@ -178,14 +321,74 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
             return QSize(1, 1)
 
     def break_span(self, index: QModelIndex) -> bool:
+        """Break the block of the cell at the given index.
+
+        The action is pushed to the undo stack.
+        """
+
         start, stop = self._lane.get_bounds(Step(index.row()))
+        self.__undo_stack.push(
+            self.BreakSpanCommand(model=self, step=index.row(), start=start, stop=stop)
+        )
+
         value = self._lane[index.row()]
         for i in range(start, stop):
             self._lane[i] = value
         self.dataChanged.emit(self.index(start), self.index(stop - 1))
         return True
 
-    def expand_step(self, step: int, start: int, stop: int) -> None:
+    @attrs.define(slots=False)
+    class BreakSpanCommand(QUndoCommand):
+        model: TimeLaneModel
+        step: int
+        start: int
+        stop: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"break span at step {self.step}")
+
+        def redo(self):
+            self.model._break_span_without_undo(self.step, self.start, self.stop)
+
+        def undo(self):
+            self.model._expand_step_without_undo(self.step, self.start, self.stop)
+
+    def _break_span_without_undo(self, step: int, start: int, stop: int) -> None:
+        value = self._lane[step]
+        for i in range(start, stop):
+            self._lane[i] = value
+        self.dataChanged.emit(self.index(start), self.index(stop - 1))
+
+    def expand_step(self, step: int, start: int, stop: int) -> bool:
+        """Expand the step at the given index to the given range.
+
+        The action is pushed to the undo stack.
+        """
+
+        if not (0 <= step < len(self._lane)):
+            return False
+        self.__undo_stack.push(
+            self.ExpandStepCommand(model=self, step=step, start=start, stop=stop)
+        )
+        return True
+
+    @attrs.define(slots=False)
+    class ExpandStepCommand(QUndoCommand):
+        model: TimeLaneModel
+        step: int
+        start: int
+        stop: int
+
+        def __attrs_post_init__(self):
+            super().__init__(f"expand step at step {self.step}")
+
+        def redo(self):
+            self.model._expand_step_without_undo(self.step, self.start, self.stop)
+
+        def undo(self):
+            self.model._break_span_without_undo(self.step, self.start, self.stop)
+
+    def _expand_step_without_undo(self, step: int, start: int, stop: int) -> None:
         value = self._lane[step]
         self._lane[start : stop + 1] = value
         self.dataChanged.emit(self.index(start), self.index(stop - 1))
@@ -196,8 +399,32 @@ class TimeLaneModel(QAbstractListModel, Generic[L], metaclass=qabc.QABCMeta):
         return []
 
     def simplify(self) -> None:
-        """Simplify the lane by merging contiguous blocks of the same value."""
+        """Simplify the lane by merging contiguous blocks of the same value.
 
+        The action is pushed to the undo stack.
+        """
+
+        self.__undo_stack.push(
+            self.SimplifyCommand(model=self, lane=copy.deepcopy(self._lane))
+        )
+
+    @attrs.define(slots=False)
+    class SimplifyCommand(QUndoCommand):
+        model: TimeLaneModel
+        lane: TimeLane
+
+        def __attrs_post_init__(self):
+            super().__init__("simplify lane")
+
+        def redo(self):
+            self.model._simplify_without_undo()
+
+        def undo(self):
+            self.model.beginResetModel()
+            self.model.set_lane(self.lane)
+            self.model.endResetModel()
+
+    def _simplify_without_undo(self) -> None:
         self.beginResetModel()
         start = 0
         for i in range(1, len(self._lane)):
