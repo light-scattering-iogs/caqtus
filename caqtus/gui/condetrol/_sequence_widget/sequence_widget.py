@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ast import Not
 from typing import Optional, Literal, assert_never
 
 import anyio
@@ -26,9 +27,10 @@ from caqtus.session import (
     PathNotFoundError,
     SequenceNotEditableError,
     PathIsNotSequenceError,
-    State,
+    State as SequenceState,
 )
 from caqtus.types.iteration import IterationConfiguration
+from caqtus.types.iteration.steps_configurations import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.utils.result import is_failure_type
@@ -40,6 +42,7 @@ from .._sequence_iteration_editors import StepsIterationEditor
 from ..timelanes_editor import TimeLanesEditor
 from ..timelanes_editor.extension import CondetrolLaneExtensionProtocol
 from ..._common.exception_tree import ExceptionDialog
+
 
 type State = SequenceNotSet | DraftSequence | FinishedSequence | CrashedSequence
 
@@ -54,7 +57,7 @@ class SequenceNotSet:
 @attrs.frozen
 class SequenceSetBase:
     sequence_path: PureSequencePath
-    iterations: IterationConfiguration
+    iterations: StepsConfiguration
     time_lanes: TimeLanes
     parameters: ParameterNamespace
 
@@ -74,12 +77,12 @@ class CrashedSequence(SequenceSetBase):
     traceback: TracebackSummary
 
 
-@attrs.define
+@attrs.frozen
 class _LiveStateBase:
     parent: SequenceWidget
 
 
-@attrs.define
+@attrs.frozen
 class _SetSequenceBase(_LiveStateBase):
     sequence_path: PureSequencePath
 
@@ -219,15 +222,11 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 self.setEnabled(False)
                 self.start_sequence_action.setEnabled(False)
                 new_state = SequenceNotSet()
-            case SequenceSetBase(
-                sequence_path=path,
-                iterations=iterations,
-                time_lanes=time_lanes,
-                parameters=parameters,
-            ) as set_state:
-                self.iteration_editor.set_iteration(iterations)
-                self.time_lanes_editor.set_time_lanes(time_lanes)
-                self.parameters_editor.set_parameters(parameters)
+            case DraftSequence() | FinishedSequence() | CrashedSequence() as set_state:
+                self.iteration_editor.set_iteration(set_state.iterations)
+                self.time_lanes_editor.set_time_lanes(set_state.time_lanes)
+                self.parameters_editor.set_parameters(set_state.parameters)
+                path = set_state.sequence_path
                 self.setEnabled(True)
                 match set_state:
                     case DraftSequence():
@@ -408,6 +407,8 @@ def _query_sequence_state_sync(
     # exists in the session.
     state = unwrap(session.sequences.get_state(path))
     iterations = session.sequences.get_iteration_configuration(path)
+    if not isinstance(iterations, StepsConfiguration):
+        raise NotImplementedError("Only steps iterations are supported.")
     time_lanes = session.sequences.get_time_lanes(path)
 
     if state.is_editable():
@@ -417,8 +418,11 @@ def _query_sequence_state_sync(
         )
     else:
         parameters = unwrap(session.sequences.get_global_parameters(path))
-        if state == State.CRASHED:
+        if state == SequenceState.CRASHED:
             traceback_summary = unwrap(session.sequences.get_exception(path))
+            if traceback_summary is None:
+                error = RuntimeError("Sequence crashed but no traceback available.")
+                traceback_summary = TracebackSummary.from_exception(error)
             return CrashedSequence(
                 path,
                 iterations=iterations,
