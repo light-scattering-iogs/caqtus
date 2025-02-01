@@ -51,7 +51,9 @@ class CondetrolWindowHandler:
         async with self.task_group:
             self.task_group.start_soon(self.main_window.path_view.run_async)
             self.task_group.start_soon(self._monitor_global_parameters)
-            self.task_group.start_soon(self.main_window.sequence_widget.exec_async)
+            self.task_group.start_soon(
+                self.main_window.sequence_widget.exec_async, self.session_maker
+            )
 
     async def _monitor_global_parameters(self) -> None:
         while True:
@@ -59,7 +61,6 @@ class CondetrolWindowHandler:
                 parameters = await session.get_global_parameters()
             if parameters != self.main_window.global_parameters_editor.get_parameters():
                 self.main_window.global_parameters_editor.set_parameters(parameters)
-                self.main_window.sequence_widget.update_global_parameters(parameters)
             await anyio.sleep(0.2)
 
     def start_sequence(self, path: PureSequencePath):
@@ -141,9 +142,7 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         self.global_parameters_editor = ParameterNamespaceEditor()
         self.connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
-        self.sequence_widget = SequenceWidget(
-            self.session_maker, extension.lane_extension, parent=self
-        )
+        self.sequence_widget = SequenceWidget(extension.lane_extension, parent=self)
         self.device_configurations_dialog = DeviceConfigurationsDialog(
             extension.device_extension, parent=self
         )
@@ -283,7 +282,6 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         with self.session_maker() as session:
             session.set_global_parameters(parameters)
             logger.info(f"Global parameters written to storage: {parameters}")
-        self.sequence_widget.update_global_parameters(parameters)
 
     def signal_exception_while_running_sequence(self, exception: Exception):
         # This is a bit ugly because on_procedure_exception runs a dialog, which

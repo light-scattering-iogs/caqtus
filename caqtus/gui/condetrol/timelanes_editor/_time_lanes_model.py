@@ -120,6 +120,11 @@ class TimeLanesModel(QAbstractTableModel):
         )
 
     def set_timelanes(self, timelanes: TimeLanes):
+        """Set the lanes of the model.
+
+        Calling this method clears the undo stack of the model.
+        """
+
         # Don't check if read only, because we need to update the content of the editor
         # even if it is readonly when swapping sequences.
         new_models = []
@@ -128,6 +133,7 @@ class TimeLanesModel(QAbstractTableModel):
             new_models.append(lane_model)
 
         self.beginResetModel()
+        self.undo_stack.clear()
         self._step_names_model.set_names(timelanes.step_names)
         self._step_durations_model.set_durations(timelanes.step_durations)
         self._lane_models.clear()

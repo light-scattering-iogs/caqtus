@@ -97,6 +97,9 @@ class TimeLanesEditor(QWidget):
         self.simplify_action.setEnabled(not read_only)
         self.paste_from_clipboard_action.setEnabled(not read_only)
 
+    def model(self) -> TimeLanesModel:
+        return self.view.model()
+
     def set_time_lanes(self, time_lanes: TimeLanes) -> None:
         """Set the time lanes to be edited.
 
@@ -104,10 +107,21 @@ class TimeLanesEditor(QWidget):
         """
 
         with block_signals(self):
-            self.view.set_time_lanes(time_lanes)
+            self.model().set_timelanes(time_lanes)
+
+    def get_time_lanes(self) -> TimeLanes:
+        """Return a copy of the time lanes currently being edited."""
+
+        return self.model().get_timelanes()
+
+    def has_uncommitted_edits(self) -> bool:
+        return self.model().has_uncommitted_edits()
+
+    def commit_edits(self) -> None:
+        self.model().commit_edits()
 
     def _simplify_timelanes(self):
-        self.view.simplify_timelanes()
+        self.model().simplify()
 
     def _on_add_lane_triggered(self) -> None:
         if self._add_lane_dialog.exec() == QDialog.DialogCode.Accepted:
@@ -308,6 +322,11 @@ class TimeLanesView(QTableView):
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.verticalHeader().setFixedWidth(200)
         self._steps_table.verticalHeader().setFixedWidth(200)
+
+    def model(self) -> TimeLanesModel:
+        model = super().model()
+        assert isinstance(model, TimeLanesModel)
+        return model
 
     @property
     def undo_stack(self) -> QUndoStack:
@@ -515,9 +534,6 @@ class TimeLanesView(QTableView):
             start = group[0][1]
             stop = group[-1][1]
             self._model.expand_step(step, row - 2, start, stop)
-
-    def simplify_timelanes(self):
-        self._model.simplify()
 
     def add_lane(self, lane_name: str, lane: TimeLane):
         self._model.insert_time_lane(lane_name, lane)
