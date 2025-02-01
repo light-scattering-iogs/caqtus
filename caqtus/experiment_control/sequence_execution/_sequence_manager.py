@@ -23,7 +23,9 @@ from caqtus.shot_compilation import (
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import split_recoverable
+from caqtus.types.timelane.timelane import TimeLanes
 from caqtus.utils.result import unwrap
+from caqtus.utils.result._result import is_failure
 from ._shot_compiler import ShotCompilerFactory, create_shot_compiler
 from ._shot_runner import ShotRunnerFactory, create_shot_runner
 from .sequence_runner import execute_steps
@@ -125,7 +127,10 @@ class SequenceManager:
                 self.sequence_parameters = session.get_global_parameters()
             else:
                 self.sequence_parameters = copy.deepcopy(global_parameters)
-            self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
+            time_lanes = session.sequences.get_time_lanes(self._sequence_path)
+            if is_failure(time_lanes):
+                raise time_lanes.exception()
+            self.time_lanes: TimeLanes = time_lanes
 
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}

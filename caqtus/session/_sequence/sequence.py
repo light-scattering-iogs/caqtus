@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 from collections.abc import Iterable
 from functools import cached_property
+import re
 from typing import TYPE_CHECKING, Optional, Self, Literal, assert_never
 
 import attrs
@@ -14,6 +15,7 @@ from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import ParameterNamespace, ParameterSchema
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils.result._result import is_failure
 from .shot import Shot
 from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
@@ -123,12 +125,17 @@ class Sequence:
     def get_time_lanes(self) -> TimeLanes:
         """Return the time lanes that define how a shot is run for this sequence."""
 
-        return self.session.sequences.get_time_lanes(self.path)
+        result = self.session.sequences.get_time_lanes(self.path)
+        if is_failure(result):
+            raise result.exception()
+        return result
 
     def set_time_lanes(self, time_lanes: TimeLanes) -> None:
         """Set the time lanes that define how a shot is run for this sequence."""
 
-        return self.session.sequences.set_time_lanes(self.path, time_lanes)
+        result = self.session.sequences.set_time_lanes(self.path, time_lanes)
+        if is_failure(result):
+            raise result.exception()
 
     def get_shots(self) -> Iterable[Shot]:
         """Return the shots that belong to this sequence.

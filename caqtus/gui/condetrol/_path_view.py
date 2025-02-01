@@ -43,6 +43,7 @@ from caqtus.types.iteration import (
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.result import Failure, is_success, is_failure_type, unwrap
+from caqtus.utils.result._result import is_failure
 from ._icons import get_icon
 from .._common.waiting_widget import blocking_call
 
@@ -242,6 +243,8 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             with self.session_maker() as session:
                 iterations = session.sequences.get_iteration_configuration(path)
                 time_lanes = session.sequences.get_time_lanes(path)
+                if is_failure(time_lanes):
+                    return
             if text.startswith(PureSequencePath._separator()):
                 if not PureSequencePath.is_valid_path(text):
                     QMessageBox.warning(  # type: ignore[reportCallIssue]

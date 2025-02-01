@@ -176,7 +176,9 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
+    def get_time_lanes(
+        self, sequence_path: PureSequencePath
+    ) -> TimeLanes | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
         """Return a copy of the time lanes for this sequence."""
 
         raise NotImplementedError
@@ -184,14 +186,13 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def set_time_lanes(
         self, sequence_path: PureSequencePath, time_lanes: TimeLanes
-    ) -> None:
-        """Set the time lanes that define how a shot is run for this sequence.
-
-        Raises:
-            PathNotFoundError: If the path doesn't exist.
-            PathIsNotSequenceError: If the path is not a sequence.
-            SequenceNotEditableError: If the sequence is not in DRAFT state.
-        """
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        """Set the time lanes that define how a shot is run for this sequence."""
 
         raise NotImplementedError
 

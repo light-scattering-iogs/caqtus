@@ -251,16 +251,22 @@ class SQLSequenceCollection(SequenceCollection):
     def serialize_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
         return self.serializer.unstructure_time_lanes(time_lanes)
 
-    def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
+    def get_time_lanes(
+        self, sequence_path: PureSequencePath
+    ) -> TimeLanes | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
         return _get_time_lanes(self._get_sql_session(), sequence_path, self.serializer)
 
     def set_time_lanes(
         self, sequence_path: PureSequencePath, time_lanes: TimeLanes
-    ) -> None:
-        sequence_model = unwrap(self._query_sequence_model(sequence_path))
-        if not sequence_model.state.is_editable():
-            raise SequenceNotEditableError(sequence_path)
-        sequence_model.time_lanes.content = self.serialize_time_lanes(time_lanes)
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        return _set_time_lanes(
+            self._get_sql_session(), sequence_path, time_lanes, self.serializer
+        )
 
     def get_state(
         self, path: PureSequencePath
@@ -748,9 +754,32 @@ def _get_iteration_configuration(
 
 def _get_time_lanes(
     session: Session, sequence_path: PureSequencePath, serializer: SerializerProtocol
-) -> TimeLanes:
-    sequence_model = unwrap(_query_sequence_model(session, sequence_path))
+) -> TimeLanes | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+    sequence_model_result = _query_sequence_model(session, sequence_path)
+    if is_failure(sequence_model_result):
+        return sequence_model_result
+    sequence_model = sequence_model_result.content()
     return serializer.structure_time_lanes(sequence_model.time_lanes.content)
+
+
+def _set_time_lanes(
+    session: Session,
+    sequence_path: PureSequencePath,
+    time_lanes: TimeLanes,
+    serializer: SerializerProtocol,
+) -> (
+    None
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[SequenceNotEditableError]
+):
+    sequence_model_result = _query_sequence_model(session, sequence_path)
+    if is_failure(sequence_model_result):
+        return sequence_model_result
+    sequence_model = sequence_model_result.content()
+    if not sequence_model.state.is_editable():
+        return Failure(SequenceNotEditableError(sequence_path))
+    sequence_model.time_lanes.content = serializer.unstructure_time_lanes(time_lanes)
 
 
 def _get_shots(
