@@ -142,6 +142,14 @@ class _NotEditableSequence(_SetSequenceBase):
 class _CrashedSequence(_SetSequenceBase):
     traceback: TracebackSummary
 
+    def get_traceback(self) -> TracebackSummary:
+        return self.traceback
+
+    def set_traceback(self, traceback: TracebackSummary) -> None:
+        self.parent._state = _CrashedSequence(
+            self.parent, sequence_path=self.sequence_path, traceback=traceback
+        )
+
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
     """Widget for editing sequence parameters, iterations and time lanes.
@@ -432,6 +440,60 @@ async def synchronize_draft_sequence(
                 changes = True
             elif editor_time_lanes != state.time_lanes:
                 editor_state.set_time_lanes(state.time_lanes)
+                changes = True
+            return changes
+        case _:
+            assert_never(state)
+
+
+async def synchronize_not_editable_sequence(
+    editor_state: _NotEditableSequence, state: State
+) -> bool:
+    match state:
+        case SequenceNotSet() | DraftSequence() | CrashedSequence():
+            editor_state.set_fresh_state(state)
+            return True
+        case NotEditableSequence():
+            changes = False
+            if editor_state.get_parameters() != state.parameters:
+                editor_state.update_global_parameters(state.parameters)
+                changes = True
+
+            if editor_state.get_iterations() != state.iterations:
+                editor_state.set_iterations(state.iterations)
+                changes = True
+
+            if editor_state.get_time_lanes() != state.time_lanes:
+                editor_state.set_time_lanes(state.time_lanes)
+                changes = True
+            return changes
+        case _:
+            assert_never(state)
+
+
+async def synchronize_crashed_sequence(
+    editor_state: _CrashedSequence, state: State
+) -> bool:
+    match state:
+        case SequenceNotSet() | DraftSequence() | NotEditableSequence():
+            editor_state.set_fresh_state(state)
+            return True
+        case CrashedSequence():
+            changes = False
+            if editor_state.get_parameters() != state.parameters:
+                editor_state.update_global_parameters(state.parameters)
+                changes = True
+
+            if editor_state.get_iterations() != state.iterations:
+                editor_state.set_iterations(state.iterations)
+                changes = True
+
+            if editor_state.get_time_lanes() != state.time_lanes:
+                editor_state.set_time_lanes(state.time_lanes)
+                changes = True
+
+            if editor_state.get_traceback() != state.traceback:
+                editor_state.set_traceback(state.traceback)
                 changes = True
             return changes
         case _:
