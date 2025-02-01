@@ -29,10 +29,15 @@ _DEFAULT_MODEL_INDEX = QModelIndex()
 class TimeLanesModel(QAbstractTableModel):
     """Table model for time lanes of a sequence.
 
+    Each column represents a step in the shot.
+    The first row contains the names of the steps.
+    The second row contains the durations of the steps.
+    The following rows contain the lanes of the sequence.
+
     This model has an undo stack when actions are performed.
     """
 
-    # Ignore some lint rules for this file as PySide6 models have a lot of camelCase
+    # Ignore some lint rules for this class as PySide6 models have a lot of camelCase
     # methods.
     # ruff: noqa: N802
     def __init__(
