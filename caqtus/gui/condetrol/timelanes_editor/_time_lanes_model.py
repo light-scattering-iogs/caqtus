@@ -65,6 +65,36 @@ class TimeLanesModel(QAbstractTableModel):
     def is_read_only(self) -> bool:
         return self._read_only
 
+    def has_uncommitted_edits(self) -> bool:
+        """Indicate if the user has edited data since calling :meth:`commit_edits`.
+
+        This value is orthogonal to :meth:`is_read_only` as the model can be read only
+        and still have uncommitted edits.
+        """
+
+        return not self.undo_stack.isClean()
+
+    def commit_edits(self) -> None:
+        """Marks the model has having no uncommitted edits.
+
+        Typically, one would call this method after saving the result of
+        :meth:`get_timelanes`.
+        """
+
+        self.undo_stack.setClean()
+
+    def get_timelanes(self) -> TimeLanes:
+        """Return a copy of the lanes currently in the model."""
+
+        return TimeLanes(
+            step_names=self._step_names_model.get_names(),
+            step_durations=self._step_durations_model.get_duration(),
+            lanes={
+                get_lane_model_name(model): model.get_lane()
+                for model in self._lane_models
+            },
+        )
+
     def cell_index(self, lane_index: int, step: int) -> QModelIndex:
 
         return self.index(lane_index + 2, step)
@@ -165,18 +195,6 @@ class TimeLanesModel(QAbstractTableModel):
 
     def get_lane_name(self, index: int) -> str:
         return get_lane_model_name(self._lane_models[index])
-
-    def get_timelanes(self) -> TimeLanes:
-        """Return a copy of the lanes currently in the model."""
-
-        return TimeLanes(
-            step_names=self._step_names_model.get_names(),
-            step_durations=self._step_durations_model.get_duration(),
-            lanes={
-                get_lane_model_name(model): model.get_lane()
-                for model in self._lane_models
-            },
-        )
 
     def number_steps(self) -> int:
         count = self._step_names_model.rowCount()
