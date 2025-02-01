@@ -15,6 +15,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QAction, QUndoStack, QUndoCommand
 from PySide6.QtWidgets import QMenu
 
+from caqtus.types.expression import Expression
 from caqtus.types.timelane import TimeLanes, TimeLane
 from ._time_lane_model import TimeLaneModel
 from ._time_step_model import (
@@ -139,6 +140,57 @@ class TimeLanesModel(QAbstractTableModel):
         self._lane_models.clear()
         self._lane_models.extend(new_models)
         self.endResetModel()
+
+    def set_timelanes_with_undo(self, timelanes: TimeLanes, message: str) -> bool:
+        if self._read_only:
+            return False
+        new_models = []
+        for name, lane in timelanes.lanes.items():
+            lane_model = self._create_lane_model(name, lane)
+            new_models.append(lane_model)
+        self.undo_stack.push(
+            self._SetTimeLanesCommand(
+                self,
+                list(self._lane_models),
+                list(new_models),
+                self._step_names_model.get_names(),
+                list(timelanes.step_names),
+                list(self._step_durations_model.get_duration()),
+                list(timelanes.step_durations),
+                message,
+            )
+        )
+        return True
+
+    @attrs.define(slots=False)
+    class _SetTimeLanesCommand(QUndoCommand):
+        model: TimeLanesModel
+        old_models: list[TimeLaneModel]
+        new_models: list[TimeLaneModel]
+        old_names: list[str]
+        new_names: list[str]
+        old_durations: list[Expression]
+        new_durations: list[Expression]
+        message: str
+
+        def __attrs_post_init__(self):
+            super().__init__(self.message)
+
+        def redo(self):
+            self.model.beginResetModel()
+            self.model._step_names_model.set_names(self.new_names)
+            self.model._step_durations_model.set_durations(self.new_durations)
+            self.model._lane_models.clear()
+            self.model._lane_models.extend(self.new_models)
+            self.model.endResetModel()
+
+        def undo(self):
+            self.model.beginResetModel()
+            self.model._step_names_model.set_names(self.old_names)
+            self.model._step_durations_model.set_durations(self.old_durations)
+            self.model._lane_models.clear()
+            self.model._lane_models.extend(self.old_models)
+            self.model.endResetModel()
 
     def _create_lane_model(self, name: str, lane: TimeLane) -> TimeLaneModel:
         lane_model = self._extension.get_lane_model(lane, name)

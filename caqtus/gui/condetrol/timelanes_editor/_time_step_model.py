@@ -32,6 +32,8 @@ class TimeStepNameModel(QAbstractListModel):
         self.endResetModel()
 
     def get_names(self) -> list[str]:
+        """Return a copy of the names displayed in the model."""
+
         return copy.deepcopy(self._names)
 
     def rowCount(self, parent=_DEFAULT_INDEX) -> int:

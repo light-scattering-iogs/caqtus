@@ -175,7 +175,7 @@ class TimeLanesEditor(QWidget):
         # TODO: raise recoverable error if the content is not valid
         time_lanes = self._extension.structure_time_lanes(content)
 
-        self.view.set_time_lanes(time_lanes)
+        self.model().set_timelanes_with_undo(time_lanes, "paste from clipboard")
         return True
 
 
