@@ -474,6 +474,10 @@ class StepsModel(QStandardItemModel):
             return False
         self.undo_stack.beginMacro("remove steps")
         for index in persistent_indices:
+            if not index.isValid():
+                # It can happen that the index is no longer valid because its parent
+                # was removed before. In that case, we just skip it.
+                continue
             self.removeRow(index.row(), index.parent())
         self.undo_stack.endMacro()
         return True
