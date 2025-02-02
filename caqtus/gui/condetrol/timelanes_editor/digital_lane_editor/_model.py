@@ -1,11 +1,11 @@
 from typing import Optional, Any, assert_never
 
 from PySide6.QtCore import QObject, QModelIndex, Qt, QPersistentModelIndex
-from PySide6.QtGui import QAction, QBrush, QPalette, QUndoStack
+from PySide6.QtGui import QAction, QBrush, QPalette
 from PySide6.QtWidgets import QMenu
 
 from caqtus.types.expression import Expression
-from caqtus.types.timelane import DigitalTimeLane, Step
+from caqtus.types.timelane import DigitalTimeLane
 from .._colored_time_lane_model import ColoredTimeLaneModel
 
 _DEFAULT_INDEX = QModelIndex()

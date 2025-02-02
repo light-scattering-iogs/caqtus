@@ -8,7 +8,7 @@ from PySide6.QtCore import (
     Qt,
     QSettings,
 )
-from PySide6.QtGui import QAction, QBrush, QColor, QUndoStack
+from PySide6.QtGui import QAction, QBrush, QColor
 from PySide6.QtWidgets import QMenu, QColorDialog
 
 import caqtus.gui.qtutil.qabc as qabc
@@ -23,6 +23,8 @@ class ColoredTimeLaneModel[L: TimeLane](TimeLaneModel[L], metaclass=qabc.QABCMet
     They have the attribute :attr:`_brush` that is optionally a :class:`QBrush` that
     can be used to color the cells in the lane.
     """
+
+    # ruff: noqa: N802
 
     def __init__(
         self,
