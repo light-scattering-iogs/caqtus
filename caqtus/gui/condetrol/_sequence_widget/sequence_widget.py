@@ -378,13 +378,16 @@ async def synchronize_editor_and_storage(
             | _NotEditableSequence(sequence_path=path)
             | _CrashedSequence(sequence_path=path)
         ):
-            storage_state = await _query_sequence_state_async(path, session)
+            storage_state = await _query_state_async(path, session)
             if editor_state != editor.get_current_state():
                 # Could be that the editor state changed while fetching the data from
                 # the storage.
                 # In this case we relaunch the synchronization.
                 return await synchronize_editor_and_storage(editor, session)
             else:
+                if isinstance(storage_state, SequenceNotSet):
+                    editor.set_fresh_state(storage_state)
+                    return True
                 return await synchronize_editor_and_storage_sequence_data(
                     editor_state, session, storage_state
                 )
