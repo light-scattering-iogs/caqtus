@@ -290,9 +290,7 @@ class Model(QAbstractTableModel):
             | Qt.ItemFlag.ItemIsSelectable
         )
 
-    def headerData(
-        self, section, orientation, role: int = Qt.ItemDataRole.DisplayRole
-    ):
+    def headerData(self, section, orientation, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
