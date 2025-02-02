@@ -218,6 +218,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.currentChanged.connect(self._on_tab_changed)
         self.undo_group.setActiveStack(self.time_lanes_editor.undo_stack)
         self.undoView.setGroup(self.undo_group)
+        self.undoView.setVisible(False)
 
         self.tool_bar = QToolBar(self)
         self.status_widget = IconLabel(icon_position="left")
