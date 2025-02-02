@@ -9,18 +9,19 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-      - name: Set up python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install
+      - name: Install the project
+        run: uv sync --all-extras --dev
       - id: changed-files
         uses: tj-actions/changed-files@v36
       - uses: pre-commit/action@v3.0.1
         with:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }} # Only run on changed files
-      - name: Install Hatch
-        uses: pypa/hatch@install
       - id: changed-python-files
         uses: tj-actions/changed-files@v36
         with:
@@ -29,9 +30,9 @@ jobs:
         if: steps.changed-python-files.outputs.any_changed == 'true'
         env:
           CHANGED_PYTHON_FILES: ${{ steps.changed-python-files.outputs.all_changed_files }}
-        run: hatch run linter $CHANGED_PYTHON_FILES
+        run: uv run ruff check $CHANGED_PYTHON_FILES
       - name: Run check types
         if: steps.changed-python-files.outputs.any_changed == 'true'
         env:
           CHANGED_PYTHON_FILES: ${{ steps.changed-python-files.outputs.all_changed_files }}
-        run: hatch run check-types $CHANGED_PYTHON_FILES
+        run: uv run pyright $CHANGED_PYTHON_FILES

@@ -13,18 +13,13 @@ build:
   apt_packages:
     - graphviz
   jobs:
-    # We need to use hatch to resolve the dependencies, but it will create a new
-    # virtual environment, which is not the one used to build the doc.
-    # So we reinstall the dependencies found by hatch in the RTD environment.
-    # Would be better to execute arbitrary commands to have hatch build to docs, but
+    # We need to use uv to resolve the dependencies.
+    # Would be better to execute arbitrary commands to have uv build to docs, but
     # in this mode, we can't use apt_packages to install graphviz.
     # See: https://github.com/readthedocs/readthedocs.org/issues/9599
-    post_create_environment:
-      - pip install hatch
     post_install:
-      - hatch -e docs run pip freeze -> requirements.txt
-      - pip install -r requirements.txt
-      - pip freeze
+      - pip install uv
+      - UV_PROJECT_ENVIRONMENT=$READTHEDOCS_VIRTUALENV_PATH uv sync --all-extras --group dev --link-mode=copy
 
 sphinx:
   configuration: doc/source/conf.py
