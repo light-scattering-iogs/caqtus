@@ -1,14 +1,20 @@
 import functools
-from collections.abc import Set, Iterable
+from collections.abc import Set
 from typing import Optional
 
 import yaml
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtWidgets
 from PySide6.QtCore import Qt, QPersistentModelIndex, QModelIndex
-from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont, QGuiApplication
+from PySide6.QtGui import (
+    QKeySequence,
+    QShortcut,
+    QFont,
+    QGuiApplication,
+    QUndoStack,
+)
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
-from caqtus.gui.qtutil import block_signals
+from caqtus.gui.qtutil._temporary_widget import temporary_widget
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
@@ -23,6 +29,10 @@ from .delegate import StepDelegate
 from .steps_model import StepsModel
 from ..sequence_iteration_editor import SequenceIterationEditor
 from ..._icons import get_icon
+
+
+def create_shot_step() -> ExecuteShot:
+    return ExecuteShot()
 
 
 def create_variable_declaration():
@@ -68,8 +78,6 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
             This signal is not emitted when the iteration is set programmatically.
     """
 
-    iteration_edited = QtCore.Signal(StepsConfiguration)
-
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self._model = StepsModel(StepsConfiguration([]))
@@ -90,11 +98,6 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
-
-        self._model.dataChanged.connect(self._emit_iteration_edited)
-        self._model.rowsInserted.connect(self._emit_iteration_edited)
-        self._model.rowsRemoved.connect(self._emit_iteration_edited)
-        self._model.modelReset.connect(self._emit_iteration_edited)
 
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -133,6 +136,22 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         )
         self.paste_from_clipboard_action.triggered.connect(self.paste_from_clipboard)
 
+    def has_uncommitted_edits(self) -> bool:
+        return not self.undo_stack.isClean()
+
+    def commit_edits(self) -> None:
+        self.undo_stack.setClean()
+
+    @property
+    def undo_stack(self) -> QUndoStack:
+        """The undo stack used by the editor.
+
+        This undo stack is used to undo and redo the changes made by the user in the
+        editor.
+        """
+
+        return self._model.undo_stack
+
     def _setup_add_button(self):
         self.add_button.setToolTip("Add step")
         self.add_button.setPopupMode(
@@ -141,21 +160,31 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.add_button.setIcon(get_icon("plus", self.palette().buttonText().color()))
         self.add_button.setMenu(self.add_menu)
         self.add_shot_action.triggered.connect(
-            functools.partial(self._model.append_step, ExecuteShot())
+            functools.partial(
+                self._model.insert_steps,
+                [create_shot_step()],
+                self._model.rowCount(),
+                QModelIndex(),
+            )
         )
         self.add_variable_action.triggered.connect(
-            functools.partial(self._model.append_step, create_variable_declaration())
+            functools.partial(
+                self._model.insert_steps,
+                [create_variable_declaration()],
+                0,
+                QModelIndex(),
+            )
         )
         self.add_linspace_action.triggered.connect(
-            functools.partial(self._model.append_step, create_linspace_loop())
+            functools.partial(
+                self._model.insert_steps, [create_linspace_loop()], 0, QModelIndex()
+            )
         )
         self.add_arange_action.triggered.connect(
-            functools.partial(self._model.append_step, create_arange_loop())
+            functools.partial(
+                self._model.insert_steps, [create_arange_loop()], 0, QModelIndex()
+            )
         )
-
-    def _emit_iteration_edited(self, *args, **kwargs):
-        self.iteration_edited.emit(self.get_iteration())
-        self.expandAll()
 
     def get_iteration(self) -> StepsConfiguration:
         """Returns the iteration currently displayed by the editor.
@@ -172,8 +201,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         This method does not emit the signal iteration_edited.
         """
 
-        with block_signals(self):
-            self._model.set_steps(iteration)
+        self._model.set_steps(iteration)
         self.expandAll()
 
     def set_available_parameter_names(self, parameter_names: Set[DottedVariableName]):
@@ -206,16 +234,8 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
     def delete_selected(self) -> bool:
         if self.is_read_only():
             return False
-        self._remove_indices(self.selectedIndexes())
+        self._model.remove_indices(self.selectedIndexes())
         return True
-
-    def _remove_indices(self, indices: Iterable[QModelIndex]) -> None:
-        # Need to be careful that the indexes are not invalidated by the removal of
-        # previous rows, that's why we convert them to QPersistentModelIndex.
-        persistent_indices = [QPersistentModelIndex(index) for index in indices]
-        for index in persistent_indices:
-            if index.isValid():
-                self._model.removeRow(index.row(), index.parent())
 
     def copy_selection(self) -> None:
         selected_indexes = self.selectedIndexes()
@@ -228,7 +248,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
             return False
 
         self.copy_selection()
-        self._remove_indices(self.selectedIndexes())
+        self._model.remove_indices(self.selectedIndexes())
         return True
 
     def paste(self) -> bool:
@@ -254,37 +274,44 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         index = self.indexAt(position)
         if not index.isValid():
             return
-        menu = QMenu(self)
+        with temporary_widget(QMenu(self)) as menu:
+            add_menu = menu.addMenu("Insert above...")
 
-        add_menu = QMenu()
-        add_menu.setTitle("Insert above...")
-        menu.addMenu(add_menu)
-
-        create_variable_action = QAction("variable")
-        add_menu.addAction(create_variable_action)
-        new_variable = create_variable_declaration()
-        create_variable_action.triggered.connect(
-            functools.partial(self._model.insert_above, new_variable, index)
-        )
-        create_shot_action = QAction("Shot")
-        add_menu.addAction(create_shot_action)
-        new_shot = ExecuteShot()
-        create_shot_action.triggered.connect(
-            functools.partial(self._model.insert_above, new_shot, index)
-        )
-        create_linspace_action = QAction("Linspace loop")
-        add_menu.addAction(create_linspace_action)
-        new_linspace = create_linspace_loop()
-        create_linspace_action.triggered.connect(
-            functools.partial(self._model.insert_above, new_linspace, index)
-        )
-        create_arange_action = QAction("Arange loop")
-        add_menu.addAction(create_arange_action)
-        new_arange = create_arange_loop()
-        create_arange_action.triggered.connect(
-            functools.partial(self._model.insert_above, new_arange, index)
-        )
-        menu.exec(self.mapToGlobal(position))
+            create_variable_action = add_menu.addAction("variable")
+            new_variable = create_variable_declaration()
+            create_variable_action.triggered.connect(
+                functools.partial(
+                    self._model.insert_steps,
+                    [new_variable],
+                    index.row(),
+                    index.parent(),
+                )
+            )
+            create_shot_action = add_menu.addAction("Shot")
+            new_shot = ExecuteShot()
+            create_shot_action.triggered.connect(
+                functools.partial(
+                    self._model.insert_steps, [new_shot], index.row(), index.parent()
+                )
+            )
+            create_linspace_action = add_menu.addAction("Linspace loop")
+            new_linspace = create_linspace_loop()
+            create_linspace_action.triggered.connect(
+                functools.partial(
+                    self._model.insert_steps,
+                    [new_linspace],
+                    index.row(),
+                    index.parent(),
+                )
+            )
+            create_arange_action = add_menu.addAction("Arange loop")
+            new_arange = create_arange_loop()
+            create_arange_action.triggered.connect(
+                functools.partial(
+                    self._model.insert_steps, [new_arange], index.row(), index.parent()
+                )
+            )
+            menu.exec(self.mapToGlobal(position))
 
     def copy_to_clipboard(self):
         steps = self.get_iteration()
@@ -319,7 +346,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
             return False
 
         # TODO: raise recoverable exception if data is not valid
-        steps = serialization.converters["json"].structure(data, StepsConfiguration)
-        self.set_iteration(steps)
+        config = serialization.structure(data, StepsConfiguration)
+        self._model.replace_steps(config.steps, "paste from clipboard")
 
         return True

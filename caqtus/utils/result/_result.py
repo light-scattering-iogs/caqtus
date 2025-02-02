@@ -41,14 +41,14 @@ def is_success(result: Success[T] | Failure[Any]) -> TypeIs[Success[T]]:
     return isinstance(result, Success)
 
 
-def is_failure(result: Success[Any] | Failure[E]) -> TypeIs[Failure[E]]:
+def is_failure(result: Any) -> TypeIs[Failure]:
     """Check if a result is a failure."""
 
     return isinstance(result, Failure)
 
 
 def is_failure_type(
-    result: Success | Failure, error_type: type[E]
+    result: Any, error_type: tuple[type[E], ...] | type[E]
 ) -> TypeIs[Failure[E]]:
     """Check if a result is a failure and contains a specific error type."""
 
@@ -66,6 +66,9 @@ class Failure(Generic[E]):
 
     def __str__(self) -> str:
         return str(self._error)
+
+    def exception[Exc: BaseException](self: Failure[Exc]) -> Exc:
+        raise self._error
 
 
 @overload

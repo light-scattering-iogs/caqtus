@@ -48,6 +48,7 @@ HIGHLIGHT_COLOR = "#cc7832"
 
 
 class StepDelegate(HTMLItemDelegate):
+    # ruff: noqa: N802
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.doc = QTextDocument(self)

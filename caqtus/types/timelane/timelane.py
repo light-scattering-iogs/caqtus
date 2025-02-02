@@ -45,8 +45,6 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
 
     @_spanned_values.validator  # type: ignore
     def validate_spanned_values(self, _, value):
-        if not value:
-            raise ValueError("Spanned values must not be empty")
         if not all(span >= 1 for _, span in value):
             raise ValueError("Span must be at least 1")
 
@@ -262,7 +260,6 @@ class TimeLane[T](MutableSequence[T], abc.ABC):
         else:
             raise TypeError(f"Invalid type for item: {type(key)}")
 
-    @assert_length_changed(-1)
     def delete_step(self, step: Step) -> None:
         """Delete a single step from the lane.
 
@@ -379,6 +376,10 @@ class TimeLanes:
         ),
         on_setattr=attrs.setters.validate,
     )
+
+    @classmethod
+    def empty(cls) -> Self:
+        return cls([], [], {})
 
     @step_names.validator  # type: ignore
     def validate_step_names(self, _, value):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Optional
+from collections.abc import Iterable, Sequence
+from typing import Optional, Any
 
 import attrs
 from PySide6.QtCore import (
@@ -11,7 +11,13 @@ from PySide6.QtCore import (
     QMimeData,
     QPersistentModelIndex,
 )
-from PySide6.QtGui import QStandardItem, QStandardItemModel, QPalette
+from PySide6.QtGui import (
+    QStandardItem,
+    QStandardItemModel,
+    QPalette,
+    QUndoStack,
+    QUndoCommand,
+)
 
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
@@ -30,6 +36,8 @@ VALUE_COLOR = "#6897BB"
 HIGHLIGHT_COLOR = "#cc7832"
 
 type AnyModelIndex = QModelIndex | QPersistentModelIndex
+
+DEFAULT_INDEX = QModelIndex()
 
 
 @attrs.define
@@ -170,12 +178,14 @@ class StepItem(QStandardItem):
             return step_data.display_data()
         return super().data(role)
 
-    def child(self, row: int, column: int = 0) -> StepItem:
+    def child(self, row: int, column: int | None = 0) -> StepItem:
         result = super().child(row, column)
         assert isinstance(result, StepItem)
         return result
 
     def get_step(self) -> Step:
+        """Return a copy of the step represented by this item."""
+
         data = self.data(role=Qt.ItemDataRole.EditRole)
         match data:
             case ExecuteShotData():
@@ -207,10 +217,19 @@ class StepItem(QStandardItem):
 
 
 class StepsModel(QStandardItemModel):
+    """Tree model for the steps of a sequence.
+
+    This model holds an undo stack to allow undoing and redoing changes to the steps.
+    """
+
+    # ruff: noqa: N802
+
     def __init__(self, steps: StepsConfiguration, parent: Optional[QObject] = None):
         super().__init__(parent)
-        self.set_steps(steps)
         self._read_only = True
+        self.undo_stack = QUndoStack(self)
+        self.undo_stack.setClean()
+        self.set_steps(steps)
 
     def set_read_only(self, read_only: bool):
         self._read_only = read_only
@@ -228,7 +247,13 @@ class StepsModel(QStandardItemModel):
         return StepsConfiguration(steps=steps)
 
     def set_steps(self, steps: StepsConfiguration):
+        """Reset the steps contained in the model.
+
+        This mehod clears the undo stack of the model.
+        """
+
         self.beginResetModel()
+        self.undo_stack.clear()
         self.clear()
         items = [StepItem.construct(step) for step in steps.steps]
         root = self.invisibleRootItem()
@@ -236,10 +261,44 @@ class StepsModel(QStandardItemModel):
             root.appendRow(item)
         self.endResetModel()
 
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+    def setData(self, index, value, role: int = Qt.ItemDataRole.EditRole):
         if self._read_only:
             return False
-        return super().setData(index, value, role)
+        previous_value = index.data(role)
+        if previous_value == value:
+            return False
+        flat_index = into_flat_index(index)
+        self.undo_stack.push(
+            self.SetDataCommand(
+                model=self,
+                index=flat_index,
+                previous_value=previous_value,
+                new_value=value,
+            )
+        )
+        return True
+
+    @attrs.define(slots=False)
+    class SetDataCommand(QUndoCommand):
+        model: StepsModel
+        index: FlatIndex
+        previous_value: Any
+        new_value: Any
+
+        def __attrs_post_init__(self):
+            super().__init__("change step value")
+
+        def redo(self):
+            index = self.model.into_index(self.index)
+            QStandardItemModel.setData(
+                self.model, index, self.new_value, Qt.ItemDataRole.EditRole
+            )
+
+        def undo(self):
+            index = self.model.into_index(self.index)
+            QStandardItemModel.setData(
+                self.model, index, self.previous_value, Qt.ItemDataRole.EditRole
+            )
 
     def flags(self, index: AnyModelIndex) -> Qt.ItemFlag:
         flags = super().flags(index)
@@ -308,8 +367,6 @@ class StepsModel(QStandardItemModel):
         except ValueError:
             return False
 
-        new_items = [StepItem.construct(step) for step in steps]
-
         parent_item = (
             self.itemFromIndex(parent) if parent.isValid() else self.invisibleRootItem()
         )
@@ -317,31 +374,162 @@ class StepsModel(QStandardItemModel):
             return False
         if row == -1:
             row = parent_item.rowCount()
+        self.undo_stack.push(
+            self.InsertStepsCommand(
+                model=self, steps=tuple(steps), parent=into_flat_index(parent), row=row
+            )
+        )
+        return True
+
+    @attrs.define(slots=False)
+    class InsertStepsCommand(QUndoCommand):
+        model: StepsModel
+        steps: tuple[Step, ...]
+        parent: FlatIndex
+        row: int
+
+        def __attrs_post_init__(self):
+            step_text = ", ".join(f"<{step}>" for step in self.steps)
+            super().__init__(f"insert {step_text}")
+
+        def redo(self):
+            parent = self.model.into_index(self.parent)
+            self.model._insert_steps_without_undo(self.steps, self.row, parent)
+
+        def undo(self):
+            parent_index = self.model.into_index(self.parent)
+            parent_item = (
+                self.model.itemFromIndex(parent_index)
+                if parent_index.isValid()
+                else self.model.invisibleRootItem()
+            )
+            parent_item.removeRows(self.row, len(self.steps))
+
+    def insert_steps(
+        self, steps: Sequence[Step], row: int, parent: QModelIndex
+    ) -> bool:
+        """Insert steps at the given row under the given parent.
+
+        This method pushes an undo command to the undo stack of the model.
+        """
+
+        if self._read_only:
+            return False
+        self.undo_stack.push(
+            self.InsertStepsCommand(
+                model=self, steps=tuple(steps), parent=into_flat_index(parent), row=row
+            )
+        )
+        return True
+
+    def _insert_steps_without_undo(
+        self, steps: Sequence[Step], row: int, parent: QModelIndex
+    ) -> bool:
+        if self._read_only:
+            return False
+        parent_item = (
+            self.itemFromIndex(parent) if parent.isValid() else self.invisibleRootItem()
+        )
+        new_items = [StepItem.construct(step) for step in steps]
         parent_item.insertRows(row, new_items)
         return True
 
-    def insert_above(self, step: Step, index: QModelIndex):
-        if self._read_only:
-            return
-        if not index.isValid():
-            return
-        else:
-            parent = index.parent()
-            parent_item = (
-                self.itemFromIndex(parent)
-                if parent.isValid()
-                else self.invisibleRootItem()
-            )
-            new_item = StepItem.construct(step)
-            parent_item.insertRows(index.row(), [new_item])
+    def removeRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ) -> bool:
+        return self.removeRows(row, 1, parent)
 
-    def append_step(self, step: Step) -> bool:
+    def into_index(self, flat_index: FlatIndex) -> QModelIndex:
+        index = QModelIndex()
+        for row in flat_index.rows:
+            index = self.index(row, 0, index)
+        return index
+
+    def removeRows(
+        self, row, count, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ) -> bool:
         if self._read_only:
             return False
-        root = self.invisibleRootItem()
-        new_item = StepItem.construct(step)
-        root.appendRow(new_item)
+        items = [
+            self.itemFromIndex(self.index(row + i, 0, parent)) for i in range(count)
+        ]
+        steps = tuple(item.get_step() for item in items)
+
+        self.undo_stack.push(
+            self.RemoveRowsCommand(self, steps, row, into_flat_index(parent))
+        )
         return True
+
+    def remove_indices(
+        self, indices: Sequence[QModelIndex | QPersistentModelIndex]
+    ) -> bool:
+        if self._read_only:
+            return False
+        # Need to be careful that the indexes are not invalidated by the removal of
+        # previous rows, that's why we convert them to QPersistentModelIndex.
+        persistent_indices = [
+            QPersistentModelIndex(index) for index in indices if index.isValid()
+        ]
+        if not persistent_indices:
+            return False
+        self.undo_stack.beginMacro("remove steps")
+        for index in persistent_indices:
+            self.removeRow(index.row(), index.parent())
+        self.undo_stack.endMacro()
+        return True
+
+    @attrs.define(slots=False)
+    class RemoveRowsCommand(QUndoCommand):
+        model: StepsModel
+        steps: tuple[Step, ...]
+        row: int
+        parent: FlatIndex
+
+        def __attrs_post_init__(self):
+            super().__init__("remove steps")
+
+        def redo(self):
+            parent_index = self.model.into_index(self.parent)
+            QStandardItemModel.removeRows(
+                self.model, self.row, len(self.steps), parent_index
+            )
+
+        def undo(self):
+            parent = self.model.into_index(self.parent)
+            result = self.model._insert_steps_without_undo(self.steps, self.row, parent)
+            assert result
+
+    def replace_steps(self, steps: Sequence[Step], message: str) -> bool:
+        if self._read_only:
+            return False
+        self.undo_stack.beginMacro(message)
+        self.removeRows(0, self.rowCount())
+        self.insert_steps(steps, 0, QModelIndex())
+        self.undo_stack.endMacro()
+        return True
+
+
+@attrs.frozen
+class FlatIndex:
+    rows: tuple[int, ...]
+
+    def parent(self) -> FlatIndex:
+        if not self.rows:
+            raise ValueError("Cannot get parent of root index")
+        return FlatIndex(self.rows[:-1])
+
+    def row(self) -> int:
+        if not self.rows:
+            raise ValueError("Cannot get row of root index")
+        return self.rows[-1]
+
+
+def into_flat_index(index: QModelIndex | QPersistentModelIndex) -> FlatIndex:
+    rows = []
+    while index.isValid():
+        rows.append(index.row())
+        index = index.parent()
+    return FlatIndex(tuple(rows[::-1]))
 
 
 def get_strict_descendants(parent: QStandardItem) -> list[QStandardItem]:

@@ -22,7 +22,7 @@ class ExperimentSessionNotActiveError(RuntimeError):
 
 
 class ExperimentSession(
-    AbstractContextManager,
+    AbstractContextManager["ExperimentSession"],
     Protocol,
 ):
     """Provides a transactional connection to the storage of the experiment.

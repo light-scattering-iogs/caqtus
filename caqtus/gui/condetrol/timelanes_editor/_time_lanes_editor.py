@@ -4,8 +4,8 @@ import itertools
 from typing import Optional
 
 import yaml
-from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
-from PySide6.QtGui import QAction, QFont
+from PySide6.QtCore import Qt, QModelIndex, QRect
+from PySide6.QtGui import QAction, QFont, QUndoStack, QCursor
 from PySide6.QtWidgets import (
     QTableView,
     QMenu,
@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.gui.condetrol._icons import get_icon
-from caqtus.gui.qtutil import block_signals
+from caqtus.gui.qtutil import block_signals, temporary_widget
 from caqtus.types.timelane import TimeLanes, TimeLane
 from ._delegate import TimeLaneDelegate
 from ._time_lanes_model import TimeLanesModel
@@ -34,8 +34,6 @@ class TimeLanesEditor(QWidget):
         time_lanes_edited: Emitted when the user edits the time lanes.
     """
 
-    time_lanes_edited = Signal(TimeLanes)
-
     def __init__(
         self,
         extension: CondetrolLaneExtensionProtocol,
@@ -49,7 +47,6 @@ class TimeLanesEditor(QWidget):
             parent=self,
         )
         self._extension = extension
-        self.view.time_lanes_changed.connect(self._on_time_lanes_changed)
         self.toolbar = QToolBar(self)
         self.toolbar.setFloatable(False)
         self.toolbar.setMovable(False)
@@ -84,6 +81,10 @@ class TimeLanesEditor(QWidget):
         font = QFont("JetBrains Mono")
         self.setFont(font)
 
+    @property
+    def undo_stack(self) -> QUndoStack:
+        return self.view.undo_stack
+
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
 
@@ -96,9 +97,8 @@ class TimeLanesEditor(QWidget):
         self.simplify_action.setEnabled(not read_only)
         self.paste_from_clipboard_action.setEnabled(not read_only)
 
-    def _on_time_lanes_changed(self, time_lanes: TimeLanes) -> None:
-        if not self.view.is_read_only():
-            self.time_lanes_edited.emit(time_lanes)
+    def model(self) -> TimeLanesModel:
+        return self.view.model()
 
     def set_time_lanes(self, time_lanes: TimeLanes) -> None:
         """Set the time lanes to be edited.
@@ -107,10 +107,21 @@ class TimeLanesEditor(QWidget):
         """
 
         with block_signals(self):
-            self.view.set_time_lanes(time_lanes)
+            self.model().set_timelanes(time_lanes)
+
+    def get_time_lanes(self) -> TimeLanes:
+        """Return a copy of the time lanes currently being edited."""
+
+        return self.model().get_timelanes()
+
+    def has_uncommitted_edits(self) -> bool:
+        return self.model().has_uncommitted_edits()
+
+    def commit_edits(self) -> None:
+        self.model().commit_edits()
 
     def _simplify_timelanes(self):
-        self.view.simplify_timelanes()
+        self.model().simplify()
 
     def _on_add_lane_triggered(self) -> None:
         if self._add_lane_dialog.exec() == QDialog.DialogCode.Accepted:
@@ -164,7 +175,7 @@ class TimeLanesEditor(QWidget):
         # TODO: raise recoverable error if the content is not valid
         time_lanes = self._extension.structure_time_lanes(content)
 
-        self.view.set_time_lanes(time_lanes)
+        self.model().set_timelanes_with_undo(time_lanes, "paste from clipboard")
         return True
 
 
@@ -180,6 +191,9 @@ class OverlayStepsView(QTableView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.horizontalHeader().hide()
+        self.verticalHeader().setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
 
         parent.horizontalHeader().sectionResized.connect(self.resize_columns)
         parent.verticalHeader().sectionResized.connect(self.resize_rows)
@@ -204,6 +218,31 @@ class OverlayStepsView(QTableView):
                 self.verticalScrollBar().minimum()
             )
         )
+        self.verticalHeader().customContextMenuRequested.connect(
+            self._on_steps_context_menu_requested
+        )
+
+    def _on_steps_context_menu_requested(self, _):
+        if self.is_read_only():
+            return
+
+        with temporary_widget(QMenu(self.horizontalHeader())) as menu:
+            add_step_action = QAction("Add step")
+            menu.addAction(add_step_action)
+            add_step_action.triggered.connect(
+                lambda: self.model().insertColumn(
+                    self.model().columnCount(), QModelIndex()
+                )
+            )
+            menu.exec(QCursor.pos())
+
+    def model(self) -> TimeLanesModel:
+        model = super().model()
+        assert isinstance(model, TimeLanesModel)
+        return model
+
+    def is_read_only(self) -> bool:
+        return self.model().is_read_only()
 
     def parent(self) -> TimeLanesView:
         p = super().parent()
@@ -243,8 +282,6 @@ class OverlayStepsView(QTableView):
 
 
 class TimeLanesView(QTableView):
-    time_lanes_changed = Signal(TimeLanes)
-
     def __init__(
         self,
         extension: CondetrolLaneExtensionProtocol,
@@ -285,6 +322,15 @@ class TimeLanesView(QTableView):
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         self.verticalHeader().setFixedWidth(200)
         self._steps_table.verticalHeader().setFixedWidth(200)
+
+    def model(self) -> TimeLanesModel:
+        model = super().model()
+        assert isinstance(model, TimeLanesModel)
+        return model
+
+    @property
+    def undo_stack(self) -> QUndoStack:
+        return self._model.undo_stack
 
     def moveCursor(self, cursorAction, modifiers):  # noqa: N802, N803
         current = super().moveCursor(cursorAction, modifiers)
@@ -332,7 +378,6 @@ class TimeLanesView(QTableView):
 
     def on_time_lanes_changed(self):
         self.update_spans()
-        self.time_lanes_changed.emit(self.get_time_lanes())
 
     def on_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
         self.on_time_lanes_changed()
@@ -439,7 +484,7 @@ class TimeLanesView(QTableView):
             remove_lane_action = QAction("Remove")
             menu.addAction(remove_lane_action)
             remove_lane_action.triggered.connect(
-                lambda: self._model.removeRow(index, QModelIndex())
+                lambda: self._model.remove_lane(index - 2)
             )
             for action in self._model.get_lane_header_context_actions(index - 2):
                 if isinstance(action, QAction):
@@ -458,22 +503,19 @@ class TimeLanesView(QTableView):
         cell_actions = self._model.get_cell_context_actions(index)
         selection = self.selectionModel().selection()
 
-        menu = QMenu(self)
-        if selection.contains(index):
-            merge_action = menu.addAction(f"Expand step {index.column()}")
-            merge_action.triggered.connect(
-                lambda: self.expand_step(index.column(), selection)
-            )
+        with temporary_widget(QMenu(self)) as menu:
+            if selection.contains(index):
+                merge_action = menu.addAction(f"Expand step {index.column()}")
+                merge_action.triggered.connect(
+                    lambda: self.expand_step(index.column(), selection)
+                )
 
-        for action in cell_actions:
-            if isinstance(action, QAction):
-                menu.addAction(action)
-            elif isinstance(action, QMenu):
-                menu.addMenu(action)
-        menu.exec(self.viewport().mapToGlobal(pos))
-        menu.deleteLater()
-        # TODO: Deal with model change in the context menu better
-        self._model.modelReset.emit()
+            for action in cell_actions:
+                if isinstance(action, QAction):
+                    menu.addAction(action)
+                elif isinstance(action, QMenu):
+                    menu.addMenu(action)
+            menu.exec(self.viewport().mapToGlobal(pos))
 
     def expand_step(self, step: int, selection):
         indices: set[tuple[int, int]] = set()
@@ -492,9 +534,6 @@ class TimeLanesView(QTableView):
             start = group[0][1]
             stop = group[-1][1]
             self._model.expand_step(step, row - 2, start, stop)
-
-    def simplify_timelanes(self):
-        self._model.simplify()
 
     def add_lane(self, lane_name: str, lane: TimeLane):
         self._model.insert_time_lane(lane_name, lane)

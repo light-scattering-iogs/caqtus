@@ -6,7 +6,7 @@ from PySide6.QtGui import QPalette
 from caqtus.gui.condetrol._icons import get_icon
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel
-from caqtus.types.timelane import CameraTimeLane, TakePicture, Step
+from caqtus.types.timelane import CameraTimeLane, TakePicture
 from .._time_lane_model import TimeLaneModel
 
 _DEFAULT_INDEX = QModelIndex()
@@ -25,7 +25,7 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane]):
     def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-        value = self._lane[index.row()]
+        value = self.lane_value(index.row())
         if role == Qt.ItemDataRole.DisplayRole:
             if isinstance(value, TakePicture):
                 return value.picture_name
@@ -54,21 +54,18 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane]):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
-            start, stop = self._lane.get_bounds(Step(index.row()))
-            if isinstance(value, str):
-                if value == "":
-                    self._lane[start:stop] = None
-                elif isinstance(value, str):
-                    self._lane[start:stop] = TakePicture(ImageLabel(DataLabel(value)))
-                else:
-                    raise TypeError(f"Invalid type for value: {type(value)}")
-                self.dataChanged.emit(index, index)
-                return True
+            assert isinstance(value, str)
+
+            if value == "":
+                new_value = None
             else:
-                raise TypeError(f"Invalid type for value: {type(value)}")
+                new_value = TakePicture(ImageLabel(DataLabel(value)))
+
+            return self.set_lane_value(index.row(), new_value)
+
         return False
 
     def insertRow(
         self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
     ) -> bool:
-        return self.insert_value(row, None)
+        return self.insert_lane_value(row, None)

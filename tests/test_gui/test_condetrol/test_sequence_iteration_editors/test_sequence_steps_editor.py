@@ -2,7 +2,7 @@ from pytestqt.modeltest import ModelTester
 from pytestqt.qtbot import QtBot
 
 from caqtus.gui.condetrol._sequence_iteration_editors import StepsIterationEditor
-from caqtus.gui.condetrol._sequence_iteration_editors.steps_iteration_editor.steps_model import (
+from caqtus.gui.condetrol._sequence_iteration_editors.steps_iteration_editor.steps_model import (  # noqa: E501
     VariableDeclarationData,
     LinspaceLoopData,
     ArrangeLoopData,
@@ -43,8 +43,8 @@ def test_0(qtbot: QtBot, qtmodeltester: ModelTester):
             ),
         ]
     )
-    with qtbot.assert_not_emitted(editor.iteration_edited):
-        editor.set_iteration(steps)
+
+    editor.set_iteration(steps)
 
     qtbot.addWidget(editor)
 
@@ -69,7 +69,6 @@ def test_1(qtbot: QtBot):
         editor.model().index(0, 0),
         VariableDeclarationData(DottedVariableName("b"), Expression("2")),
     )
-    qtbot.wait_signal(editor.iteration_edited)
     assert editor.get_iteration() == StepsConfiguration(
         [VariableDeclaration(DottedVariableName("b"), Expression("2"))]
     )
@@ -104,7 +103,6 @@ def test_2(qtbot: QtBot):
             num=10,
         ),
     )
-    qtbot.wait_signal(editor.iteration_edited)
     assert editor.get_iteration() == StepsConfiguration(
         [
             LinspaceLoop(
@@ -147,7 +145,6 @@ def test_3(qtbot: QtBot):
             step=Expression("0.2"),
         ),
     )
-    qtbot.wait_signal(editor.iteration_edited)
     assert editor.get_iteration() == StepsConfiguration(
         [
             ArangeLoop(

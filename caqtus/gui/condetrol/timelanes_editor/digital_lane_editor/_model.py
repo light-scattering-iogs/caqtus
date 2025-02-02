@@ -5,8 +5,8 @@ from PySide6.QtGui import QAction, QBrush, QPalette
 from PySide6.QtWidgets import QMenu
 
 from caqtus.types.expression import Expression
-from caqtus.types.timelane import DigitalTimeLane, Step
-from .._time_lane_model import ColoredTimeLaneModel
+from caqtus.types.timelane import DigitalTimeLane
+from .._colored_time_lane_model import ColoredTimeLaneModel
 
 _DEFAULT_INDEX = QModelIndex()
 
@@ -25,7 +25,7 @@ class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane]):
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-        value = self._lane[index.row()]
+        value = self.lane_value(index.row())
         if role == Qt.ItemDataRole.DisplayRole:
             if isinstance(value, bool):
                 return
@@ -48,29 +48,20 @@ class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane]):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
-            start, stop = self._lane.get_bounds(Step(index.row()))
-            if isinstance(value, bool):
-                self._lane[start:stop] = value
-                self.dataChanged.emit(index, index)
-                return True
-            elif isinstance(value, Expression):
-                self._lane[start:stop] = value
-                self.dataChanged.emit(index, index)
-                return True
-            else:
-                raise TypeError(f"Invalid type for value: {type(value)}")
+            assert isinstance(value, bool | Expression)
+            return self.set_lane_value(index.row(), value)
         return False
 
     def insertRow(
         self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
     ) -> bool:
-        return self.insert_value(row, False)
+        return self.insert_lane_value(row, False)
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():
             return []
         cell_type_menu = QMenu("Cell type")
-        value = self._lane[index.row()]
+        value = self.lane_value(index.row())
         bool_action = cell_type_menu.addAction("on/off")
         if isinstance(value, bool):
             bool_action.setCheckable(True)

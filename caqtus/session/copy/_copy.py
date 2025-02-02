@@ -131,6 +131,7 @@ def copy_sequence(
         return Failure(SequenceStateError("Can't copy running sequence"))
     iterations = source_session.sequences.get_iteration_configuration(path)
     time_lanes = source_session.sequences.get_time_lanes(path)
+    assert not is_failure_type(time_lanes, (PathNotFoundError, PathIsNotSequenceError))
 
     creation_result = destination_session.sequences.create(path, iterations, time_lanes)
     assert not is_failure_type(creation_result, PathIsSequenceError)

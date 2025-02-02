@@ -26,6 +26,7 @@ jobs:
         uses: tj-actions/changed-files@v36
         with:
           files: "**.py"
+          files_ignore: "**/*_ui.py"
       - name: Run linter
         if: steps.changed-python-files.outputs.any_changed == 'true'
         env:

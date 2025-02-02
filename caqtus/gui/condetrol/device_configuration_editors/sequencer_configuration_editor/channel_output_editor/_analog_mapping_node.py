@@ -10,6 +10,7 @@ from PySide6.QtCharts import (
 )
 from PySide6.QtCore import (
     QAbstractTableModel,
+    QPersistentModelIndex,
     Qt,
     QSortFilterProxyModel,
     QModelIndex,
@@ -239,17 +240,18 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
 
 
 class Model(QAbstractTableModel):
+    # ruff: noqa: N802
     def __init__(self, parent=None):
         super().__init__(parent)
         self._values = []
 
-    def rowCount(self, parent=_QMODEL_INDEX):  # noqa: N802
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX):
         return len(self._values)
 
-    def columnCount(self, parent=_QMODEL_INDEX):  # noqa: N802
+    def columnCount(self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX):
         return 2
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
                 return self._values[index.row()][0]
@@ -257,7 +259,7 @@ class Model(QAbstractTableModel):
                 return self._values[index.row()][1]
         return None
 
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):  # noqa: N802
+    def setData(self, index, value, role: int = Qt.ItemDataRole.EditRole):  # noqa: N802
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
                 self._values[index.row()] = (value, self._values[index.row()][1])
@@ -288,9 +290,7 @@ class Model(QAbstractTableModel):
             | Qt.ItemFlag.ItemIsSelectable
         )
 
-    def headerData(  # noqa: N802
-        self, section, orientation, role=Qt.ItemDataRole.DisplayRole
-    ):
+    def headerData(self, section, orientation, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
@@ -301,13 +301,17 @@ class Model(QAbstractTableModel):
                 return str(section)
         return None
 
-    def insertRow(self, row, parent=_QMODEL_INDEX):  # noqa: N802
+    def insertRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
+    ):
         self.beginInsertRows(parent, row, row)
         self._values.insert(row, (0.0, 0.0))
         self.endInsertRows()
         return True
 
-    def removeRow(self, row, parent=_QMODEL_INDEX):  # noqa: N802
+    def removeRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
+    ):
         self.beginRemoveRows(parent, row, row)
         del self._values[row]
         self.endRemoveRows()

@@ -15,6 +15,7 @@ from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError
 from .._sequence_collection import (
     PathIsNotSequenceError,
+    SequenceNotEditableError,
     SequenceStats,
     SequenceNotCrashedError,
     SequenceNotRunningError,
@@ -77,7 +78,31 @@ class AsyncSequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def get_time_lanes(self, path: PureSequencePath) -> TimeLanes:
+    async def set_iteration_configuration(
+        self, path: PureSequencePath, iteration_configuration: IterationConfiguration
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_time_lanes(
+        self, path: PureSequencePath
+    ) -> TimeLanes | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def set_time_lanes(
+        self, path: PureSequencePath, time_lanes: TimeLanes
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
         raise NotImplementedError
 
     @abc.abstractmethod

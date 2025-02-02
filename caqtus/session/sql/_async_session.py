@@ -23,7 +23,9 @@ from ._sequence_collection import (
     _is_sequence,
     _get_sequence_global_parameters,
     _get_time_lanes,
+    _set_time_lanes,
     _get_iteration_configuration,
+    _set_iteration_configuration,
     _get_shots,
     _get_shot_parameters,
     _get_shot_end_time,
@@ -42,6 +44,7 @@ from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
 from .._sequence_collection import (
     PathIsSequenceError,
+    SequenceNotEditableError,
     SequenceStats,
     PathIsNotSequenceError,
     SequenceNotCrashedError,
@@ -226,8 +229,20 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
     ):
         return await self._run_sync(_get_exceptions, path)
 
-    async def get_time_lanes(self, path: PureSequencePath) -> TimeLanes:
+    async def get_time_lanes(
+        self, path: PureSequencePath
+    ) -> TimeLanes | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
         return await self._run_sync(_get_time_lanes, path, self.serializer)
+
+    async def set_time_lanes(
+        self, path: PureSequencePath, time_lanes: TimeLanes
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        return await self._run_sync(_set_time_lanes, path, time_lanes, self.serializer)
 
     async def get_global_parameters(
         self, path: PureSequencePath
@@ -243,6 +258,18 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         self, path: PureSequencePath
     ) -> IterationConfiguration:
         return await self._run_sync(_get_iteration_configuration, path, self.serializer)
+
+    async def set_iteration_configuration(
+        self, path: PureSequencePath, iteration_configuration: IterationConfiguration
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        return await self._run_sync(
+            _set_iteration_configuration, path, iteration_configuration, self.serializer
+        )
 
     async def get_shots(
         self, path: PureSequencePath
