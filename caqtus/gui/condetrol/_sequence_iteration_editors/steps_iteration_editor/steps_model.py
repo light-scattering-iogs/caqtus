@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Optional
+from typing import Optional, Any
 
 import attrs
 from PySide6.QtCore import (
@@ -262,7 +262,42 @@ class StepsModel(QStandardItemModel):
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         if self._read_only:
             return False
-        return super().setData(index, value, role)
+        previous_value = index.data(role)
+        if previous_value == value:
+            return False
+        flat_index = into_flat_index(index)
+        self.undo_stack.push(
+            self.SetDataCommand(
+                model=self,
+                index=flat_index,
+                previous_value=previous_value,
+                new_value=value,
+            )
+
+        )
+        return True
+
+    @attrs.define(slots=False)
+    class SetDataCommand(QUndoCommand):
+        model: StepsModel
+        index: FlatIndex
+        previous_value: Any
+        new_value: Any
+
+        def __attrs_post_init__(self):
+            super().__init__("change step value")
+
+        def redo(self):
+            index = self.model.into_index(self.index)
+            QStandardItemModel.setData(
+                self.model, index, self.new_value, Qt.ItemDataRole.EditRole
+            )
+
+        def undo(self):
+            index = self.model.into_index(self.index)
+            QStandardItemModel.setData(
+                self.model, index, self.previous_value, Qt.ItemDataRole.EditRole
+            )
 
     def flags(self, index: AnyModelIndex) -> Qt.ItemFlag:
         flags = super().flags(index)
@@ -421,7 +456,7 @@ class FlatIndex:
         return self.rows[-1]
 
 
-def into_flat_index(index: QModelIndex) -> FlatIndex:
+def into_flat_index(index: QModelIndex | QPersistentModelIndex) -> FlatIndex:
     rows = []
     while index.isValid():
         rows.append(index.row())
