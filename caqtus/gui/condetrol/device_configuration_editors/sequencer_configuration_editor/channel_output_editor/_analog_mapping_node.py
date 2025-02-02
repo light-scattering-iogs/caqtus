@@ -245,14 +245,10 @@ class Model(QAbstractTableModel):
         super().__init__(parent)
         self._values = []
 
-    def rowCount(
-        self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
-    ):
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX):
         return len(self._values)
 
-    def columnCount(
-        self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
-    ):
+    def columnCount(self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX):
         return 2
 
     def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
@@ -294,7 +290,7 @@ class Model(QAbstractTableModel):
             | Qt.ItemFlag.ItemIsSelectable
         )
 
-    def headerData(  # noqa: N802
+    def headerData(
         self, section, orientation, role: int = Qt.ItemDataRole.DisplayRole
     ):
         if role == Qt.ItemDataRole.DisplayRole:
@@ -309,7 +305,7 @@ class Model(QAbstractTableModel):
 
     def insertRow(
         self, row, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
-    ):  # noqa: N802
+    ):
         self.beginInsertRows(parent, row, row)
         self._values.insert(row, (0.0, 0.0))
         self.endInsertRows()
@@ -317,7 +313,7 @@ class Model(QAbstractTableModel):
 
     def removeRow(
         self, row, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
-    ):  # noqa: N802
+    ):
         self.beginRemoveRows(parent, row, row)
         del self._values[row]
         self.endRemoveRows()
