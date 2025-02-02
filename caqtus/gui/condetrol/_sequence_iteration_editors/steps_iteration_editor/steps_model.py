@@ -273,7 +273,6 @@ class StepsModel(QStandardItemModel):
                 previous_value=previous_value,
                 new_value=value,
             )
-
         )
         return True
 

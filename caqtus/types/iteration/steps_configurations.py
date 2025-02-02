@@ -111,7 +111,7 @@ class LinspaceLoop(ContainsSubSteps):
     )
 
     def __str__(self):
-        return f"linspace loop over {fmt.shot_param(self.variable)}"
+        return f"linspace loop over {self.variable}"
 
     def loop_values(
         self, evaluation_context: Mapping[DottedVariableName, Any]
@@ -305,7 +305,8 @@ class ArangeLoop(ContainsSubSteps):
 class ExecuteShot:
     """Step that represents the execution of a shot."""
 
-    pass
+    def __str__(self):
+        return "do shot"
 
 
 def unstructure_hook(execute_shot: ExecuteShot):
