@@ -52,6 +52,8 @@ logger = logger.getChild("parameters_editor")
 PARAMETER_NAME_ROLE = Qt.ItemDataRole.UserRole + 1
 PARAMETER_VALUE_ROLE = Qt.ItemDataRole.UserRole + 2
 
+DEFAULT_INDEX = QModelIndex()
+
 
 class ParameterNamespaceEditor(QWidget):
     """A widget that allows to edit a ParameterNamespace.
@@ -250,6 +252,7 @@ class ParameterNamespaceView(QColumnView):
 
 
 class ParameterNamespaceModel(QStandardItemModel):
+    # ruff: noqa: N802
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._read_only = False
@@ -337,7 +340,7 @@ class ParameterNamespaceModel(QStandardItemModel):
         item = self._create_item(name, ParameterNamespace.empty())
         root.appendRow(item)
 
-    def hasChildren(self, parent: AnyModelIndex = QModelIndex()) -> bool:
+    def hasChildren(self, parent: AnyModelIndex = DEFAULT_INDEX) -> bool:
         # hasChildren is used to know when to display a new column in the ColumnView,
         # so we only return true when the parent is a namespace.
         if not parent.isValid():
