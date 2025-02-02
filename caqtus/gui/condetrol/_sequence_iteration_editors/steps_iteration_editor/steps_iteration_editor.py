@@ -86,8 +86,6 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self._delegate = StepDelegate(self)
         self.setItemDelegate(self._delegate)
 
-        self.undo_stack = QUndoStack(self)
-
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
@@ -141,6 +139,16 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
             "Paste from clipboard",
         )
         self.paste_from_clipboard_action.triggered.connect(self.paste_from_clipboard)
+
+    @property
+    def undo_stack(self) -> QUndoStack:
+        """The undo stack used by the editor.
+
+        This undo stack is used to undo and redo the changes made by the user in the
+        editor.
+        """
+
+        return self._model.undo_stack
 
     def _setup_add_button(self):
         self.add_button.setToolTip("Add step")
