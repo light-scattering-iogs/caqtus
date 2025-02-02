@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 from collections.abc import Iterable
 from functools import cached_property
-import re
 from typing import TYPE_CHECKING, Optional, Self, Literal, assert_never
 
 import attrs

@@ -376,7 +376,7 @@ async def synchronize_editor_and_storage(
             _DraftSequence(sequence_path=path)
             | _NotEditableSequence(sequence_path=path)
             | _CrashedSequence(sequence_path=path)
-        ) as set_state:
+        ):
             storage_state = await _query_sequence_state_async(path, session)
             if editor_state != editor.get_current_state():
                 # Could be that the editor state changed while fetching the data from

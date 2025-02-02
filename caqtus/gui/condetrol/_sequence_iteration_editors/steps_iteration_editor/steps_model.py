@@ -222,7 +222,7 @@ class StepsModel(QStandardItemModel):
     This model holds an undo stack to allow undoing and redoing changes to the steps.
     """
 
-    # noqa: N802
+    # ruff: noqa: N802
 
     def __init__(self, steps: StepsConfiguration, parent: Optional[QObject] = None):
         super().__init__(parent)
