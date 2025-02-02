@@ -15,7 +15,8 @@ from PySide6.QtGui import (
     QStandardItem,
     QPalette,
     QFocusEvent,
-    QFont, QUndoStack,
+    QFont,
+    QUndoStack,
 )
 from PySide6.QtWidgets import (
     QWidget,

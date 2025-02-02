@@ -19,22 +19,34 @@ class Ui_ErrorBarVisualizerCreator(object):
         self.formLayout.setObjectName("formLayout")
         self.xAxisLabel = QtWidgets.QLabel(parent=ErrorBarVisualizerCreator)
         self.xAxisLabel.setObjectName("xAxisLabel")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.xAxisLabel)
+        self.formLayout.setWidget(
+            0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.xAxisLabel
+        )
         self._x_axis_line_edit = QtWidgets.QLineEdit(parent=ErrorBarVisualizerCreator)
         self._x_axis_line_edit.setObjectName("_x_axis_line_edit")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self._x_axis_line_edit)
+        self.formLayout.setWidget(
+            0, QtWidgets.QFormLayout.ItemRole.FieldRole, self._x_axis_line_edit
+        )
         self.yAxisLabel = QtWidgets.QLabel(parent=ErrorBarVisualizerCreator)
         self.yAxisLabel.setObjectName("yAxisLabel")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.yAxisLabel)
+        self.formLayout.setWidget(
+            1, QtWidgets.QFormLayout.ItemRole.LabelRole, self.yAxisLabel
+        )
         self._y_axis_line_edit = QtWidgets.QLineEdit(parent=ErrorBarVisualizerCreator)
         self._y_axis_line_edit.setObjectName("_y_axis_line_edit")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.FieldRole, self._y_axis_line_edit)
+        self.formLayout.setWidget(
+            1, QtWidgets.QFormLayout.ItemRole.FieldRole, self._y_axis_line_edit
+        )
         self.hueLabel = QtWidgets.QLabel(parent=ErrorBarVisualizerCreator)
         self.hueLabel.setObjectName("hueLabel")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.hueLabel)
+        self.formLayout.setWidget(
+            2, QtWidgets.QFormLayout.ItemRole.LabelRole, self.hueLabel
+        )
         self._hue_line_edit = QtWidgets.QLineEdit(parent=ErrorBarVisualizerCreator)
         self._hue_line_edit.setObjectName("_hue_line_edit")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.ItemRole.FieldRole, self._hue_line_edit)
+        self.formLayout.setWidget(
+            2, QtWidgets.QFormLayout.ItemRole.FieldRole, self._hue_line_edit
+        )
         self.verticalLayout.addLayout(self.formLayout)
 
         self.retranslateUi(ErrorBarVisualizerCreator)
@@ -42,8 +54,12 @@ class Ui_ErrorBarVisualizerCreator(object):
 
     def retranslateUi(self, ErrorBarVisualizerCreator):
         _translate = QtCore.QCoreApplication.translate
-        ErrorBarVisualizerCreator.setWindowTitle(_translate("ErrorBarVisualizerCreator", "Form"))
+        ErrorBarVisualizerCreator.setWindowTitle(
+            _translate("ErrorBarVisualizerCreator", "Form")
+        )
         self.xAxisLabel.setText(_translate("ErrorBarVisualizerCreator", "x-axis"))
         self.yAxisLabel.setText(_translate("ErrorBarVisualizerCreator", "y-axis"))
         self.hueLabel.setText(_translate("ErrorBarVisualizerCreator", "hue"))
-        self._hue_line_edit.setPlaceholderText(_translate("ErrorBarVisualizerCreator", "None"))
+        self._hue_line_edit.setPlaceholderText(
+            _translate("ErrorBarVisualizerCreator", "None")
+        )
