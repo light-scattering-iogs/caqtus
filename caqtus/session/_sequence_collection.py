@@ -164,14 +164,13 @@ class SequenceCollection(Protocol):
         self,
         sequence: PureSequencePath,
         iteration_configuration: IterationConfiguration,
-    ) -> None:
-        """Set the iteration configuration for this sequence.
-
-        Raises:
-            PathNotFoundError: If the path doesn't exist.
-            PathIsNotSequenceError: If the path is not a sequence.
-            SequenceNotEditableError: If the sequence is not in DRAFT state.
-        """
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        """Set the iteration configuration for this sequence."""
 
         raise NotImplementedError
 

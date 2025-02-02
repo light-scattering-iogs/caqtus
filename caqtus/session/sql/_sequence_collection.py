@@ -193,17 +193,14 @@ class SQLSequenceCollection(SequenceCollection):
         self,
         sequence: PureSequencePath,
         iteration_configuration: IterationConfiguration,
-    ) -> None:
-        sequence_model = unwrap(self._query_sequence_model(sequence))
-        if not sequence_model.state.is_editable():
-            raise SequenceNotEditableError(sequence)
-        iteration_content = self.serializer.dump_sequence_iteration(
-            iteration_configuration
-        )
-        sequence_model.iteration.content = iteration_content
-        expected_number_shots = iteration_configuration.expected_number_shots()
-        sequence_model.expected_number_of_shots = _convert_from_unknown(
-            expected_number_shots
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        return _set_iteration_configuration(
+            self._get_sql_session(), sequence, iteration_configuration, self.serializer
         )
 
     def create(
@@ -749,6 +746,31 @@ def _get_iteration_configuration(
     sequence_model = unwrap(_query_sequence_model(session, sequence))
     return serializer.construct_sequence_iteration(
         sequence_model.iteration.content,
+    )
+
+
+def _set_iteration_configuration(
+    session: Session,
+    sequence: PureSequencePath,
+    iteration_configuration: IterationConfiguration,
+    serializer: SerializerProtocol,
+) -> (
+    None
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[SequenceNotEditableError]
+):
+    sequence_model_result = _query_sequence_model(session, sequence)
+    if is_failure(sequence_model_result):
+        return sequence_model_result
+    sequence_model = sequence_model_result.content()
+    if not sequence_model.state.is_editable():
+        raise SequenceNotEditableError(sequence)
+    iteration_content = serializer.dump_sequence_iteration(iteration_configuration)
+    sequence_model.iteration.content = iteration_content
+    expected_number_shots = iteration_configuration.expected_number_shots()
+    sequence_model.expected_number_of_shots = _convert_from_unknown(
+        expected_number_shots
     )
 
 
