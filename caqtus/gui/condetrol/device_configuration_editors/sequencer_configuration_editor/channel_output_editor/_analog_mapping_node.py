@@ -240,19 +240,19 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
 
 
 class Model(QAbstractTableModel):
-    # noqa: N802
+    # ruff: noqa: N802
     def __init__(self, parent=None):
         super().__init__(parent)
         self._values = []
 
     def rowCount(
         self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
-    ):  # noqa: N802
+    ):
         return len(self._values)
 
     def columnCount(
         self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
-    ):  # noqa: N802
+    ):
         return 2
 
     def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
