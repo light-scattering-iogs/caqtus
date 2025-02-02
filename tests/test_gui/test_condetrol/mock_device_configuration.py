@@ -8,7 +8,7 @@ class MockDeviceConfiguration(DeviceConfiguration):
     def compile_device_shot_parameters(
         self, device_name: DeviceName, shot_context: ShotContext
     ) -> Mapping[str, Any]:
-        pass
+        return {}
 
     def get_device_initialization_method(self, device_name, sequence_context):
         raise NotImplementedError
