@@ -8,7 +8,6 @@ from PySide6.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PySide6.QtGui import (
     QKeySequence,
     QShortcut,
-    QAction,
     QFont,
     QGuiApplication,
     QUndoStack,
@@ -16,6 +15,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
 from caqtus.gui.qtutil import block_signals
+from caqtus.gui.qtutil._temporary_widget import temporary_widget
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
@@ -30,6 +30,10 @@ from .delegate import StepDelegate
 from .steps_model import StepsModel
 from ..sequence_iteration_editor import SequenceIterationEditor
 from ..._icons import get_icon
+
+
+def create_shot_step() -> ExecuteShot:
+    return ExecuteShot()
 
 
 def create_variable_declaration():
@@ -158,16 +162,30 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.add_button.setIcon(get_icon("plus", self.palette().buttonText().color()))
         self.add_button.setMenu(self.add_menu)
         self.add_shot_action.triggered.connect(
-            functools.partial(self._model.append_step, ExecuteShot())
+            functools.partial(
+                self._model.insert_steps,
+                [create_shot_step()],
+                self._model.rowCount(),
+                QModelIndex(),
+            )
         )
         self.add_variable_action.triggered.connect(
-            functools.partial(self._model.append_step, create_variable_declaration())
+            functools.partial(
+                self._model.insert_steps,
+                [create_variable_declaration()],
+                0,
+                QModelIndex(),
+            )
         )
         self.add_linspace_action.triggered.connect(
-            functools.partial(self._model.append_step, create_linspace_loop())
+            functools.partial(
+                self._model.insert_steps, [create_linspace_loop()], 0, QModelIndex()
+            )
         )
         self.add_arange_action.triggered.connect(
-            functools.partial(self._model.append_step, create_arange_loop())
+            functools.partial(
+                self._model.insert_steps, [create_arange_loop()], 0, QModelIndex()
+            )
         )
 
     def _emit_iteration_edited(self, *args, **kwargs):
@@ -271,37 +289,44 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         index = self.indexAt(position)
         if not index.isValid():
             return
-        menu = QMenu(self)
+        with temporary_widget(QMenu(self)) as menu:
+            add_menu = menu.addMenu("Insert above...")
 
-        add_menu = QMenu()
-        add_menu.setTitle("Insert above...")
-        menu.addMenu(add_menu)
-
-        create_variable_action = QAction("variable")
-        add_menu.addAction(create_variable_action)
-        new_variable = create_variable_declaration()
-        create_variable_action.triggered.connect(
-            functools.partial(self._model.insert_above, new_variable, index)
-        )
-        create_shot_action = QAction("Shot")
-        add_menu.addAction(create_shot_action)
-        new_shot = ExecuteShot()
-        create_shot_action.triggered.connect(
-            functools.partial(self._model.insert_above, new_shot, index)
-        )
-        create_linspace_action = QAction("Linspace loop")
-        add_menu.addAction(create_linspace_action)
-        new_linspace = create_linspace_loop()
-        create_linspace_action.triggered.connect(
-            functools.partial(self._model.insert_above, new_linspace, index)
-        )
-        create_arange_action = QAction("Arange loop")
-        add_menu.addAction(create_arange_action)
-        new_arange = create_arange_loop()
-        create_arange_action.triggered.connect(
-            functools.partial(self._model.insert_above, new_arange, index)
-        )
-        menu.exec(self.mapToGlobal(position))
+            create_variable_action = add_menu.addAction("variable")
+            new_variable = create_variable_declaration()
+            create_variable_action.triggered.connect(
+                functools.partial(
+                    self._model.insert_steps,
+                    [new_variable],
+                    index.row(),
+                    index.parent(),
+                )
+            )
+            create_shot_action = add_menu.addAction("Shot")
+            new_shot = ExecuteShot()
+            create_shot_action.triggered.connect(
+                functools.partial(
+                    self._model.insert_steps, [new_shot], index.row(), index.parent()
+                )
+            )
+            create_linspace_action = add_menu.addAction("Linspace loop")
+            new_linspace = create_linspace_loop()
+            create_linspace_action.triggered.connect(
+                functools.partial(
+                    self._model.insert_steps,
+                    [new_linspace],
+                    index.row(),
+                    index.parent(),
+                )
+            )
+            create_arange_action = add_menu.addAction("Arange loop")
+            new_arange = create_arange_loop()
+            create_arange_action.triggered.connect(
+                functools.partial(
+                    self._model.insert_steps, [new_arange], index.row(), index.parent()
+                )
+            )
+            menu.exec(self.mapToGlobal(position))
 
     def copy_to_clipboard(self):
         steps = self.get_iteration()
