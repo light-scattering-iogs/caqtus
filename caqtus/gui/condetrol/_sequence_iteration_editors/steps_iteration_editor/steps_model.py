@@ -178,7 +178,7 @@ class StepItem(QStandardItem):
             return step_data.display_data()
         return super().data(role)
 
-    def child(self, row: int, column: int = 0) -> StepItem:
+    def child(self, row: int, column: int | None = 0) -> StepItem:
         result = super().child(row, column)
         assert isinstance(result, StepItem)
         return result
@@ -261,7 +261,7 @@ class StepsModel(QStandardItemModel):
             root.appendRow(item)
         self.endResetModel()
 
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+    def setData(self, index, value, role: int = Qt.ItemDataRole.EditRole):
         if self._read_only:
             return False
         previous_value = index.data(role)
@@ -434,7 +434,9 @@ class StepsModel(QStandardItemModel):
         parent_item.insertRows(row, new_items)
         return True
 
-    def removeRow(self, row, parent=DEFAULT_INDEX) -> bool:
+    def removeRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ) -> bool:
         return self.removeRows(row, 1, parent)
 
     def into_index(self, flat_index: FlatIndex) -> QModelIndex:
@@ -443,7 +445,9 @@ class StepsModel(QStandardItemModel):
             index = self.index(row, 0, index)
         return index
 
-    def removeRows(self, row, count, parent=DEFAULT_INDEX) -> bool:
+    def removeRows(
+        self, row, count, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ) -> bool:
         if self._read_only:
             return False
         items = [

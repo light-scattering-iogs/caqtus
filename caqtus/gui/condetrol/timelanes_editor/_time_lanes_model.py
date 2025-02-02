@@ -266,18 +266,22 @@ class TimeLanesModel(QAbstractTableModel):
         assert isinstance(name, str)
         return name
 
-    def columnCount(self, parent=_DEFAULT_MODEL_INDEX) -> int:
+    def columnCount(
+        self, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_MODEL_INDEX
+    ) -> int:
         return self.number_steps()
 
-    def rowCount(self, parent=_DEFAULT_MODEL_INDEX) -> int:
+    def rowCount(
+        self, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_MODEL_INDEX
+    ) -> int:
         return len(self._lane_models) + 2
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         return self._map_to_source(index).data(role)
 
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+    def setData(self, index, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if self._read_only:
             return False
         if not index.isValid():
@@ -352,7 +356,7 @@ class TimeLanesModel(QAbstractTableModel):
         self,
         section: int,
         orientation: Qt.Orientation,
-        role=Qt.ItemDataRole.DisplayRole,
+        role: int = Qt.ItemDataRole.DisplayRole,
     ):
         if orientation == Qt.Orientation.Horizontal:
             if role == Qt.ItemDataRole.DisplayRole:
@@ -371,7 +375,11 @@ class TimeLanesModel(QAbstractTableModel):
                     0, Qt.Orientation.Horizontal, role
                 )
 
-    def insertColumn(self, column: int, parent=_DEFAULT_MODEL_INDEX) -> bool:
+    def insertColumn(
+        self,
+        column: int,
+        parent: QModelIndex | QPersistentModelIndex = _DEFAULT_MODEL_INDEX,
+    ) -> bool:
         """Add a new time step at the requested column.
 
         If performed, pushes the action on the model undo stack.
@@ -429,7 +437,9 @@ class TimeLanesModel(QAbstractTableModel):
             assert not self.model._read_only
             self.model.beginRemoveColumns(QModelIndex(), self.column, self.column)
 
-    def removeColumn(self, column, parent=_DEFAULT_MODEL_INDEX) -> bool:
+    def removeColumn(
+        self, column, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_MODEL_INDEX
+    ) -> bool:
         """Remove a step from the model.
 
         If an action was performed, pushes the action on the model undo stack.

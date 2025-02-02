@@ -11,13 +11,14 @@ from PySide6.QtCore import (
     QAbstractListModel,
     QObject,
     QModelIndex,
+    QPersistentModelIndex,
     Qt,
 )
 from PySide6.QtGui import QFont, QUndoCommand, QUndoStack
 
 from caqtus.types.expression import Expression
 
-_DEFAULT_INDEX = QModelIndex()
+_DEFAULT_INDEX: QModelIndex | QPersistentModelIndex = QModelIndex()
 
 
 class TimeStepNameModel(QAbstractListModel):
@@ -36,10 +37,12 @@ class TimeStepNameModel(QAbstractListModel):
 
         return copy.deepcopy(self._names)
 
-    def rowCount(self, parent=_DEFAULT_INDEX) -> int:
+    def rowCount(
+        self, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> int:
         return len(self._names)
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
@@ -47,7 +50,7 @@ class TimeStepNameModel(QAbstractListModel):
         if role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
 
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+    def setData(self, index, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
@@ -89,7 +92,9 @@ class TimeStepNameModel(QAbstractListModel):
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
-    def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
+    def insertRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> bool:
         if not (0 <= row <= self.rowCount()):
             return False
         self._undo_stack.push(self._InsertStepCommand(self, row))
@@ -115,7 +120,9 @@ class TimeStepNameModel(QAbstractListModel):
         self._names.insert(row, value)
         self.endInsertRows()
 
-    def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
+    def removeRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> bool:
         if not (0 <= row < self.rowCount()):
             return False
         self._undo_stack.push(self._RemoveStepCommand(self, row, self._names[row]))
@@ -142,7 +149,7 @@ class TimeStepNameModel(QAbstractListModel):
         del self._names[row]
         self.endRemoveRows()
 
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(self, section, orientation, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 return "Step names"
@@ -168,10 +175,12 @@ class TimeStepDurationModel(QAbstractListModel):
     def get_duration(self) -> list[Expression]:
         return copy.deepcopy(self._durations)
 
-    def rowCount(self, parent=_DEFAULT_INDEX) -> int:
+    def rowCount(
+        self, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> int:
         return len(self._durations)
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
@@ -179,7 +188,7 @@ class TimeStepDurationModel(QAbstractListModel):
         if role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
 
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+    def setData(self, index, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
@@ -223,7 +232,9 @@ class TimeStepDurationModel(QAbstractListModel):
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
-    def insertRow(self, row, parent=_DEFAULT_INDEX) -> bool:
+    def insertRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> bool:
         if not (0 <= row <= self.rowCount()):
             return False
         self._undo_stack.push(self._InsertStepCommand(self, row))
@@ -249,7 +260,9 @@ class TimeStepDurationModel(QAbstractListModel):
         self._durations.insert(row, value)
         self.endInsertRows()
 
-    def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
+    def removeRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> bool:
         if not (0 <= row < self.rowCount()):
             return False
         self._undo_stack.push(self._RemoveStepCommand(self, row, self._durations[row]))
@@ -276,7 +289,7 @@ class TimeStepDurationModel(QAbstractListModel):
         del self._durations[row]
         self.endRemoveRows()
 
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(self, section, orientation, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 return "Step durations"

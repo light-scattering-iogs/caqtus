@@ -88,7 +88,9 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         self.__lane = copy.deepcopy(lane)
         self.endResetModel()
 
-    def rowCount(self, parent=_DEFAULT_INDEX) -> int:
+    def rowCount(
+        self, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> int:
         """Return the number of steps in the lane."""
 
         return len(self.__lane)
@@ -97,7 +99,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
     def data(
         self,
         index: QModelIndex | QPersistentModelIndex,
-        role=Qt.ItemDataRole.DisplayRole,
+        role: int = Qt.ItemDataRole.DisplayRole,
     ) -> Any:
         """Return the data to be shown to the user for the given index and role.
 
@@ -117,7 +119,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         return self.__lane[step]
 
     @abc.abstractmethod
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+    def setData(self, index, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
         """Set the data for the given index and role.
 
         See :meth:`PySide6.QtCore.QAbstractItemModel.setData` for more information on
@@ -193,7 +195,7 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         self,
         section: int,
         orientation: Qt.Orientation,
-        role=Qt.ItemDataRole.DisplayRole,
+        role: int = Qt.ItemDataRole.DisplayRole,
     ) -> Any:
         """Return the data for the model header."""
 
@@ -223,7 +225,9 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
         )
 
     @abc.abstractmethod
-    def insertRow(self, row: int, parent=_DEFAULT_INDEX) -> bool:
+    def insertRow(
+        self, row: int, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> bool:
         """Insert a row at the given row index.
 
         This method must be implemented by subclasses, typically by calling the
@@ -281,7 +285,9 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, metaclass=qabc.QABCMeta):
                 self.__lane[start : stop + 1] = self.__lane[start]
         self.endInsertRows()
 
-    def removeRow(self, row, parent=_DEFAULT_INDEX) -> bool:
+    def removeRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _DEFAULT_INDEX
+    ) -> bool:
         """Remove a row at the given row index.
 
         The action is pushed to the undo stack.

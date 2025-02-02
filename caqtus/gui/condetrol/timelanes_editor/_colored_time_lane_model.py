@@ -77,7 +77,9 @@ class ColoredTimeLaneModel[L: TimeLane](TimeLaneModel[L], metaclass=qabc.QABCMet
                 0, Qt.Orientation.Horizontal, color, Qt.ItemDataRole.ForegroundRole
             )
 
-    def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.EditRole):
+    def setHeaderData(
+        self, section, orientation, value, role: int = Qt.ItemDataRole.EditRole
+    ):
         change = False
         if (
             orientation == Qt.Orientation.Horizontal
