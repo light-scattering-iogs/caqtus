@@ -101,6 +101,7 @@ exclude_lines = [
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "N", "B", "NPY", "ASYNC", "LOG"]
+exclude = ["**/*_ui.py", "caqtus/gui/_common/NodeGraphQt"]
 
 [tool.pyright]
 exclude = ["**/*_ui.py", "caqtus/gui/_common/NodeGraphQt"]
