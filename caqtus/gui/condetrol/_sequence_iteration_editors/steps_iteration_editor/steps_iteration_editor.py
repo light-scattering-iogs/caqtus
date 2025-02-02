@@ -136,6 +136,12 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         )
         self.paste_from_clipboard_action.triggered.connect(self.paste_from_clipboard)
 
+    def has_uncommitted_edits(self) -> bool:
+        return not self.undo_stack.isClean()
+
+    def commit_edits(self) -> None:
+        self.undo_stack.setClean()
+
     @property
     def undo_stack(self) -> QUndoStack:
         """The undo stack used by the editor.

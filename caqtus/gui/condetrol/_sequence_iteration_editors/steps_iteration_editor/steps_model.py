@@ -226,9 +226,10 @@ class StepsModel(QStandardItemModel):
 
     def __init__(self, steps: StepsConfiguration, parent: Optional[QObject] = None):
         super().__init__(parent)
-        self.set_steps(steps)
         self._read_only = True
         self.undo_stack = QUndoStack(self)
+        self.undo_stack.setClean()
+        self.set_steps(steps)
 
     def set_read_only(self, read_only: bool):
         self._read_only = read_only
@@ -252,6 +253,7 @@ class StepsModel(QStandardItemModel):
         """
 
         self.beginResetModel()
+        self.undo_stack.clear()
         self.clear()
         items = [StepItem.construct(step) for step in steps.steps]
         root = self.invisibleRootItem()

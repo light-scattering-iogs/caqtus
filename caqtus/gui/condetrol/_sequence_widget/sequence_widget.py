@@ -132,6 +132,12 @@ class _DraftSequence(_SetSequenceBase):
     def time_lanes_edits_committed(self) -> None:
         self.parent.time_lanes_editor.commit_edits()
 
+    def has_iteration_uncommitted_edits(self) -> bool:
+        return self.parent.iteration_editor.has_uncommitted_edits()
+
+    def iteration_edits_committed(self) -> None:
+        self.parent.iteration_editor.commit_edits()
+
 
 @attrs.frozen
 class _NotEditableSequence(_SetSequenceBase):
@@ -418,7 +424,23 @@ async def synchronize_draft_sequence(
                 editor_state.update_global_parameters(state.parameters)
                 changes = True
 
-            if editor_state.get_iterations() != state.iterations:
+            if editor_state.has_iteration_uncommitted_edits():
+                iterations = editor_state.get_iterations()
+                editor_state.iteration_edits_committed()
+                result = await session.sequences.set_iteration_configuration(
+                    editor_state.sequence_path, iterations
+                )
+                assert not is_failure_type(
+                    result,
+                    (
+                        PathNotFoundError,
+                        PathIsNotSequenceError,
+                        SequenceNotEditableError,
+                    ),
+                ), "Path should exists in the session and be an editable sequence."
+                assert_type(result, None)
+                changes = True
+            elif editor_state.get_iterations() != state.iterations:
                 editor_state.set_iterations(state.iterations)
                 changes = True
 
