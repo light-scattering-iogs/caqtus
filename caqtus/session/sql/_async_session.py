@@ -25,6 +25,7 @@ from ._sequence_collection import (
     _get_time_lanes,
     _set_time_lanes,
     _get_iteration_configuration,
+    _set_iteration_configuration,
     _get_shots,
     _get_shot_parameters,
     _get_shot_end_time,
@@ -257,6 +258,18 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         self, path: PureSequencePath
     ) -> IterationConfiguration:
         return await self._run_sync(_get_iteration_configuration, path, self.serializer)
+
+    async def set_iteration_configuration(
+        self, path: PureSequencePath, iteration_configuration: IterationConfiguration
+    ) -> (
+        None
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        return await self._run_sync(
+            _set_iteration_configuration, path, iteration_configuration, self.serializer
+        )
 
     async def get_shots(
         self, path: PureSequencePath
