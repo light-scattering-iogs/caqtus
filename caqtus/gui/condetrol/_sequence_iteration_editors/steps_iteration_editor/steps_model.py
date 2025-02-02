@@ -454,6 +454,24 @@ class StepsModel(QStandardItemModel):
         )
         return True
 
+    def remove_indices(
+        self, indices: Sequence[QModelIndex | QPersistentModelIndex]
+    ) -> bool:
+        if self._read_only:
+            return False
+        # Need to be careful that the indexes are not invalidated by the removal of
+        # previous rows, that's why we convert them to QPersistentModelIndex.
+        persistent_indices = [
+            QPersistentModelIndex(index) for index in indices if index.isValid()
+        ]
+        if not persistent_indices:
+            return False
+        self.undo_stack.beginMacro("remove steps")
+        for index in persistent_indices:
+            self.removeRow(index.row(), index.parent())
+        self.undo_stack.endMacro()
+        return True
+
     @attrs.define(slots=False)
     class RemoveRowsCommand(QUndoCommand):
         model: StepsModel
@@ -474,6 +492,15 @@ class StepsModel(QStandardItemModel):
             parent = self.model.into_index(self.parent)
             result = self.model._insert_steps_without_undo(self.steps, self.row, parent)
             assert result
+
+    def replace_steps(self, steps: Sequence[Step], message: str) -> bool:
+        if self._read_only:
+            return False
+        self.undo_stack.beginMacro(message)
+        self.removeRows(0, self.rowCount())
+        self.insert_steps(steps, 0, QModelIndex())
+        self.undo_stack.endMacro()
+        return True
 
 
 @attrs.frozen

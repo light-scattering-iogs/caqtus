@@ -26,7 +26,7 @@ def unstructure(obj: Any, unstructure_as: Any = None):
     return converters["unconfigured"].unstructure(obj, unstructure_as=unstructure_as)
 
 
-def structure(obj: Any, cls: Any = None):
+def structure[T](obj: Any, cls: type[T]) -> T:
     return converters["unconfigured"].structure(obj, cls)
 
 
