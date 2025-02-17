@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import functools
+import math
 import platform
-from collections.abc import Callable
+from collections.abc import Callable, Awaitable
+from typing import Never
 
 import anyio
+import anyio.abc
 import anyio.to_thread
 from PySide6 import QtGui, QtCore, QtWidgets
 from PySide6.QtCore import Qt
@@ -22,7 +26,11 @@ from .._logger import logger
 from .._parameter_tables_editor import ParameterNamespaceEditor
 from .._path_view import EditablePathHierarchyView
 from .._sequence_widget import SequenceWidget
-from .._sequence_widget.sequence_widget import _query_state_sync
+from .._sequence_widget.sequence_widget import (
+    _query_state_sync,
+    synchronize_editor_and_storage,
+    synchronize_sequence_widget,
+)
 from ..device_configuration_editors._configurations_editor import (
     DeviceConfigurationsDialog,
 )
@@ -44,6 +52,12 @@ class CondetrolWindowHandler:
         self.main_window.sequence_widget.sequence_start_requested.connect(
             self.start_sequence
         )
+        self.background_sequence_synchronization = BackgroundTask(
+            synchronize_sequence_widget,
+            100e-3,
+            self.main_window.sequence_widget,
+            self.session_maker,
+        )
 
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
@@ -51,9 +65,7 @@ class CondetrolWindowHandler:
         async with self.task_group:
             self.task_group.start_soon(self.main_window.path_view.run_async)
             self.task_group.start_soon(self._monitor_global_parameters)
-            self.task_group.start_soon(
-                self.main_window.sequence_widget.exec_async, self.session_maker
-            )
+            self.task_group.start_soon(self.background_sequence_synchronization.run)
 
     async def _monitor_global_parameters(self) -> None:
         while True:
@@ -93,6 +105,11 @@ class CondetrolWindowHandler:
         self.is_running_sequence = True
 
     async def _run_sequence(self, procedure: Procedure, sequence):
+        with self.background_sequence_synchronization.suspend():
+            async with self.session_maker.async_session() as session:
+                await synchronize_editor_and_storage(
+                    self.main_window.sequence_widget, session
+                )
         with procedure:
             try:
                 await anyio.to_thread.run_sync(procedure.start_sequence, sequence)
@@ -305,3 +322,55 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
             f"<p><i>caqtus-suite</i> version: {__version__}</p>"
             f"<p>Platform: {platform.platform()}</p>",
         )
+
+
+class BackgroundTask:
+    def __init__[
+        **P
+    ](
+        self,
+        task: Callable[P, Awaitable[None]],
+        sleep_time: float,
+        /,
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ):
+        self.task = task
+        self._can_resume: anyio.Event | None = None
+        self._cancel_scope: anyio.CancelScope | None = None
+        self.sleep_time = sleep_time
+        self.args = args
+        self.kwargs = kwargs
+        self._task_group: anyio.abc.TaskGroup | None = None
+
+    async def run(self) -> Never:
+        """Run the background task indefinitely."""
+
+        async with anyio.create_task_group() as self._task_group:
+            await self.run_loop()
+            await anyio.sleep(math.inf)
+
+    async def run_loop(self) -> None:
+        with anyio.CancelScope() as self._cancel_scope:
+            while True:
+                await self.task(*self.args, **self.kwargs)
+                await anyio.sleep(self.sleep_time)
+
+    @contextlib.contextmanager
+    def suspend(self):
+        """Suspend the background task until the context manager exits.
+
+        When the context manager is entered, the background task is cancelled at the
+        next cancellation point.
+        When the context manager exits, a new background task is started.
+        """
+
+        if self._cancel_scope is None:
+            raise RuntimeError("The background task is not running.")
+        self._cancel_scope.cancel()
+        self._cancel_scope = None
+
+        yield
+
+        assert self._task_group is not None
+        self._task_group.start_soon(self.run_loop)

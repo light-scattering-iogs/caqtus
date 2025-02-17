@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional, Literal, assert_never
 
-import anyio
 import attrs
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QIcon, QColor, QPalette, QKeySequence, QUndoGroup
@@ -345,17 +344,12 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         assert isinstance(self._state, _DraftSequence)
         self.sequence_start_requested.emit(self._state.sequence_path)
 
-    async def exec_async(self, storage_manager: StorageManager):
-        """Run a synchronization loop to keep to editor in sync with the storage."""
 
-        await update(self, storage_manager)
-
-
-async def update(widget: SequenceWidget, storage_manager: StorageManager) -> None:
-    while True:
-        async with storage_manager.async_session() as session:
-            await synchronize_editor_and_storage(widget, session)
-        await anyio.sleep(100e-3)
+async def synchronize_sequence_widget(
+    widget: SequenceWidget, storage_manager: StorageManager
+) -> None:
+    async with storage_manager.async_session() as session:
+        await synchronize_editor_and_storage(widget, session)
 
 
 async def synchronize_editor_and_storage(
