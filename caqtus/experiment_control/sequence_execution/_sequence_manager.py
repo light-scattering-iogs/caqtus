@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import copy
-import logging
 from collections.abc import Mapping, AsyncGenerator, AsyncIterable
 from typing import Optional
 
@@ -26,14 +25,13 @@ from caqtus.types.recoverable_exceptions import split_recoverable
 from caqtus.types.timelane.timelane import TimeLanes
 from caqtus.utils.result import unwrap
 from caqtus.utils.result._result import is_failure
+from ._logger import logger
 from ._shot_compiler import ShotCompilerFactory, create_shot_compiler
 from ._shot_runner import ShotRunnerFactory, create_shot_runner
 from .sequence_runner import execute_steps
 from .shots_manager import ShotManager, ShotData, ShotScheduler, ShotRetryConfig
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ...types.iteration._step_context import StepContext
-
-logger = logging.getLogger(__name__)
 
 
 async def run_sequence(
@@ -127,6 +125,17 @@ class SequenceManager:
                 self.sequence_parameters = session.get_global_parameters()
             else:
                 self.sequence_parameters = copy.deepcopy(global_parameters)
+
+            # It is critical to lock the sequence state by setting it to PREPARING in
+            # the same transaction that retrieves the sequence configuration.
+            # Otherwise, it can happen that we retrieve the sequence configuration while
+            # it is still draft, and it can be modified by another process before we
+            # set it to preparing.
+            session.sequences.set_preparing(
+                self._sequence_path,
+                self.device_configurations,
+                self.sequence_parameters,
+            )
             time_lanes = session.sequences.get_time_lanes(self._sequence_path)
             if is_failure(time_lanes):
                 raise time_lanes.exception()
@@ -159,12 +168,6 @@ class SequenceManager:
             occurred or INTERRUPTED if the sequence was interrupted by the user.
         """
 
-        with self._session_maker() as session:
-            session.sequences.set_preparing(
-                self._sequence_path,
-                self.device_configurations,
-                self.sequence_parameters,
-            )
         try:
             sequence_context = SequenceContext(
                 device_configurations=self.device_configurations,  # pyright: ignore[reportCallIssue]
