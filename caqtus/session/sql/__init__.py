@@ -8,6 +8,7 @@ from ._session_maker import (
     SQLiteConfig,
     SQLStorageManager,
 )
+from ._logger import logger
 
 __all__ = [
     "PostgreSQLExperimentSessionMaker",
@@ -16,4 +17,5 @@ __all__ = [
     "SQLiteStorageManager",
     "PostgreSQLStorageManager",
     "SQLStorageManager",
+    "logger",
 ]
