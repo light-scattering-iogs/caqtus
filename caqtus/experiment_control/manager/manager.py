@@ -10,6 +10,8 @@ from typing import Optional, assert_type
 
 import anyio
 import anyio.from_thread
+import trio
+import trio.abc
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import (
@@ -23,11 +25,11 @@ from caqtus.session import (
     InvalidStateTransitionError,
 )
 from caqtus.types.parameter import ParameterNamespace
+from caqtus.utils._trio_instrumentation import LogBlockingTaskInstrument
+from caqtus.utils.result import is_failure_type, Success
+from .._logger import logger
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_execution import ShotRetryConfig, run_sequence
-from ...utils.result import is_failure_type, Success
-
-logger = logging.getLogger(__name__)
 
 
 class ExperimentManager(abc.ABC):
@@ -349,6 +351,7 @@ class BoundProcedure(Procedure):
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
+
         async def run():
             with anyio.CancelScope() as self._cancel_scope:
                 async with anyio.from_thread.BlockingPortal() as self._portal:
@@ -362,7 +365,14 @@ class BoundProcedure(Procedure):
                     )
 
         try:
-            anyio.run(run, backend="trio")
+            # TODO: Would like to use anyio.run() here, but I'm not sure how to pass
+            #  the instruments to the underlying trio.run() call.
+            #  anyio.run(run, backend_options={"instruments"=instruments}) does not
+            #  seem to work.
+            trio.run(
+                run,
+                instruments=get_instruments(),
+            )
         except Exception as e:
             logger.error(f"Error while running sequence {sequence}.", exc_info=e)
         self._cancel_scope = None
@@ -404,3 +414,34 @@ class SequenceAlreadyRunningError(RuntimeError):
 
 class ProcedureNotActiveError(RuntimeError):
     pass
+
+
+def get_instruments() -> list[trio.abc.Instrument]:
+    blocking_task_duration_warning = get_blocking_task_duration_warning()
+
+    if not logger.isEnabledFor(logging.WARNING):
+        return []
+
+    if blocking_task_duration_warning is not None:
+        log_blocking_task_instrument = LogBlockingTaskInstrument(
+            duration=blocking_task_duration_warning, logger=logger
+        )
+        return [log_blocking_task_instrument]
+    return []
+
+
+def get_blocking_task_duration_warning() -> float | None:
+    import os
+
+    duration_warning = os.environ.get("CAQTUS_BLOCKING_TASK_DURATION_WARNING", None)
+    if duration_warning is None:
+        return None
+    try:
+        return float(duration_warning)
+    except ValueError:
+        logger.error(
+            "Invalid value for CAQTUS_BLOCKING_TASK_DURATION_WARNING: %s.\n"
+            "Expected a float.",
+            duration_warning,
+        )
+        return None

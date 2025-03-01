@@ -338,6 +338,10 @@ class Experiment:
 
         The experiment server is used to run procedures on the experiment manager from a
         remote process.
+
+        If the environment variable `CAQTUS_BLOCKING_TASK_DURATION_WARNING` is set to
+        a float duration in seconds, a warning will be logged if a task doesn't yield to
+        the event loop for that duration during the execution of a sequence.
         """
 
         if platform.system() == "Windows":
