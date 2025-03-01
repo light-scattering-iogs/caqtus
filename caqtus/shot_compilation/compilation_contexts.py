@@ -75,9 +75,9 @@ class SequenceContext:
 class ShotContext:
     """Contains information about a shot being compiled."""
 
-    _sequence_context: SequenceContext
-    _variables: Mapping[DottedVariableName, Any]
-    _device_compilers: Mapping[DeviceName, "DeviceCompiler"]
+    _sequence_context: SequenceContext = attrs.field()
+    _variables: Mapping[DottedVariableName, Any] = attrs.field()
+    _device_compilers: Mapping[DeviceName, "DeviceCompiler"] = attrs.field()
 
     _step_durations: tuple[Time, ...] = attrs.field(init=False)
     _step_bounds: tuple[Time, ...] = attrs.field(init=False)

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import abc
+import pickle
 from collections.abc import Mapping, Callable
 from typing import Any
 from typing import Protocol
 
 import anyio.to_process
+import attrs
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.shot_compilation import (
@@ -65,6 +67,12 @@ class ShotCompiler(ShotCompilerProtocol):
             time_lanes=shot_timelanes,  # pyright: ignore[reportCallIssue]
         )
         self.device_compilers = device_compilers
+        self.pickled_context = pickle.dumps(
+            CompilationContext(
+                sequence_context=self._sequence_context,
+                device_compilers=device_compilers,
+            )
+        )
 
     def compile_initialization_parameters(
         self,
@@ -82,35 +90,52 @@ class ShotCompiler(ShotCompilerProtocol):
         # We add a deadline to shot compilation to not hang indefinitely in case of
         # a bug.
         with anyio.move_on_after(10):
+            # Here we send to the other process the pre-pickled compilation context and
+            # the shot parameters.
+            # It is important that we pickle the context only once and not for every
+            # shot as it can take a long time to pickle and block the event loop.
             return await anyio.to_process.run_sync(
-                self.compile_shot_sync, shot_parameters.parameters, cancellable=True
+                compile_shot_sync,
+                self.pickled_context,
+                shot_parameters.parameters,
+                cancellable=True,
             )
         raise TimeoutError(
             "Shot compilation took too long to complete and has been terminated."
         )
 
-    @ensure_exception_pickling
-    def compile_shot_sync(
-        self, shot_parameters: VariableNamespace
-    ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
-        shot_context = ShotContext(
-            sequence_context=self._sequence_context,  # pyright: ignore[reportCallIssue]
-            variables=shot_parameters.dict(),  # pyright: ignore[reportCallIssue]
-            device_compilers=self.device_compilers,  # pyright: ignore[reportCallIssue]
+
+@attrs.frozen
+class CompilationContext:
+    sequence_context: SequenceContext = attrs.field()
+    device_compilers: Mapping[DeviceName, DeviceCompiler] = attrs.field()
+
+
+@ensure_exception_pickling
+def compile_shot_sync(
+    pickled_compilation_context: bytes,
+    shot_parameters: VariableNamespace,
+) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
+    compilation_context = pickle.loads(pickled_compilation_context)
+    assert isinstance(compilation_context, CompilationContext)
+    shot_context = ShotContext(
+        sequence_context=compilation_context.sequence_context,  # pyright: ignore[reportCallIssue]
+        variables=shot_parameters.dict(),  # pyright: ignore[reportCallIssue]
+        device_compilers=compilation_context.device_compilers,  # pyright: ignore[reportCallIssue]
+    )
+
+    results = {}
+    for device_name in compilation_context.device_compilers:
+        results[device_name] = shot_context.get_shot_parameters(device_name)
+
+    # noinspection PyProtectedMember
+    if unused_lanes := shot_context._unused_lanes():
+        raise InvalidValueError(
+            "The following lanes where not used during the shot: "
+            + ", ".join(unused_lanes)
         )
 
-        results = {}
-        for device_name in self.device_compilers:
-            results[device_name] = shot_context.get_shot_parameters(device_name)
-
-        # noinspection PyProtectedMember
-        if unused_lanes := shot_context._unused_lanes():
-            raise InvalidValueError(
-                "The following lanes where not used during the shot: "
-                + ", ".join(unused_lanes)
-            )
-
-        return results, float(shot_context.get_shot_duration())
+    return results, float(shot_context.get_shot_duration())
 
 
 def create_shot_compiler(
