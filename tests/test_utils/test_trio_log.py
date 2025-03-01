@@ -1,5 +1,6 @@
 import logging
 
+import anyio.lowlevel
 import trio
 import trio.testing
 
@@ -13,7 +14,8 @@ def test_running_long_task_emits_warning(caplog):
     clock = trio.testing.MockClock()
 
     async def main():
-        # Simulate a task that doesn't yield back to the event loop for a long time
+        # Simulate a task that doesn't yield back to the event loop for a long time.
+        # This task also never awaits
         clock.jump(0.2)
 
     with caplog.at_level(logging.WARNING, logger=logger.name):
@@ -35,6 +37,7 @@ def test_running_short_task_does_not_emit_warning(caplog):
     async def main():
         # Simulate a task that yields back to the event loop quickly
         clock.jump(0.05)
+        await anyio.lowlevel.checkpoint()
 
     with caplog.at_level(logging.WARNING, logger=logger.name):
         trio.run(main, instruments=[instrument], clock=clock)

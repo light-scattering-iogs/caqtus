@@ -1,3 +1,4 @@
+import traceback
 from logging import Logger
 
 import trio
@@ -20,19 +21,33 @@ class LogBlockingTaskInstrument(Instrument):
     def __init__(self, duration: float, logger: Logger):
         self.duration = duration
         self.logger = logger
+        self.step_before_times = dict[Task, float]()
 
     def before_task_step(self, task: Task) -> None:
-        assert task.custom_sleep_data is None
-        task.custom_sleep_data = {"start_time": trio.current_time()}
+        self.step_before_times[task] = trio.current_time()
 
     def after_task_step(self, task: Task) -> None:
-        data = task.custom_sleep_data
-        if data is not None:
-            elapsed = trio.current_time() - data["start_time"]
-            if elapsed > self.duration:
+        before_step_time = self.step_before_times.pop(task)
+        elapsed = trio.current_time() - before_step_time
+        if elapsed > self.duration:
+            currently_waiting_on = task.coro.cr_frame  # type: ignore[reportAttributeAccessIssue]
+            if currently_waiting_on is not None:
+                formatted_stack = "".join(
+                    traceback.StackSummary.extract(task.iter_await_frames()).format()
+                )
                 self.logger.warning(
-                    "Task %r didn't yield to the event loop after %.4f seconds",
+                    "Task %r didn't yield to the event loop after %.4f seconds.\n"
+                    "This occurred in the step before this await point\n%s",
+                    task,
+                    elapsed,
+                    formatted_stack,
+                )
+            else:
+                self.logger.warning(
+                    "Task %r didn't yield to the event loop after %.4f seconds.\n"
+                    "This occurred after the last await point of the task.",
                     task,
                     elapsed,
                 )
-            task.custom_sleep_data = None
+
+        task.custom_sleep_data = None
