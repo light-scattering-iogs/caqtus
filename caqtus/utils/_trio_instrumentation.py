@@ -32,6 +32,7 @@ class LogBlockingTaskInstrument(Instrument):
             if elapsed > self.duration:
                 self.logger.warning(
                     "Task %r didn't yield to the event loop after %.4f seconds",
-                    task, elapsed
+                    task,
+                    elapsed,
                 )
             task.custom_sleep_data = None
