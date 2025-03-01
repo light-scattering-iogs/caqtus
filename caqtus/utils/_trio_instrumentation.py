@@ -36,15 +36,15 @@ class LogBlockingTaskInstrument(Instrument):
                     traceback.StackSummary.extract(task.iter_await_frames()).format()
                 )
                 self.logger.warning(
-                    "Task %r didn't yield to the event loop after %.4f seconds.\n"
-                    "This occurred in the step before this await point\n%s",
+                    "Task %r blocked the event loop for %.4f seconds.\n"
+                    "This occurred just before this await point\n%s",
                     task,
                     elapsed,
                     formatted_stack,
                 )
             else:
                 self.logger.warning(
-                    "Task %r didn't yield to the event loop after %.4f seconds.\n"
+                    "Task %r blocked the event loop for %.4f seconds.\n"
                     "This occurred after the last await point of the task.",
                     task,
                     elapsed,
