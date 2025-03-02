@@ -190,7 +190,7 @@ class Sequence:
 
         device_configurations = self.session.sequences.get_device_configurations(
             self.path
-        )
+        ).unwrap()
 
         return dict(device_configurations)
 

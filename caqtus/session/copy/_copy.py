@@ -15,7 +15,7 @@ from .._exception_summary import TracebackSummary
 from .._experiment_session import ExperimentSession
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError, PathHasChildrenError
-from .._sequence_collection import InvalidStateTransitionError
+from .._sequence_collection import InvalidStateTransitionError, SequenceNotLaunchedError
 from .._sequence_collection import (
     PathIsNotSequenceError,
     PathIsSequenceError,
@@ -141,9 +141,13 @@ def copy_sequence(
     if state == State.DRAFT:
         return Success(None)
     device_configs = source_session.sequences.get_device_configurations(path)
+    assert not is_failure_type(
+        device_configs,
+        (PathNotFoundError, PathIsNotSequenceError, SequenceNotLaunchedError),
+    )
     global_parameters = unwrap(source_session.sequences.get_global_parameters(path))
     preparing_result = destination_session.sequences.set_preparing(
-        path, device_configs, global_parameters
+        path, device_configs.content(), global_parameters
     )
     assert not is_failure_type(preparing_result, PathNotFoundError)
     assert not is_failure_type(preparing_result, PathIsNotSequenceError)

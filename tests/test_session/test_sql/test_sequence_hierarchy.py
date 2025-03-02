@@ -9,6 +9,7 @@ from caqtus.session import (
     PathIsSequenceError,
     DataNotFoundError,
     PathNotFoundError,
+    StorageManager,
 )
 from caqtus.session import PureSequencePath, Sequence
 from caqtus.session._shot_id import ShotId
@@ -257,7 +258,9 @@ def test_data_not_existing(
             shots[0].get_data_by_label(DataLabel("c"))
 
 
-def test_0(session_maker, steps_configuration: StepsConfiguration, time_lanes):
+def test_0(
+    session_maker: StorageManager, steps_configuration: StepsConfiguration, time_lanes
+):
     with session_maker() as session:
         parameters = ParameterNamespace.from_mapping(
             {
@@ -275,7 +278,7 @@ def test_0(session_maker, steps_configuration: StepsConfiguration, time_lanes):
     with session_maker() as session:
         sequence = Sequence(p, session)
         s = sequence.get_global_parameters()
-        d = session.sequences.get_device_configurations(p)
+        d = session.sequences.get_device_configurations(p).unwrap()
     assert s == parameters
     assert d == device_configurations
 

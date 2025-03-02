@@ -474,10 +474,20 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_device_configurations(
         self, path: PureSequencePath
-    ) -> dict[DeviceName, DeviceConfiguration]:
-        sequence = unwrap(self._query_sequence_model(path))
+    ) -> (
+        Success[dict[DeviceName, DeviceConfiguration]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        sequence_result = _query_sequence_model(self._get_sql_session(), path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.content()
         if sequence.state == State.DRAFT:
-            raise RuntimeError("Sequence has not been prepared yet")
+            return Failure(
+                SequenceNotLaunchedError(f"Sequence at {path} is in DRAFT state")
+            )
 
         device_configurations = {}
 
@@ -486,7 +496,7 @@ class SQLSequenceCollection(SequenceCollection):
                 device_configuration.device_type, device_configuration.content
             )
             device_configurations[device_configuration.name] = constructed
-        return device_configurations
+        return Success(device_configurations)
 
     def get_stats(
         self, path: PureSequencePath

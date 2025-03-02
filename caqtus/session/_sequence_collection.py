@@ -198,7 +198,12 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_device_configurations(
         self, path: PureSequencePath
-    ) -> Mapping[DeviceName, DeviceConfiguration]:
+    ) -> (
+        Success[Mapping[DeviceName, DeviceConfiguration]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
         """Get the device configurations that are used by this sequence.
 
         Raises:
