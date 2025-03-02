@@ -545,42 +545,40 @@ def _query_sequence_state_sync(
         time_lanes, (PathNotFoundError, PathIsNotSequenceError)
     ), "Path should exists in the session and be a sequence."
 
+    parameters_result = session.sequences.get_global_parameters(path)
+    assert not is_failure_type(
+        parameters_result,
+        (PathNotFoundError, PathIsNotSequenceError, SequenceNotLaunchedError),
+    ), "Path should exists in the session and be a launched sequence."
+    parameters = parameters_result.content()
     if state.is_editable():
-        parameters = session.get_global_parameters()
         return DraftSequence(
             path, iterations=iterations, time_lanes=time_lanes, parameters=parameters
         )
-    else:
-        parameters_result = session.sequences.get_global_parameters(path)
+    elif state == SequenceState.CRASHED:
+        traceback_summary_result = session.sequences.get_exception(path)
         assert not is_failure_type(
-            parameters_result,
-            (PathNotFoundError, PathIsNotSequenceError, SequenceNotLaunchedError),
-        ), "Path should exists in the session and be a launched sequence."
-        parameters = parameters_result.content()
-        if state == SequenceState.CRASHED:
-            traceback_summary_result = session.sequences.get_exception(path)
-            assert not is_failure_type(
-                traceback_summary_result,
-                (PathNotFoundError, PathIsNotSequenceError, SequenceNotCrashedError),
-            ), "Path should exists in the session and be a crashed sequence."
-            traceback_summary = traceback_summary_result.content()
-            if traceback_summary is None:
-                error = RuntimeError("Sequence crashed but no traceback available.")
-                traceback_summary = TracebackSummary.from_exception(error)
-            return CrashedSequence(
-                path,
-                iterations=iterations,
-                time_lanes=time_lanes,
-                parameters=parameters,
-                traceback=traceback_summary,
-            )
-        else:
-            return NotEditableSequence(
-                path,
-                iterations=iterations,
-                time_lanes=time_lanes,
-                parameters=parameters,
-            )
+            traceback_summary_result,
+            (PathNotFoundError, PathIsNotSequenceError, SequenceNotCrashedError),
+        ), "Path should exists in the session and be a crashed sequence."
+        traceback_summary = traceback_summary_result.content()
+        if traceback_summary is None:
+            error = RuntimeError("Sequence crashed but no traceback available.")
+            traceback_summary = TracebackSummary.from_exception(error)
+        return CrashedSequence(
+            path,
+            iterations=iterations,
+            time_lanes=time_lanes,
+            parameters=parameters,
+            traceback=traceback_summary,
+        )
+    else:
+        return NotEditableSequence(
+            path,
+            iterations=iterations,
+            time_lanes=time_lanes,
+            parameters=parameters,
+        )
 
 
 async def _query_state_async(
@@ -612,44 +610,40 @@ async def _query_sequence_state_async(
         time_lanes, (PathNotFoundError, PathIsNotSequenceError)
     ), "Path should exists in the session and be a sequence."
 
+    parameters_result = await session.sequences.get_global_parameters(path)
+    assert not is_failure_type(
+        parameters_result,
+        (PathNotFoundError, PathIsNotSequenceError, SequenceNotLaunchedError),
+    ), "Path should exists in the session and be a launched sequence."
+    parameters = parameters_result.content()
     if state.is_editable():
-        parameters = await session.get_global_parameters()
         return DraftSequence(
             path, iterations=iterations, time_lanes=time_lanes, parameters=parameters
         )
-    else:
-        parameters_result = await session.sequences.get_global_parameters(path)
+    if state == SequenceState.CRASHED:
+        traceback_summary_result = await session.sequences.get_traceback_summary(path)
         assert not is_failure_type(
-            parameters_result,
-            (PathNotFoundError, PathIsNotSequenceError, SequenceNotLaunchedError),
-        ), "Path should exists in the session and be a launched sequence."
-        parameters = parameters_result.content()
-        if state == SequenceState.CRASHED:
-            traceback_summary_result = await session.sequences.get_traceback_summary(
-                path
-            )
-            assert not is_failure_type(
-                traceback_summary_result,
-                (PathNotFoundError, PathIsNotSequenceError, SequenceNotCrashedError),
-            ), "Path should exists in the session and be a crashed sequence."
-            traceback_summary = traceback_summary_result.content()
-            if traceback_summary is None:
-                error = RuntimeError("Sequence crashed but no traceback available.")
-                traceback_summary = TracebackSummary.from_exception(error)
-            return CrashedSequence(
-                path,
-                iterations=iterations,
-                time_lanes=time_lanes,
-                parameters=parameters,
-                traceback=traceback_summary,
-            )
-        else:
-            return NotEditableSequence(
-                path,
-                iterations=iterations,
-                time_lanes=time_lanes,
-                parameters=parameters,
-            )
+            traceback_summary_result,
+            (PathNotFoundError, PathIsNotSequenceError, SequenceNotCrashedError),
+        ), "Path should exists in the session and be a crashed sequence."
+        traceback_summary = traceback_summary_result.content()
+        if traceback_summary is None:
+            error = RuntimeError("Sequence crashed but no traceback available.")
+            traceback_summary = TracebackSummary.from_exception(error)
+        return CrashedSequence(
+            path,
+            iterations=iterations,
+            time_lanes=time_lanes,
+            parameters=parameters,
+            traceback=traceback_summary,
+        )
+    else:
+        return NotEditableSequence(
+            path,
+            iterations=iterations,
+            time_lanes=time_lanes,
+            parameters=parameters,
+        )
 
 
 class IconLabel(QWidget):
