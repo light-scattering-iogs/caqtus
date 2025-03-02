@@ -385,7 +385,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 return section
         return None
 
-    def data(self, index, role: int=Qt.ItemDataRole.DisplayRole):
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         """Get the data for a specific index in the model.
 
         The displayed data returned for each column is as follows:
