@@ -57,7 +57,11 @@ def test_destination_path_is_sequence(
     time_lanes,
 ):
     path = PureSequencePath.root() / "path"
-    unwrap(destination_session.sequences.create(path, steps_configuration, time_lanes))
+    unwrap(
+        destination_session.sequences.create(
+            path, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
+    )
     result = _copy_path(path, source_session, destination_session)
     assert is_failure_type(result, PathIsSequenceError)
 
@@ -114,8 +118,12 @@ def test_cant_copy_running_sequence(
     time_lanes,
 ):
     path = PureSequencePath.root() / "path"
-    unwrap(source_session.sequences.create(path, steps_configuration, time_lanes))
-    unwrap(source_session.sequences.set_preparing(path, {}, ParameterNamespace.empty()))
+    unwrap(
+        source_session.sequences.create(
+            path, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
+    )
+    unwrap(source_session.sequences.set_preparing(path, {}))
     result = _copy_path(path, source_session, destination_session)
     assert is_failure_type(result, SequenceStateError)
 
@@ -127,7 +135,11 @@ def test_copy_draft_sequence(
     time_lanes,
 ):
     path = PureSequencePath.root() / "path"
-    unwrap(source_session.sequences.create(path, steps_configuration, time_lanes))
+    unwrap(
+        source_session.sequences.create(
+            path, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
+    )
     unwrap(_copy_path(path, source_session, destination_session))
     assert unwrap(destination_session.sequences.get_state(path)) == State.DRAFT
     assert (
@@ -144,7 +156,11 @@ def test_cant_copy_sequence_on_path_with_children(
     time_lanes,
 ):
     parent = PureSequencePath.root() / "parent"
-    unwrap(source_session.sequences.create(parent, steps_configuration, time_lanes))
+    unwrap(
+        source_session.sequences.create(
+            parent, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
+    )
     child_path = parent / "child"
     unwrap(destination_session.paths.create_path(child_path))
     result = _copy_path(parent, source_session, destination_session)

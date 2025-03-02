@@ -7,6 +7,7 @@ import sqlalchemy
 from sqlalchemy import ForeignKey, DateTime, UniqueConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from caqtus.utils.serialization import JsonDict
 from ._path_table import SQLSequencePath
 from ._shot_tables import SQLShot
 from ._table_base import Base
@@ -113,7 +114,10 @@ class SQLSequenceParameters(Base):
     sequence: Mapped[SQLSequence] = relationship(
         back_populates="parameters", single_parent=True
     )
-    content = mapped_column(sqlalchemy.types.JSON)
+
+    # For legacy reasons, the content of the sequence parameters can be None for old
+    # draft sequences.
+    content: Mapped[JsonDict | None] = mapped_column()
 
     __table_args__ = (UniqueConstraint(sequence_id),)
 

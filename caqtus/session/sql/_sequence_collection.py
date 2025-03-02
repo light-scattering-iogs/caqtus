@@ -73,6 +73,14 @@ from .._state import State
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
 
+unstructure_parameters = (
+    serialization.converters["json"].copy().get_unstructure_hook(ParameterNamespace)
+)
+
+structure_parameters = (
+    serialization.converters["json"].copy().get_structure_hook(ParameterNamespace)
+)
+
 
 @attrs.frozen
 class SQLSequenceCollection(SequenceCollection):
@@ -154,12 +162,21 @@ class SQLSequenceCollection(SequenceCollection):
         running_sequences.update(PureSequencePath(row.path.path) for row in result)
         return Success(running_sequences)
 
-    def _set_global_parameters(
+    def set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace
-    ) -> None:
-        sequence = unwrap(self._query_sequence_model(path))
-        if sequence.state != State.PREPARING:
-            raise SequenceNotEditableError(path)
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotEditableError]
+    ):
+        sequence_result = self._query_sequence_model(path)
+        if is_failure(sequence_result):
+            return sequence_result
+        sequence = sequence_result.content()
+
+        if sequence.state != State.DRAFT:
+            return Failure(SequenceNotEditableError(path))
 
         if not isinstance(parameters, ParameterNamespace):
             raise TypeError(
@@ -167,11 +184,8 @@ class SQLSequenceCollection(SequenceCollection):
                 f"expected ParameterNamespace"
             )
 
-        parameters_content = serialization.converters["json"].unstructure(
-            parameters, ParameterNamespace
-        )
-
-        sequence.parameters.content = parameters_content
+        sequence.parameters.content = unstructure_parameters(parameters)
+        return Success(None)
 
     def get_global_parameters(
         self, path: PureSequencePath
@@ -179,7 +193,6 @@ class SQLSequenceCollection(SequenceCollection):
         Success[ParameterNamespace]
         | Failure[PathNotFoundError]
         | Failure[PathIsNotSequenceError]
-        | Failure[SequenceNotLaunchedError]
     ):
         return _get_sequence_global_parameters(self._get_sql_session(), path)
 
@@ -209,6 +222,7 @@ class SQLSequenceCollection(SequenceCollection):
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
+        parameters: ParameterNamespace,
     ) -> Success[None] | Failure[PathIsSequenceError] | Failure[PathHasChildrenError]:
         children_result = self.parent_session.paths.get_children(path)
         if is_success(children_result):
@@ -296,7 +310,6 @@ class SQLSequenceCollection(SequenceCollection):
         self,
         path: PureSequencePath,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
-        global_parameters: ParameterNamespace,
     ) -> (
         Success[None]
         | Failure[PathNotFoundError]
@@ -316,7 +329,6 @@ class SQLSequenceCollection(SequenceCollection):
             )
         sequence.state = State.PREPARING
         self._set_device_configurations(path, device_configurations)
-        self._set_global_parameters(path, global_parameters)
         return Success(None)
 
     def set_running(
@@ -716,25 +728,21 @@ def _get_sequence_global_parameters(
     Success[ParameterNamespace]
     | Failure[PathNotFoundError]
     | Failure[PathIsNotSequenceError]
-    | Failure[SequenceNotLaunchedError]
 ):
     sequence_result = _query_sequence_model(session, path)
     if is_failure(sequence_result):
         return sequence_result
     sequence = sequence_result.value
 
-    if sequence.state == State.DRAFT:
-        return Failure(
-            SequenceNotLaunchedError(f"Sequence at {path} is in DRAFT state")
-        )
-
     parameters_content = sequence.parameters.content
+    if parameters_content is None:
+        # For legacy reasons, old draft sequences may not have any parameters set.
+        assert sequence.state == State.DRAFT
+        parameters = ParameterNamespace.empty()
+        sequence.parameters.content = unstructure_parameters(parameters)
+        return Success(parameters)
 
-    return Success(
-        serialization.converters["json"].structure(
-            parameters_content, ParameterNamespace
-        )
-    )
+    return Success(structure_parameters(parameters_content, ParameterNamespace))
 
 
 def _get_iteration_configuration(
@@ -829,7 +837,7 @@ def _get_shot_parameters(
     result = session.execute(stmt).scalar_one_or_none()
     if result is not None:
         return serialization.converters["json"].structure(
-            result, dict[DottedVariableName, bool | int | float | Quantity]
+            result, dict[DottedVariableName, bool | int | float | Quantity[float]]
         )
     # This will raise the proper error if the shot was not found.
     unwrap(_query_shot_model(session, path, shot_index))

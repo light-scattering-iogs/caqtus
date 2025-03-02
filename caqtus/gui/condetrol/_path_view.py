@@ -29,6 +29,7 @@ from caqtus.session import (
     PathIsSequenceError,
     PathHasChildrenError,
     State,
+    PathIsNotSequenceError,
 )
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
@@ -241,6 +242,11 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                 time_lanes = session.sequences.get_time_lanes(path)
                 if is_failure(time_lanes):
                     return
+                parameters_result = session.sequences.get_global_parameters(path)
+                assert not is_failure_type(
+                    parameters_result, (PathNotFoundError, PathIsNotSequenceError)
+                )
+                parameters = parameters_result.content()
             if text.startswith(PureSequencePath._separator()):
                 if not PureSequencePath.is_valid_path(text):
                     QMessageBox.warning(  # type: ignore[reportCallIssue]
@@ -252,7 +258,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                 path = PureSequencePath(text)
                 with self.session_maker() as session:
                     creation_result = session.sequences.create(
-                        path, iterations, time_lanes
+                        path, iterations, time_lanes, parameters
                     )
             else:
                 if not PureSequencePath.is_valid_name(text):

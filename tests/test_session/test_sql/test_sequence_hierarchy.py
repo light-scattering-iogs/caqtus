@@ -113,10 +113,18 @@ def test_deletion_1(session_maker):
 def test_sequence(session_maker, steps_configuration: StepsConfiguration, time_lanes):
     with session_maker() as session:
         p = PureSequencePath(r"\a\b\c")
-        unwrap(session.sequences.create(p, steps_configuration, time_lanes))
+        unwrap(
+            session.sequences.create(
+                p, steps_configuration, time_lanes, ParameterNamespace.empty()
+            )
+        )
         assert unwrap(session.sequences.is_sequence(p))
         with pytest.raises(PathIsSequenceError):
-            unwrap(session.sequences.create(p, steps_configuration, time_lanes))
+            unwrap(
+                session.sequences.create(
+                    p, steps_configuration, time_lanes, ParameterNamespace.empty()
+                )
+            )
 
         assert not unwrap(session.sequences.is_sequence(p.parent))
 
@@ -126,7 +134,11 @@ def test_sequence_deletion(
 ):
     with session_maker() as session:
         p = PureSequencePath(r"\test\test")
-        unwrap(session.sequences.create(p, steps_configuration, time_lanes))
+        unwrap(
+            session.sequences.create(
+                p, steps_configuration, time_lanes, ParameterNamespace.empty()
+            )
+        )
         with pytest.raises(PathIsSequenceError):
             unwrap(session.paths.delete_path(p.parent))
         assert session.sequences.is_sequence(p)
@@ -142,14 +154,22 @@ def test_sequence_deletion_1(
     # with the same path would fail.
     with session_maker() as session:
         p = PureSequencePath(r"\test")
-        unwrap(session.sequences.create(p, steps_configuration, time_lanes))
+        unwrap(
+            session.sequences.create(
+                p, steps_configuration, time_lanes, ParameterNamespace.empty()
+            )
+        )
         assert unwrap(session.sequences.is_sequence(p))
     with session_maker() as session:
         session.paths.delete_path(p, delete_sequences=True)
         with pytest.raises(PathNotFoundError):
             unwrap(session.sequences.is_sequence(p))
     with session_maker() as session:
-        unwrap(session.sequences.create(p, steps_configuration, time_lanes))
+        unwrap(
+            session.sequences.create(
+                p, steps_configuration, time_lanes, ParameterNamespace.empty()
+            )
+        )
         assert session.sequences.is_sequence(p)
 
 
@@ -158,7 +178,9 @@ def test_iteration_save(
 ):
     with session_maker() as session:
         p = PureSequencePath(r"\test\test")
-        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
+        sequence = Sequence.create(
+            p, steps_configuration, time_lanes, ParameterNamespace.empty(), session
+        )
         assert sequence.get_iteration_configuration() == steps_configuration
         new_steps_configuration = StepsConfiguration(
             steps=steps_configuration.steps + [steps_configuration.steps[0]]
@@ -176,8 +198,12 @@ def test_iteration_save(
 def test_start_date(session_maker, steps_configuration: StepsConfiguration, time_lanes):
     with session_maker() as session:
         p = PureSequencePath(r"\test\test")
-        unwrap(session.sequences.create(p, steps_configuration, time_lanes))
-        unwrap(session.sequences.set_preparing(p, {}, ParameterNamespace.empty()))
+        unwrap(
+            session.sequences.create(
+                p, steps_configuration, time_lanes, ParameterNamespace.empty()
+            )
+        )
+        unwrap(session.sequences.set_preparing(p, {}))
         unwrap(session.sequences.set_running(p, start_time="now"))
     with session_maker() as session:
         stats = unwrap(session.sequences.get_stats(p))
@@ -196,8 +222,10 @@ def test_shot_creation(
 ):
     with session_maker() as session:
         p = PureSequencePath(r"\test")
-        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
-        session.sequences.set_preparing(p, {}, ParameterNamespace.empty())
+        sequence = Sequence.create(
+            p, steps_configuration, time_lanes, ParameterNamespace.empty(), session
+        )
+        session.sequences.set_preparing(p, {})
         session.sequences.set_running(p, start_time="now")
         parameters = {
             DottedVariableName("test"): 1.0,
@@ -238,8 +266,10 @@ def test_data_not_existing(
 ):
     with session_maker() as session:
         p = PureSequencePath(r"\test")
-        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
-        session.sequences.set_preparing(p, {}, ParameterNamespace.empty())
+        sequence = Sequence.create(
+            p, steps_configuration, time_lanes, ParameterNamespace.empty(), session
+        )
+        session.sequences.set_preparing(p, {})
         session.sequences.set_running(p, start_time="now")
         parameters = {}
         data = {
@@ -271,9 +301,11 @@ def test_0(
             DeviceName("device"): DummyConfiguration(a=1, b="test", remote_server=None),
         }
         p = PureSequencePath(r"\a\b\c")
-        Sequence.create(p, steps_configuration, time_lanes, session)
+        Sequence.create(
+            p, steps_configuration, time_lanes, ParameterNamespace.empty(), session
+        )
 
-        unwrap(session.sequences.set_preparing(p, device_configurations, parameters))
+        unwrap(session.sequences.set_preparing(p, device_configurations))
 
     with session_maker() as session:
         sequence = Sequence(p, session)
@@ -289,12 +321,10 @@ def test_1(session_maker, steps_configuration: StepsConfiguration, time_lanes):
             DeviceName("device"): DummyConfiguration(a=1, b="test", remote_server=None)
         }
         p = PureSequencePath(r"\a\b\c")
-        Sequence.create(p, steps_configuration, time_lanes, session)
-        unwrap(
-            session.sequences.set_preparing(
-                p, configurations, ParameterNamespace.empty()
-            )
+        Sequence.create(
+            p, steps_configuration, time_lanes, ParameterNamespace.empty(), session
         )
+        unwrap(session.sequences.set_preparing(p, configurations))
 
     with session_maker() as session:
         sequence = Sequence(p, session)
@@ -310,7 +340,9 @@ def test_fetch_schema(
         session.set_global_parameters(
             ParameterNamespace.from_mapping({"const": Expression("12 MHz")})
         )
-        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
+        sequence = Sequence.create(
+            p, steps_configuration, time_lanes, ParameterNamespace.empty(), session
+        )
         schema = sequence.get_parameter_schema()
         assert schema == ParameterSchema(
             _constant_schema={DottedVariableName("const"): Quantity(12, Unit("MHz"))},

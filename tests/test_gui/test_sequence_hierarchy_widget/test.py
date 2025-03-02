@@ -33,13 +33,15 @@ def test_2(
     model = AsyncPathHierarchyModel(session_maker)
     with session_maker() as session:
         path = PureSequencePath(r"\test")
-        session.sequences.create(path, steps_configuration, time_lanes)
+        session.sequences.create(
+            path, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
     qtmodeltester.check(model)
     index = model.index(0, 1)
     assert index.data().state == State.DRAFT
 
     with session_maker() as session:
-        session.sequences.set_preparing(path, {}, ParameterNamespace.empty())
+        session.sequences.set_preparing(path, {})
 
     qt_trio.run(model.update_stats, model.index(0, 0))
     assert index.data().state == State.PREPARING

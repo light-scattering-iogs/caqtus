@@ -76,14 +76,8 @@ class SequenceCollection(Protocol):
         Success[ParameterNamespace]
         | Failure[PathNotFoundError]
         | Failure[PathIsNotSequenceError]
-        | Failure[SequenceNotLaunchedError]
     ):
-        """Get the global parameters that were used by this sequence.
-
-        Raises:
-            RuntimeError: If the sequence is in draft mode, since the global parameters
-            are only set once the sequence has entered the PREPARING state.
-        """
+        """Get the global parameters that are set for this sequence."""
 
         raise NotImplementedError
 
@@ -150,6 +144,7 @@ class SequenceCollection(Protocol):
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
+        parameters: ParameterNamespace,
     ) -> Success[None] | Failure[PathIsSequenceError] | Failure[PathHasChildrenError]:
         """Create a new sequence at the given path.
 
@@ -191,7 +186,6 @@ class SequenceCollection(Protocol):
         self,
         path: PureSequencePath,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
-        global_parameters: ParameterNamespace,
     ) -> (
         Success[None]
         | Failure[PathNotFoundError]
@@ -204,7 +198,6 @@ class SequenceCollection(Protocol):
             path: The path to the sequence to prepare.
             device_configurations: The configurations of the devices that were used to
                 run this sequence.
-            global_parameters: The parameters used to run the sequence.
         """
 
         raise NotImplementedError

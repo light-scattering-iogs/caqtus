@@ -24,7 +24,6 @@ from caqtus.session import (
     TracebackSummary,
     InvalidStateTransitionError,
 )
-from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils._trio_instrumentation import LogBlockingTaskInstrument
 from caqtus.utils.result import is_failure_type, Success
 from .._logger import logger
@@ -107,7 +106,6 @@ class Procedure(AbstractContextManager, abc.ABC):
     def start_sequence(
         self,
         sequence: PureSequencePath,
-        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
@@ -122,7 +120,6 @@ class Procedure(AbstractContextManager, abc.ABC):
 
         Args:
             sequence: the sequence to run.
-            global_parameters: The parameters to set for this sequence.
             If nothing is passed, it will take the current global parameters from the
             session.
             device_configurations: the device configurations to use for running this
@@ -154,7 +151,6 @@ class Procedure(AbstractContextManager, abc.ABC):
     def run_sequence(
         self,
         sequence: PureSequencePath,
-        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
@@ -171,7 +167,7 @@ class Procedure(AbstractContextManager, abc.ABC):
             Exception: if an exception occurs while running the sequence.
         """
 
-        self.start_sequence(sequence, global_parameters, device_configurations)
+        self.start_sequence(sequence, device_configurations)
         if exception := self.exception():
             raise exception
 
@@ -306,7 +302,6 @@ class BoundProcedure(Procedure):
     def start_sequence(
         self,
         sequence: PureSequencePath,
-        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
@@ -325,7 +320,6 @@ class BoundProcedure(Procedure):
         self._sequence_future = self._thread_pool.submit(
             self._run_sequence,
             sequence,
-            global_parameters,
             device_configurations,
         )
         self._sequences.append(sequence)
@@ -346,7 +340,6 @@ class BoundProcedure(Procedure):
     def _run_sequence(
         self,
         sequence: PureSequencePath,
-        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
@@ -359,7 +352,6 @@ class BoundProcedure(Procedure):
                         sequence=sequence,
                         session_maker=self._session_maker,
                         shot_retry_config=self._shot_retry_config,
-                        global_parameters=global_parameters,
                         device_configurations=device_configurations,
                         device_manager_extension=self._device_manager_extension,
                     )

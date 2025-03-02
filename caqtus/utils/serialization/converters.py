@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Callable, TypeVar
 
+import cattrs
 from cattrs.converters import Converter
 from cattrs.preconf.json import make_converter as make_json_converter, JsonConverter
 from cattrs.preconf.pyyaml import make_converter as make_yaml_converter
@@ -9,7 +10,7 @@ unstruct_collection_overrides = {tuple: tuple}
 
 T = TypeVar("T")
 
-converters = {
+converters: dict[str, cattrs.Converter] = {
     "json": make_json_converter(
         unstruct_collection_overrides=unstruct_collection_overrides
     ),

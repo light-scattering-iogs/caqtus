@@ -135,8 +135,14 @@ def copy_sequence(
     iterations = source_session.sequences.get_iteration_configuration(path)
     time_lanes = source_session.sequences.get_time_lanes(path)
     assert not is_failure_type(time_lanes, (PathNotFoundError, PathIsNotSequenceError))
+    parameter_result = source_session.sequences.get_global_parameters(path)
+    assert not is_failure_type(
+        parameter_result, (PathNotFoundError, PathIsNotSequenceError)
+    )
 
-    creation_result = destination_session.sequences.create(path, iterations, time_lanes)
+    creation_result = destination_session.sequences.create(
+        path, iterations, time_lanes, parameter_result.content()
+    )
     assert not is_failure_type(creation_result, PathIsSequenceError)
     if is_failure(creation_result):
         return creation_result
@@ -148,9 +154,8 @@ def copy_sequence(
         device_configs,
         (PathNotFoundError, PathIsNotSequenceError, SequenceNotLaunchedError),
     )
-    global_parameters = unwrap(source_session.sequences.get_global_parameters(path))
     preparing_result = destination_session.sequences.set_preparing(
-        path, device_configs.content(), global_parameters
+        path, device_configs.content()
     )
     assert not is_failure_type(preparing_result, PathNotFoundError)
     assert not is_failure_type(preparing_result, PathIsNotSequenceError)

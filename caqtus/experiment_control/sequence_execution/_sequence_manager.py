@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import copy
 from collections.abc import Mapping, AsyncGenerator, AsyncIterable
 from typing import Optional
 
@@ -20,7 +19,6 @@ from caqtus.shot_compilation import (
     SequenceContext,
 )
 from caqtus.types.iteration import StepsConfiguration
-from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import split_recoverable
 from caqtus.types.timelane.timelane import TimeLanes
 from caqtus.utils.result import unwrap
@@ -38,7 +36,6 @@ async def run_sequence(
     sequence: PureSequencePath,
     session_maker: ExperimentSessionMaker,
     shot_retry_config: Optional[ShotRetryConfig],
-    global_parameters: Optional[ParameterNamespace],
     device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
     device_manager_extension: DeviceManagerExtensionProtocol,
     shot_runner_factory: ShotRunnerFactory = create_shot_runner,
@@ -57,14 +54,6 @@ async def run_sequence(
             by the sequence manager and the shot will be retried according to the
             configuration in this object.
 
-        global_parameters: The global parameters to use to run the sequence.
-
-            These parameters will be saved as the global parameters for the sequence
-            when it is prepared.
-
-            If None, the sequence manager will use the default global parameters stored
-            in the session.
-
         device_configurations: The device configurations to use to run the sequence.
 
             These configurations will be saved as the configurations used for the
@@ -79,6 +68,12 @@ async def run_sequence(
 
         shot_compiler_factory: A function that can be used to create an object to
             compile shots.
+
+        .. Warning::
+
+            This function will use the parameters of the sequence, not the default
+            parameters of the experiment. If you want to use the default parameters,
+            you need to update the sequence before calling this function.
     """
 
     with session_maker.session() as session:
@@ -89,7 +84,6 @@ async def run_sequence(
         sequence=sequence,
         session_maker=session_maker,
         shot_retry_config=shot_retry_config,
-        global_parameters=global_parameters,
         device_configurations=device_configurations,
         device_manager_extension=device_manager_extension,
         shot_runner_factory=shot_runner_factory,
@@ -106,7 +100,6 @@ class SequenceManager:
         sequence: PureSequencePath,
         session_maker: ExperimentSessionMaker,
         shot_retry_config: Optional[ShotRetryConfig],
-        global_parameters: Optional[ParameterNamespace],
         device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
         device_manager_extension: DeviceManagerExtensionProtocol,
         shot_runner_factory: ShotRunnerFactory,
@@ -121,10 +114,9 @@ class SequenceManager:
                 self.device_configurations = dict(session.default_device_configurations)
             else:
                 self.device_configurations = dict(device_configurations)
-            if global_parameters is None:
-                self.sequence_parameters = session.get_global_parameters()
-            else:
-                self.sequence_parameters = copy.deepcopy(global_parameters)
+            self.sequence_parameters = session.sequences.get_global_parameters(
+                sequence
+            ).unwrap()
 
             # It is critical to lock the sequence state by setting it to PREPARING in
             # the same transaction that retrieves the sequence configuration.
@@ -134,7 +126,6 @@ class SequenceManager:
             session.sequences.set_preparing(
                 self._sequence_path,
                 self.device_configurations,
-                self.sequence_parameters,
             )
             time_lanes = session.sequences.get_time_lanes(self._sequence_path)
             if is_failure(time_lanes):

@@ -40,6 +40,7 @@ from caqtus.types.iteration import (
     Unknown,
     IterationConfiguration,
 )
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.utils.result import (
     is_failure,
@@ -731,7 +732,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         new_path = parent_data.path / name
         with self.session_maker() as session, self._background_runner.suspend():
             creation_result = session.sequences.create(
-                new_path, iteration_config, time_lanes
+                new_path, iteration_config, time_lanes, ParameterNamespace.empty()
             )
             if is_failure(creation_result):
                 return creation_result

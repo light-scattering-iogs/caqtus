@@ -77,6 +77,7 @@ class Sequence:
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
+        parameters: ParameterNamespace,
         session: ExperimentSession,
     ) -> Self:
         """Create a new sequence in the session.
@@ -86,11 +87,16 @@ class Sequence:
             iteration_configuration: How the sequence parameters should be iterated
                 over.
             time_lanes: How the shots should be run.
+            parameters: The parameters to set for the sequence.
             session: The session in which the sequence should be created.
                 The session must be active.
         """
 
-        unwrap(session.sequences.create(path, iteration_configuration, time_lanes))
+        unwrap(
+            session.sequences.create(
+                path, iteration_configuration, time_lanes, parameters
+            )
+        )
         return cls(path, session)
 
     def __str__(self) -> str:
@@ -182,7 +188,10 @@ class Sequence:
 
         iteration_configuration = self.get_iteration_configuration()
         time_lanes = self.get_time_lanes()
-        self.create(target_path, iteration_configuration, time_lanes, self.session)
+        parameters = self.get_global_parameters()
+        self.create(
+            target_path, iteration_configuration, time_lanes, parameters, self.session
+        )
         return Sequence(target_path, self.session)
 
     def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:

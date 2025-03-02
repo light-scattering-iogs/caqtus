@@ -136,7 +136,9 @@ def draft_sequence(
 ) -> Generator[PureSequencePath, None, None]:
     path = PureSequencePath(r"\test")
     with session_maker.session() as session:
-        session.sequences.create(path, steps_configuration, time_lanes)
+        session.sequences.create(
+            path, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
     yield path
     with session_maker.session() as session:
         session.paths.delete_path(path, delete_sequences=True)
@@ -145,7 +147,7 @@ def draft_sequence(
 @pytest.fixture
 def initializing_sequence(session_maker, draft_sequence) -> PureSequencePath:
     with session_maker.session() as session:
-        session.sequences.set_preparing(draft_sequence, {}, ParameterNamespace.empty())
+        session.sequences.set_preparing(draft_sequence, {})
     return draft_sequence
 
 

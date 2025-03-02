@@ -1,6 +1,7 @@
 from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyModel
 from caqtus.gui.qtutil import qt_trio
 from caqtus.session import PureSequencePath
+from caqtus.types.parameter import ParameterNamespace
 
 
 def test_0(session_maker, qtmodeltester, qtbot):
@@ -47,7 +48,9 @@ def test_2(session_maker, qtmodeltester, steps_configuration, time_lanes, qtbot)
     qtmodeltester.check(model)
 
     with session_maker() as session:
-        session.sequences.create(path, steps_configuration, time_lanes)
+        session.sequences.create(
+            path, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
 
     qt_trio.run(model.prune)
     assert model.rowCount() == 1

@@ -70,7 +70,9 @@ def test_move_sequence(session_maker, steps_configuration, time_lanes):
     with session_maker() as session:
         sequence_path = PureSequencePath.root() / "sequence"
 
-        session.sequences.create(sequence_path, steps_configuration, time_lanes)
+        session.sequences.create(
+            sequence_path, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
 
         dst = PureSequencePath.root() / "dst"
         session.paths.move(sequence_path, dst)
@@ -128,7 +130,9 @@ def test_cant_move_with_sequence_in_dst_path(
 
         sequence_path = PureSequencePath.root() / "sequence"
 
-        session.sequences.create(sequence_path, steps_configuration, time_lanes)
+        session.sequences.create(
+            sequence_path, steps_configuration, time_lanes, ParameterNamespace.empty()
+        )
 
         dst = sequence_path / "dst"
         with pytest.raises(PathIsSequenceError):
@@ -140,8 +144,12 @@ def test_cant_move_running_sequence(session_maker, steps_configuration, time_lan
         src = PureSequencePath.root() / "src"
         unwrap(session.paths.create_path(src))
 
-        unwrap(session.sequences.create(src, steps_configuration, time_lanes))
-        unwrap(session.sequences.set_preparing(src, {}, ParameterNamespace.empty()))
+        unwrap(
+            session.sequences.create(
+                src, steps_configuration, time_lanes, ParameterNamespace.empty()
+            )
+        )
+        unwrap(session.sequences.set_preparing(src, {}))
         unwrap(session.sequences.set_running(src, start_time="now"))
 
         dst = PureSequencePath.root() / "dst"
