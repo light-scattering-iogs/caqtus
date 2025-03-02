@@ -19,17 +19,13 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
 )
 
-from caqtus.gui._common.sequence_hierarchy import (
-    AsyncPathHierarchyView,
-)
+from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyView
 from caqtus.gui.qtutil import temporary_widget
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
     PathIsRootError,
     PathNotFoundError,
-)
-from caqtus.session import (
     PathIsSequenceError,
     PathHasChildrenError,
     State,
