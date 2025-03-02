@@ -3,6 +3,7 @@ import datetime
 from collections.abc import Mapping
 from typing import Protocol, Optional
 
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
@@ -169,4 +170,17 @@ class AsyncSequenceCollection(Protocol):
         | Failure[PathIsNotSequenceError]
         | Failure[SequenceNotRunningError]
     ):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_device_configurations(
+        self, path: PureSequencePath
+    ) -> (
+        Success[Mapping[DeviceName, DeviceConfiguration]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        """Get the device configurations that are used by this sequence."""
+
         raise NotImplementedError

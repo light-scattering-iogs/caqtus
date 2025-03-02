@@ -204,13 +204,7 @@ class SequenceCollection(Protocol):
         | Failure[PathIsNotSequenceError]
         | Failure[SequenceNotLaunchedError]
     ):
-        """Get the device configurations that are used by this sequence.
-
-        Raises:
-            RuntimeError: If the sequence is in draft mode, since the device
-            configurations are only set once the sequence has entered the PREPARING
-            state.
-        """
+        """Get the device configurations that are used by this sequence."""
 
         raise NotImplementedError
 

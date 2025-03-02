@@ -480,23 +480,9 @@ class SQLSequenceCollection(SequenceCollection):
         | Failure[PathIsNotSequenceError]
         | Failure[SequenceNotLaunchedError]
     ):
-        sequence_result = _query_sequence_model(self._get_sql_session(), path)
-        if is_failure(sequence_result):
-            return sequence_result
-        sequence = sequence_result.content()
-        if sequence.state == State.DRAFT:
-            return Failure(
-                SequenceNotLaunchedError(f"Sequence at {path} is in DRAFT state")
-            )
-
-        device_configurations = {}
-
-        for device_configuration in sequence.device_configurations:
-            constructed = self.serializer.load_device_configuration(
-                device_configuration.device_type, device_configuration.content
-            )
-            device_configurations[device_configuration.name] = constructed
-        return Success(device_configurations)
+        return _get_device_configurations(
+            self._get_sql_session(), path, self.serializer
+        )
 
     def get_stats(
         self, path: PureSequencePath
@@ -1071,6 +1057,33 @@ def _query_shot_model(
                 return failure
             case _:
                 assert_never(sequence_model_result)
+
+
+def _get_device_configurations(
+    session: Session, path: PureSequencePath, serializer: SerializerProtocol
+) -> (
+    Success[dict[DeviceName, DeviceConfiguration]]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[SequenceNotLaunchedError]
+):
+    sequence_result = _query_sequence_model(session, path)
+    if is_failure(sequence_result):
+        return sequence_result
+    sequence = sequence_result.content()
+    if sequence.state == State.DRAFT:
+        return Failure(
+            SequenceNotLaunchedError(f"Sequence at {path} is in DRAFT state")
+        )
+
+    device_configurations = {}
+
+    for device_configuration in sequence.device_configurations:
+        constructed = serializer.load_device_configuration(
+            device_configuration.device_type, device_configuration.content
+        )
+        device_configurations[device_configuration.name] = constructed
+    return Success(device_configurations)
 
 
 def _reset_to_draft(

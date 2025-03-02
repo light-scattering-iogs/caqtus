@@ -35,6 +35,7 @@ from ._sequence_collection import (
     _get_exceptions,
     _create_shot,
     _reset_to_draft,
+    _get_device_configurations,
 )
 from ._serializer import SerializerProtocol
 from .._data_id import DataId
@@ -58,6 +59,7 @@ from ..async_session import (
     AsyncPathHierarchy,
     AsyncSequenceCollection,
 )
+from ...device import DeviceName, DeviceConfiguration
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -253,6 +255,16 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         | Failure[SequenceNotLaunchedError]
     ):
         return await self._run_sync(_get_sequence_global_parameters, path)
+
+    async def get_device_configurations(
+        self, path: PureSequencePath
+    ) -> (
+        Success[Mapping[DeviceName, DeviceConfiguration]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        return await self._run_sync(_get_device_configurations, path, self.serializer)
 
     async def get_iteration_configuration(
         self, path: PureSequencePath
