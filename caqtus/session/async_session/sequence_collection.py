@@ -19,9 +19,9 @@ from .._exceptions import (
     InvalidStateTransitionError,
     SequenceNotEditableError,
     SequenceNotCrashedError,
+    PathNotFoundError,
 )
 from .._path import PureSequencePath
-from .._path_hierarchy import PathNotFoundError
 from .._sequence_collection import SequenceStats
 from .._shot_id import ShotId
 from .._state import State

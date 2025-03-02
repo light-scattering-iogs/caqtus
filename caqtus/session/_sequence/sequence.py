@@ -17,9 +17,8 @@ from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.result._result import is_failure
 from .shot import Shot
 from .._exception_summary import TracebackSummary
-from .._exceptions import PathIsNotSequenceError
+from .._exceptions import PathIsNotSequenceError, PathNotFoundError
 from .._path import PureSequencePath
-from .._path_hierarchy import PathNotFoundError
 from .._state import State
 from ...utils.result import is_failure_type, unwrap
 

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from caqtus.session import PathError
+
+class PathError(RuntimeError):
+    """Base class for all path errors."""
+
+    pass
 
 
 class PathIsSequenceError(PathError):
@@ -72,5 +76,35 @@ class SequenceNotCrashedError(SequenceStateError):
 
 class ShotNotFoundError(RuntimeError):
     """Raised when a shot is not found in a sequence."""
+
+    pass
+
+
+class PathNotFoundError(PathError):
+    """Raised when a path is not found in the session."""
+
+    pass
+
+
+class PathIsRootError(PathError):
+    """Raised when an invalid operation is performed on the root path."""
+
+    pass
+
+
+class PathHasChildrenError(PathError):
+    """Raised when an invalid operation is performed on a path that has children."""
+
+    pass
+
+
+class PathExistsError(PathError):
+    """Raised when a path already exists in the session."""
+
+    pass
+
+
+class RecursivePathMoveError(PathError):
+    """Raised when an invalid move operation is performed."""
 
     pass

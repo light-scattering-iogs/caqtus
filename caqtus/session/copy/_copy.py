@@ -19,10 +19,12 @@ from .._exceptions import (
     SequenceStateError,
     InvalidStateTransitionError,
     SequenceNotCrashedError,
+    PathNotFoundError,
+    PathIsRootError,
+    PathHasChildrenError,
 )
 from .._experiment_session import ExperimentSession
 from .._path import PureSequencePath
-from .._path_hierarchy import PathNotFoundError, PathIsRootError, PathHasChildrenError
 from .._session_maker import ExperimentSessionMaker
 from .._shot_id import ShotId
 from .._state import State

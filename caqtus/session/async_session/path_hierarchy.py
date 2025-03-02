@@ -5,9 +5,8 @@ from datetime import datetime
 from typing import Protocol
 
 from caqtus.utils.result import Success, Failure
-from .._exceptions import PathIsSequenceError
+from .._exceptions import PathIsSequenceError, PathNotFoundError, PathIsRootError
 from .._path import PureSequencePath
-from .._path_hierarchy import PathNotFoundError, PathIsRootError
 
 
 class AsyncPathHierarchy(Protocol):

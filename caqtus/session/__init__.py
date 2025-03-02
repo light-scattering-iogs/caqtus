@@ -13,16 +13,14 @@ from ._exceptions import (
     SequenceNotEditableError,
     SequenceNotCrashedError,
     ShotNotFoundError,
-    SequenceNotLaunchedError
-)
-from ._experiment_session import ExperimentSession
-from ._path import PureSequencePath, InvalidPathFormatError
-from ._path_hierarchy import (
+    SequenceNotLaunchedError,
     PathError,
     PathNotFoundError,
     PathIsRootError,
     PathHasChildrenError,
 )
+from ._experiment_session import ExperimentSession
+from ._path import PureSequencePath, InvalidPathFormatError
 from ._path_hierarchy import PathHierarchy
 from ._sequence import Sequence, Shot
 from ._sequence_collection import (

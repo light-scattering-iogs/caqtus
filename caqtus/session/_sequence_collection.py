@@ -22,10 +22,11 @@ from ._exceptions import (
     InvalidStateTransitionError,
     SequenceNotEditableError,
     SequenceNotCrashedError,
+    PathNotFoundError,
+    PathHasChildrenError,
 )
 from ._exceptions import SequenceNotRunningError, SequenceNotLaunchedError
 from ._path import PureSequencePath
-from ._path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ._shot_id import ShotId
 from ._state import State
 

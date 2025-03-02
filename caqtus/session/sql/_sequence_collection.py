@@ -61,9 +61,11 @@ from .._exceptions import (
     SequenceNotEditableError,
     SequenceNotCrashedError,
     ShotNotFoundError,
+    PathNotFoundError,
+    PathIsRootError,
+    PathHasChildrenError,
 )
 from .._path import PureSequencePath
-from .._path_hierarchy import PathNotFoundError, PathHasChildrenError, PathIsRootError
 from .._sequence_collection import SequenceCollection, SequenceStats
 from .._shot_id import ShotId
 from .._state import State
