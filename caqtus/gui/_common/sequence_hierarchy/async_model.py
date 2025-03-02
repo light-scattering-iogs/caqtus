@@ -30,11 +30,9 @@ from caqtus.session import (
     AsyncExperimentSession,
     PathIsRootError,
     PathHasChildrenError,
-)
-from caqtus.session import (
-    PathNotFoundError,
     PathIsSequenceError,
     PathIsNotSequenceError,
+    PathNotFoundError,
     State,
 )
 from caqtus.session._sequence_collection import SequenceStats

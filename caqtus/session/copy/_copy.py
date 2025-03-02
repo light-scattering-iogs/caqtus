@@ -12,16 +12,17 @@ from caqtus.utils.result import (
     unwrap,
 )
 from .._exception_summary import TracebackSummary
+from .._exceptions import (
+    SequenceNotLaunchedError,
+    PathIsSequenceError,
+    PathIsNotSequenceError,
+    SequenceStateError,
+    InvalidStateTransitionError,
+    SequenceNotCrashedError,
+)
 from .._experiment_session import ExperimentSession
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError, PathHasChildrenError
-from .._sequence_collection import InvalidStateTransitionError, SequenceNotLaunchedError
-from .._sequence_collection import (
-    PathIsNotSequenceError,
-    PathIsSequenceError,
-    SequenceStateError,
-    SequenceNotCrashedError,
-)
 from .._session_maker import ExperimentSessionMaker
 from .._shot_id import ShotId
 from .._state import State

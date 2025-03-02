@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from datetime import datetime
-from typing import Protocol, TYPE_CHECKING
+from typing import Protocol
 
 from caqtus.utils.result import Success, Failure
+from .._exceptions import PathIsSequenceError
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
-
-if TYPE_CHECKING:
-    from .._sequence_collection import PathIsSequenceError
 
 
 class AsyncPathHierarchy(Protocol):
