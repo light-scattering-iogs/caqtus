@@ -242,7 +242,7 @@ class PostgreSQLStorageManager(SQLStorageManager):
             port=config.port,
             database=config.database,
         )
-        engine = create_engine(sync_url, isolation_level="REPEATABLE READ")
+        engine = create_engine(sync_url, isolation_level="SERIALIZABLE")
         async_url = URL.create(
             "postgresql+psycopg",
             username=config.username,
@@ -251,7 +251,7 @@ class PostgreSQLStorageManager(SQLStorageManager):
             port=config.port,
             database=config.database,
         )
-        async_engine = create_async_engine(async_url, isolation_level="REPEATABLE READ")
+        async_engine = create_async_engine(async_url, isolation_level="SERIALIZABLE")
         self.config = config
 
         super().__init__(serializer, engine, async_engine)
