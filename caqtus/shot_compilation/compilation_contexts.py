@@ -10,7 +10,7 @@ from caqtus.types.variable_name import DottedVariableName
 from .timing import to_time, get_step_bounds, Time
 from ..formatter import fmt
 from ..types.expression import Expression
-from ..types.parameter import NotQuantityError, Parameters
+from ..types.parameter import NotQuantityError, Parameters, ParameterSchema
 from ..types.recoverable_exceptions import InvalidValueError, EvaluationError
 from ..types.units import (
     DimensionalityError,
@@ -30,6 +30,7 @@ class SequenceContext:
     """Contains information about a sequence being compiled."""
 
     _device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    _parameter_schema: ParameterSchema
     _time_lanes: TimeLanes
 
     def get_device_configuration(self, device_name: DeviceName) -> DeviceConfiguration:
@@ -45,6 +46,11 @@ class SequenceContext:
         """Returns all device configurations available in this sequence."""
 
         return self._device_configurations
+
+    def get_parameter_schema(self) -> ParameterSchema:
+        """Returns the schema for the parameters of the sequence."""
+
+        return self._parameter_schema
 
     def get_lane(self, name: str) -> TimeLane:
         """Returns the time lane with the given name.
@@ -256,8 +262,7 @@ def evaluate_step_durations(
         except DimensionalityError as error:
             raise InvalidDimensionalityError(
                 fmt(
-                    "Couldn't convert {:expression} for duration of {:step} to "
-                    "seconds",
+                    "Couldn't convert {:expression} for duration of {:step} to seconds",
                     duration,
                     (step, name),
                 )
