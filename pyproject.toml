@@ -110,7 +110,6 @@ exclude = ["**/*_ui.py", "caqtus/gui/_common/NodeGraphQt"]
 dev = [
     "black>=24.10.0",
     "hypothesis>=6.124.2",
-    "ipython>=8.32.0",
     "jupyter>=1.0.0",
     "matplotlib>=3.10.0",
     "nbsphinx>=0.9.7",
