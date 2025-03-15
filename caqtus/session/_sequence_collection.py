@@ -6,9 +6,10 @@ from collections.abc import Mapping, Set, Iterable
 from typing import Protocol, Optional, Literal, TYPE_CHECKING
 
 import attrs
+import polars
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.types.data import DataLabel, Data
+from caqtus.types.data import DataLabel, Data, DataType
 from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace, ParameterSchema
 from caqtus.types.timelane import TimeLanes
@@ -434,6 +435,47 @@ class SequenceCollection(Protocol):
 
         schema = iterations.get_parameter_schema(initial_values)
         return Success(schema)
+
+    def get_data_schema(
+        self, path: PureSequencePath
+    ) -> (
+        Success[Mapping[DataLabel, DataType]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        device_configurations_result = self.get_device_configurations(path)
+        if is_failure(device_configurations_result):
+            return device_configurations_result
+        device_configurations = device_configurations_result.content()
+        parameter_schema_result = self.get_parameter_schema(path)
+        if is_failure(parameter_schema_result):
+            return parameter_schema_result
+        parameter_schema = parameter_schema_result.content()
+        time_lanes = self.get_time_lanes(path)
+        if is_failure(time_lanes):
+            return time_lanes
+        schema = {}
+        for device_name, device_configuration in device_configurations.items():
+            device_schema = {
+                f"{device_name}\\{label}": data_type
+                for label, data_type in device_configuration.get_data_schema(
+                    parameter_schema, time_lanes
+                ).items()
+            }
+            schema.update(device_schema)
+        return Success(schema)
+
+    @abc.abstractmethod
+    def scan(
+        self, path: PureSequencePath
+    ) -> (
+        Success[polars.LazyFrame]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        raise NotImplementedError
 
 
 @attrs.frozen

@@ -81,6 +81,7 @@ def initialized_database_config(postgresql_initialized) -> PostgreSQLConfig:
 @pytest.fixture
 def session_maker(initialized_database_config) -> ExperimentSessionMaker:
     exp = Experiment(initialized_database_config)
+    exp.setup_default_extensions()
     exp._extension.device_configurations_serializer.register_device_configuration(
         DummyConfiguration, DummyConfiguration.dump, DummyConfiguration.load
     )

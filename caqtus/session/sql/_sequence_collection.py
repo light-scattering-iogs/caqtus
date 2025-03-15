@@ -13,6 +13,7 @@ from typing import (
 import attrs
 import cattrs
 import numpy as np
+import polars
 import sqlalchemy.orm
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -37,6 +38,7 @@ from caqtus.utils.result import (
     is_failure,
     unwrap,
 )
+from ._lazy_load import scan, structure_shot_sql_data
 from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -562,6 +564,41 @@ class SQLSequenceCollection(SequenceCollection):
         result = self._get_sql_session().execute(stmt).scalars().all()
         return (PureSequencePath(row.path) for row in result)
 
+    def scan(
+        self, path: PureSequencePath
+    ) -> (
+        Success[polars.LazyFrame]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        session = self._get_sql_session()
+        sequence_model_result = _query_sequence_model(session, path)
+        if is_failure(sequence_model_result):
+            return sequence_model_result
+        sequence_model = sequence_model_result.content()
+        parameter_schema_result = self.get_parameter_schema(path)
+        assert not is_failure_type(
+            parameter_schema_result, (PathNotFoundError, PathIsNotSequenceError)
+        )
+        parameter_schema = parameter_schema_result.content()
+        if sequence_model.state == State.DRAFT:
+            return Failure(SequenceNotLaunchedError(path))
+        data_schema_result = self.get_data_schema(path)
+        assert not is_failure_type(
+            data_schema_result,
+            (PathNotFoundError, PathIsNotSequenceError, SequenceNotLaunchedError),
+        )
+        data_schema = data_schema_result.content()
+        return Success(
+            scan(
+                session,
+                sequence_model,
+                {str(k): v for k, v in parameter_schema.items()},
+                {str(k): v for k, v in data_schema.items()},
+            )
+        )
+
     def _query_path_model(
         self, path: PureSequencePath
     ) -> (
@@ -891,11 +928,9 @@ def _get_all_shot_data(
     structured_data = shot_model.structured_data
     result = {}
     for array in arrays:
-        result[array.label] = np.frombuffer(array.bytes_, dtype=array.dtype).reshape(
-            array.shape
-        )
+        result[array.label] = structure_shot_sql_data(array)
     for data in structured_data:
-        result[data.label] = data.content
+        result[data.label] = structure_shot_sql_data(data)
     return result
 
 
@@ -934,14 +969,14 @@ def _get_shot_start_time(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> datetime.datetime:
     shot_model = unwrap(_query_shot_model(session, path, shot_index))
-    return shot_model.start_time.replace(tzinfo=datetime.timezone.utc)
+    return shot_model.get_start_time()
 
 
 def _get_shot_end_time(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> datetime.datetime:
     shot_model = unwrap(_query_shot_model(session, path, shot_index))
-    return shot_model.end_time.replace(tzinfo=datetime.timezone.utc)
+    return shot_model.get_end_time()
 
 
 def _query_data_model(
@@ -1124,7 +1159,7 @@ def _reset_to_draft(
 
 
 def serialize_data(
-    data: Mapping[DataLabel, Data]
+    data: Mapping[DataLabel, Data],
 ) -> tuple[list[SQLShotArray], list[SQLStructuredShotData]]:
     arrays = []
     structured_data = []

@@ -5,9 +5,9 @@ from ._analog_value import (
     is_quantity,
     NotQuantityError,
 )
-from ._parameter import Parameter, is_parameter, Parameters
+from ._parameter import Parameter, is_parameter, Parameters, converter
 from ._parameter_namespace import ParameterNamespace
-from ._schema import ParameterSchema
+from ._schema import ParameterSchema, ParameterType
 
 __all__ = [
     "AnalogValue",
@@ -20,4 +20,6 @@ __all__ = [
     "is_quantity",
     "NotQuantityError",
     "ParameterSchema",
+    "ParameterType",
+    "converter",
 ]

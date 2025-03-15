@@ -153,7 +153,7 @@ def _(
 def default_iteration_configuration_constructor(
     iteration_content,
 ) -> IterationConfiguration:
-    iteration_type = iteration_content.pop("type")
+    iteration_type = iteration_content["type"]
     if iteration_type == "steps":
         return serialization.converters["json"].structure(
             iteration_content, StepsConfiguration

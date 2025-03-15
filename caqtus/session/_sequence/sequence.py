@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional, Self, Literal, assert_never
 
 import attrs
 import polars
+from typing_extensions import deprecated
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel
@@ -263,6 +264,54 @@ class Sequence:
 
         return unwrap(self.session.sequences.get_parameter_schema(self.path))
 
+    def scan(self) -> polars.LazyFrame:
+        r"""Lazily read the data of the shots that have been run for this sequence.
+
+        Calling this function does not yet load any data.
+        Instead, you should apply operations on the returned lazyframe and then call
+        :meth:`polars.LazyFrame.collect` to load the data.
+        This will only fetch the data necessary to perform the requested operations.
+
+        Returns:
+            A lazy dataframe that can be used to fetch the data of the shots that
+            have been run for this sequence.
+            Each row in the dataframe corresponds to a shot.
+
+            The first columns contain the following metadata:
+
+                * sequence: The name of the sequence the shot belongs to.
+                * shot_index: The index of the shot in the sequence.
+                * shot_start_time: The time the shot started.
+                * shot_end_time: The time the shot ended.
+
+            The dataframe then contains columns for all the shot parameters and
+            generated data.
+
+        Example:
+
+        >>> data = sequence.scan().head().collect()
+        ┌──────────┬────────────┬─────────────────────┬────────────────────┬──────────┬────────────────────┐
+        │ sequence ┆ shot_index ┆ shot_start_time     ┆ shot_end_time      ┆ exposure ┆ Camera\picture 1   │
+        │ ---      ┆ ---        ┆ ---                 ┆ ---                ┆ ---      ┆ ---                │
+        │ cat      ┆ u64        ┆ datetime[ms, UTC]   ┆ datetime[ms, UTC]  ┆ f64      ┆ array[u32, (100,   │
+        │          ┆            ┆                     ┆                    ┆          ┆ 100)]              │
+        ╞══════════╪════════════╪═════════════════════╪════════════════════╪══════════╪════════════════════╡
+        │ \test    ┆ 0          ┆ 2025-03-15          ┆ 2025-03-15         ┆ 0.0      ┆ [[0, 0, … 0], [0,  │
+        │          ┆            ┆ 14:03:30.476 UTC    ┆ 14:03:30.476 UTC   ┆          ┆ 0, … 0], … […      │
+        │ \test    ┆ 1          ┆ 2025-03-15          ┆ 2025-03-15         ┆ 1.0      ┆ [[1, 1, … 1], [1,  │
+        │          ┆            ┆ 14:03:30.478 UTC    ┆ 14:03:30.478 UTC   ┆          ┆ 1, … 1], … […      │
+        │ \test    ┆ 2          ┆ 2025-03-15          ┆ 2025-03-15         ┆ 2.0      ┆ [[2, 2, … 2], [2,  │
+        │          ┆            ┆ 14:03:30.486 UTC    ┆ 14:03:30.486 UTC   ┆          ┆ 2, … 2], … […      │
+        │ \test    ┆ 3          ┆ 2025-03-15          ┆ 2025-03-15         ┆ 3.0      ┆ [[3, 3, … 3], [3,  │
+        │          ┆            ┆ 14:03:30.490 UTC    ┆ 14:03:30.490 UTC   ┆          ┆ 3, … 3], … […      │
+        │ \test    ┆ 4          ┆ 2025-03-15          ┆ 2025-03-15         ┆ 4.0      ┆ [[4, 4, … 4], [4,  │
+        │          ┆            ┆ 14:03:30.492 UTC    ┆ 14:03:30.492 UTC   ┆          ┆ 4, … 4], … […      │
+        └──────────┴────────────┴─────────────────────┴────────────────────┴──────────┴────────────────────┘
+        """  # noqa: E501
+
+        return self.session.sequences.scan(self.path).unwrap()
+
+    @deprecated("use sequence.scan() instead")
     def load_shots_data(
         self,
         importer: "DataImporter",
@@ -281,6 +330,10 @@ class Sequence:
         Yields:
             Dataframes containing the data of the shots in the sequence ordered by shot
             index.
+
+        .. deprecated:: 6.24.0
+
+            Use :meth:`scan` instead as it is faster and easier to use.
         """
 
         if tags is not None:
