@@ -16,6 +16,7 @@ from caqtus.device import DeviceName
 from caqtus.device.runtime import Device
 from caqtus.shot_compilation import SequenceContext
 from caqtus.types.data import DataType, DataLabel
+from caqtus.utils.result import Success, Failure
 
 DeviceServerName = NewType("DeviceServerName", str)
 
@@ -48,8 +49,12 @@ class DeviceConfiguration(Generic[DeviceType]):
 
     def get_data_schema(
         self, name: DeviceName, sequence_context: SequenceContext
-    ) -> Mapping[DataLabel, DataType]:
-        return {}
+    ) -> Success[Mapping[DataLabel, DataType]] | Failure[DataSchemaError]:
+        return Success({})
+
+
+class DataSchemaError(Exception):
+    """An error occurred while trying to get the data schema."""
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)

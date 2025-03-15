@@ -465,7 +465,9 @@ class SequenceCollection(Protocol):
                 f"{device_name}\\{label}": data_type
                 for label, data_type in device_configuration.get_data_schema(
                     device_name, sequence_context
-                ).items()
+                )
+                .unwrap()
+                .items()
             }
             schema.update(device_schema)
         return Success(schema)
