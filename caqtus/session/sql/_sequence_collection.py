@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Mapping, Iterable, Set
+from collections.abc import Mapping, Iterable, Set, Iterator
 from typing import (
     TYPE_CHECKING,
     Optional,
@@ -13,9 +13,12 @@ from typing import (
 import attrs
 import cattrs
 import numpy as np
+import polars
 import sqlalchemy.orm
+from polars.io.plugins import register_io_source
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from tqdm.auto import tqdm
 
 from caqtus.types.data import Data
 from caqtus.types.data import is_data, DataLabel
@@ -561,6 +564,74 @@ class SQLSequenceCollection(SequenceCollection):
         result = self._get_sql_session().execute(stmt).scalars().all()
         return (PureSequencePath(row.path) for row in result)
 
+    def lazy_load(
+        self, path: PureSequencePath
+    ) -> (
+        Success[polars.LazyFrame]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        session = self._get_sql_session()
+        sequence_model_result = _query_sequence_model(session, path)
+        if is_failure(sequence_model_result):
+            return sequence_model_result
+        sequence_model = sequence_model_result.content()
+        if sequence_model.state == State.DRAFT:
+            return Failure(SequenceNotLaunchedError(path))
+        schema = {
+            "sequence": polars.Categorical(ordering="lexical"),
+            "shot_index": polars.UInt64,
+            "shot_start_time": polars.Datetime,
+            "shot_end_time": polars.Datetime,
+        }
+
+        def load(
+            with_columns: list[str] | None,
+            predicate: polars.Expr | None,
+            n_rows: int | None,
+            batch_size: int | None,
+        ) -> Iterator[polars.DataFrame]:
+            if with_columns is None:
+                restrained_schema = schema
+            else:
+                restrained_schema = {column: schema[column] for column in with_columns}
+            if n_rows is None:
+                number_shots_to_load = sequence_model.number_shots()
+            else:
+                number_shots_to_load = min(n_rows, sequence_model.number_shots())
+            if batch_size is None:
+                batch_size = 10
+
+            shots_query = (
+                select(SQLShot)
+                .where(
+                    SQLShot.sequence == sequence_model,
+                    SQLShot.index < number_shots_to_load,
+                )
+                .order_by(SQLShot.index)
+                .execution_options(yield_per=batch_size)
+            )
+            for shot in tqdm(
+                session.execute(shots_query).scalars(), total=number_shots_to_load
+            ):
+                shot_data = {
+                    "sequence": (str(path),),
+                    "shot_index": (shot.index,),
+                }
+                if with_columns is None or "shot_start_time" in with_columns:
+                    shot_data["shot_start_time"] = (shot.get_start_time(),)
+                if with_columns is None or "shot_end_time" in with_columns:
+                    shot_data["shot_end_time"] = (shot.get_end_time(),)
+                df = polars.DataFrame(shot_data, schema=restrained_schema)
+                if with_columns is not None:
+                    df = df.select(with_columns)
+                if predicate is not None:
+                    df = df.filter(predicate)
+                yield df
+
+        return Success(register_io_source(load, schema))
+
     def _query_path_model(
         self, path: PureSequencePath
     ) -> (
@@ -933,14 +1004,14 @@ def _get_shot_start_time(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> datetime.datetime:
     shot_model = unwrap(_query_shot_model(session, path, shot_index))
-    return shot_model.start_time.replace(tzinfo=datetime.timezone.utc)
+    return shot_model.get_start_time()
 
 
 def _get_shot_end_time(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> datetime.datetime:
     shot_model = unwrap(_query_shot_model(session, path, shot_index))
-    return shot_model.end_time.replace(tzinfo=datetime.timezone.utc)
+    return shot_model.get_end_time()
 
 
 def _query_data_model(

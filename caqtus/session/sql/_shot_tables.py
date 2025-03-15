@@ -42,6 +42,16 @@ class SQLShot(Base):
         passive_deletes=True,
     )
 
+    def get_start_time(self) -> datetime.datetime:
+        """Return the start time with the correct timezone."""
+
+        return self.start_time.replace(tzinfo=datetime.timezone.utc)
+
+    def get_end_time(self) -> datetime.datetime:
+        """Return the end time with the correct timezone."""
+
+        return self.end_time.replace(tzinfo=datetime.timezone.utc)
+
 
 # Shot parameters are stored as a single JSON row per shot, which is a dictionary
 # mapping parameter names to values.

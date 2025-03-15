@@ -6,6 +6,7 @@ from collections.abc import Mapping, Set, Iterable
 from typing import Protocol, Optional, Literal, TYPE_CHECKING
 
 import attrs
+import polars
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
@@ -498,6 +499,16 @@ class SequenceCollection(Protocol):
 
         schema = iterations.get_parameter_schema(initial_values)
         return Success(schema)
+
+    def lazy_load(
+        self, path: PureSequencePath
+    ) -> (
+        Success[polars.LazyFrame]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        raise NotImplementedError
 
 
 @attrs.frozen

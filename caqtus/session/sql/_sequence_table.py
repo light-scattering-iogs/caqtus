@@ -102,6 +102,10 @@ class SQLSequence(Base):
     # None indicates that this value is not known.
     expected_number_of_shots: Mapped[Optional[int]] = mapped_column()
 
+    def number_shots(self) -> int:
+        # TODO: replace with fast query
+        return len(self.shots)
+
 
 class SQLSequenceParameters(Base):
     __tablename__ = "sequence.parameters"
