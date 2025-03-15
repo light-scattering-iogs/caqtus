@@ -30,11 +30,9 @@ from caqtus.session import (
     AsyncExperimentSession,
     PathIsRootError,
     PathHasChildrenError,
-)
-from caqtus.session import (
-    PathNotFoundError,
     PathIsSequenceError,
     PathIsNotSequenceError,
+    PathNotFoundError,
     State,
 )
 from caqtus.session._sequence_collection import SequenceStats
@@ -85,6 +83,7 @@ def is_node(value) -> TypeGuard[Node]:
 
 
 class AsyncPathHierarchyModel(QAbstractItemModel):
+    # ruff: noqa: N802
     def __init__(
         self, session_maker: ExperimentSessionMaker, parent: Optional[QObject] = None
     ):
@@ -102,7 +101,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         )
         self._background_runner = BackgroundRunner(self.watch_session)
 
-    def index(self, row, column, parent=DEFAULT_INDEX):
+    def index(
+        self, row, column, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ):
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         parent_item = (
@@ -181,7 +182,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             return isinstance(node_data, FolderNode)
         return False
 
-    def dropMimeData(self, data, action, row, column, parent):  # noqa: N802
+    def dropMimeData(self, data, action, row, column, parent):
         if not self.canDropMimeData(data, action, row, column, parent):
             return False
 
@@ -202,7 +203,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 return is_success(result)
         return False
 
-    def removeRows(self, row, count, parent=...):  # noqa: N802
+    def removeRows(
+        self, row, count, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ) -> bool:
         # This method only remove the in-memory data, it does not remove the path from
         # the session.
         parent_item = self._get_item(parent)
@@ -221,7 +224,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert isinstance(result, QStandardItem)
         return result
 
-    def rowCount(self, parent=DEFAULT_INDEX) -> int:  # noqa: N802
+    def rowCount(
+        self, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ) -> int:
         if parent.column() > 0:
             return 0
         parent_item = self._get_item(parent)
@@ -235,7 +240,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             else:
                 return 0
 
-    def hasChildren(self, parent=DEFAULT_INDEX) -> bool:  # noqa: N802
+    def hasChildren(
+        self, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ) -> bool:
         parent_item = self._get_item(parent)
         node_data = get_item_data(parent_item)
         if isinstance(node_data, SequenceNode):
@@ -247,7 +254,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             else:
                 return True
 
-    def canFetchMore(self, parent) -> bool:  # noqa: N802
+    def canFetchMore(self, parent) -> bool:
         parent_item = self._get_item(parent)
         node_data = get_item_data(parent_item)
         match node_data:
@@ -356,12 +363,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             )
         return item
 
-    def columnCount(self, parent=DEFAULT_INDEX) -> int:  # noqa: N802
+    def columnCount(
+        self, parent: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ) -> int:
         return 5
 
-    def headerData(  # noqa: N802
-        self, section, orientation, role=Qt.ItemDataRole.DisplayRole
-    ):
+    def headerData(self, section, orientation, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
@@ -378,7 +385,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 return section
         return None
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         """Get the data for a specific index in the model.
 
         The displayed data returned for each column is as follows:
@@ -662,7 +669,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         self.emit_index_updated(index)
 
     def emit_index_updated(self, index: QModelIndex | QPersistentModelIndex) -> None:
-        index = QModelIndex(index)
+        index = QModelIndex(index)  # type: ignore[reportArgumentType]
         self.dataChanged.emit(
             index.siblingAtColumn(0),
             index.siblingAtColumn(self.columnCount() - 1),

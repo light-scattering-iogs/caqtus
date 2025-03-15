@@ -12,17 +12,17 @@ from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.result import Success, Failure
 from .._data_id import DataId
 from .._exception_summary import TracebackSummary
-from .._path import PureSequencePath
-from .._path_hierarchy import PathNotFoundError
-from .._sequence_collection import (
-    PathIsNotSequenceError,
-    SequenceNotEditableError,
-    SequenceStats,
-    SequenceNotCrashedError,
+from .._exceptions import (
     SequenceNotRunningError,
-    InvalidStateTransitionError,
     SequenceNotLaunchedError,
+    PathIsNotSequenceError,
+    InvalidStateTransitionError,
+    SequenceNotEditableError,
+    SequenceNotCrashedError,
+    PathNotFoundError,
 )
+from .._path import PureSequencePath
+from .._sequence_collection import SequenceStats
 from .._shot_id import ShotId
 from .._state import State
 

@@ -20,16 +20,14 @@ from caqtus.session import (
     SequenceNotEditableError,
     PathIsNotSequenceError,
     State as SequenceState,
+    SequenceNotCrashedError,
+    SequenceNotLaunchedError,
 )
 from caqtus.session import (
     PureSequencePath,
     ExperimentSession,
     AsyncExperimentSession,
     TracebackSummary,
-)
-from caqtus.session._sequence_collection import (
-    SequenceNotCrashedError,
-    SequenceNotLaunchedError,
 )
 from caqtus.session._session_maker import StorageManager
 from caqtus.types.iteration import IterationConfiguration
