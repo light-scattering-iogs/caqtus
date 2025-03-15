@@ -583,11 +583,18 @@ class SQLSequenceCollection(SequenceCollection):
         parameter_schema = parameter_schema_result.content()
         if sequence_model.state == State.DRAFT:
             return Failure(SequenceNotLaunchedError(path))
+        data_schema_result = self.get_data_schema(path)
+        assert not is_failure_type(
+            data_schema_result,
+            (PathNotFoundError, PathIsNotSequenceError, SequenceNotLaunchedError),
+        )
+        data_schema = data_schema_result.content()
         return Success(
             lazy_load(
                 session,
                 sequence_model,
                 {str(k): v for k, v in parameter_schema.items()},
+                {str(k): v for k, v in data_schema.items()},
             )
         )
 
