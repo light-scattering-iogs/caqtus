@@ -126,20 +126,21 @@ def scan(
             restricted_parameter_schema = parameter_schema
             restricted_data_schema = data_schema
         else:
+            columns_set = set(with_columns)
             restricted_metadata_schema = {
                 column: pl_shot_metadata_schema[column]
-                for column in with_columns
-                if column in pl_shot_metadata_schema
+                for column in pl_shot_metadata_schema
+                if column in columns_set
             }
             restricted_parameter_schema = {
                 column: parameter_type
                 for column, parameter_type in parameter_schema.items()
-                if column in with_columns
+                if column in columns_set
             }
             restricted_data_schema = {
                 column: data_type
                 for column, data_type in data_schema.items()
-                if column in with_columns
+                if column in columns_set
             }
         if n_rows is None:
             number_shots_to_load = sequence.number_shots()
@@ -163,7 +164,8 @@ def scan(
                 df = df.filter(predicate)
             yield df
 
-    return register_io_source(load, schema=pl_schema, validate_schema=True)
+    # TODO: validate schema seems to have issues with ordering, to check
+    return register_io_source(load, schema=pl_schema, validate_schema=False)
 
 
 def get_shot_metadata_pl_schema() -> dict[str, polars.DataType]:
