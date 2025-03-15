@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import (
     TypeVar,
     Optional,
@@ -12,6 +13,9 @@ from typing import (
 import attrs
 
 from caqtus.device.runtime import Device
+from caqtus.types.data import DataType, DataLabel
+from caqtus.types.parameter import ParameterSchema
+from caqtus.types.timelane import TimeLanes
 
 DeviceServerName = NewType("DeviceServerName", str)
 
@@ -41,6 +45,11 @@ class DeviceConfiguration(Generic[DeviceType]):
     """
 
     remote_server: Optional[DeviceServerName] = attrs.field()
+
+    def get_data_schema(
+        self, parameter_schema: ParameterSchema, time_lanes: TimeLanes
+    ) -> Mapping[DataLabel, DataType]:
+        return {}
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)

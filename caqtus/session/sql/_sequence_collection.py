@@ -18,6 +18,7 @@ import sqlalchemy.orm
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import Data
 from caqtus.types.data import is_data, DataLabel
 from caqtus.types.iteration import (
@@ -37,7 +38,7 @@ from caqtus.utils.result import (
     is_failure,
     unwrap,
 )
-from ._lazy_load import lazy_load
+from ._lazy_load import lazy_load, structure_shot_sql_data
 from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -69,7 +70,6 @@ from .._sequence_collection import (
 from .._sequence_collection import SequenceCollection
 from .._shot_id import ShotId
 from .._state import State
-from ...device import DeviceName, DeviceConfiguration
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -927,11 +927,9 @@ def _get_all_shot_data(
     structured_data = shot_model.structured_data
     result = {}
     for array in arrays:
-        result[array.label] = np.frombuffer(array.bytes_, dtype=array.dtype).reshape(
-            array.shape
-        )
+        result[array.label] = structure_shot_sql_data(array)
     for data in structured_data:
-        result[data.label] = data.content
+        result[data.label] = structure_shot_sql_data(data)
     return result
 
 
@@ -1160,7 +1158,7 @@ def _reset_to_draft(
 
 
 def serialize_data(
-    data: Mapping[DataLabel, Data]
+    data: Mapping[DataLabel, Data],
 ) -> tuple[list[SQLShotArray], list[SQLStructuredShotData]]:
     arrays = []
     structured_data = []
