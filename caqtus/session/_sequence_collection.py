@@ -30,6 +30,7 @@ from ._exceptions import SequenceNotRunningError, SequenceNotLaunchedError
 from ._path import PureSequencePath
 from ._shot_id import ShotId
 from ._state import State
+from ..shot_compilation import SequenceContext
 
 if TYPE_CHECKING:
     from ._experiment_session import ExperimentSession
@@ -455,12 +456,15 @@ class SequenceCollection(Protocol):
         time_lanes = self.get_time_lanes(path)
         if is_failure(time_lanes):
             return time_lanes
+        sequence_context = SequenceContext(
+            device_configurations, parameter_schema, time_lanes
+        )
         schema = {}
         for device_name, device_configuration in device_configurations.items():
             device_schema = {
                 f"{device_name}\\{label}": data_type
                 for label, data_type in device_configuration.get_data_schema(
-                    parameter_schema, time_lanes
+                    device_name, sequence_context
                 ).items()
             }
             schema.update(device_schema)

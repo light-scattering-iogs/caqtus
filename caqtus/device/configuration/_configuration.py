@@ -12,10 +12,10 @@ from typing import (
 
 import attrs
 
+from caqtus.device import DeviceName
 from caqtus.device.runtime import Device
+from caqtus.shot_compilation import SequenceContext
 from caqtus.types.data import DataType, DataLabel
-from caqtus.types.parameter import ParameterSchema
-from caqtus.types.timelane import TimeLanes
 
 DeviceServerName = NewType("DeviceServerName", str)
 
@@ -47,7 +47,7 @@ class DeviceConfiguration(Generic[DeviceType]):
     remote_server: Optional[DeviceServerName] = attrs.field()
 
     def get_data_schema(
-        self, parameter_schema: ParameterSchema, time_lanes: TimeLanes
+        self, name: DeviceName, sequence_context: SequenceContext
     ) -> Mapping[DataLabel, DataType]:
         return {}
 
