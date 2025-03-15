@@ -9,7 +9,7 @@ import attrs
 import polars
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.types.data import DataLabel, Data
+from caqtus.types.data import DataLabel, Data, DataType
 from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace, ParameterSchema
 from caqtus.types.timelane import TimeLanes
@@ -499,6 +499,16 @@ class SequenceCollection(Protocol):
 
         schema = iterations.get_parameter_schema(initial_values)
         return Success(schema)
+
+    def get_data_schema(
+        self, path: PureSequencePath
+    ) -> (
+        Success[Mapping[DataLabel, DataType]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotLaunchedError]
+    ):
+        raise NotImplementedError
 
     def lazy_load(
         self, path: PureSequencePath
