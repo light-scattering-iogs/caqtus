@@ -1,7 +1,6 @@
 from typing import TypeVar
 
 import attrs
-import polars
 
 from caqtus.shot_compilation import SequenceContext
 from caqtus.types.data import ImageType
