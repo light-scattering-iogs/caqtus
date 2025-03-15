@@ -163,7 +163,7 @@ def scan(
                 df = df.filter(predicate)
             yield df
 
-    return register_io_source(load, pl_schema)
+    return register_io_source(load, schema=pl_schema, validate_schema=True)
 
 
 def get_shot_metadata_pl_schema() -> dict[str, polars.DataType]:
