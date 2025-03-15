@@ -18,6 +18,7 @@ from ..types.units import (
     SECOND,
     is_scalar_quantity,
 )
+from ..utils.result import Success, Failure
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import DeviceCompiler
@@ -52,6 +53,15 @@ class SequenceContext:
 
         return self._parameter_schema
 
+    def get_lane_by_name(self, name: str) -> Success[TimeLane] | Failure[KeyError]:
+        """Returns the time lane with the given name."""
+
+        try:
+            return Success(self._time_lanes.lanes[name])
+        except KeyError:
+            return Failure(KeyError(name))
+
+    @deprecated("Use get_lane_by_name instead", stacklevel=2)
     def get_lane(self, name: str) -> TimeLane:
         """Returns the time lane with the given name.
 
