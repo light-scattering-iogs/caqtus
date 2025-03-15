@@ -500,6 +500,7 @@ class SequenceCollection(Protocol):
         schema = iterations.get_parameter_schema(initial_values)
         return Success(schema)
 
+    @abc.abstractmethod
     def get_data_schema(
         self, path: PureSequencePath
     ) -> (
@@ -510,6 +511,7 @@ class SequenceCollection(Protocol):
     ):
         raise NotImplementedError
 
+    @abc.abstractmethod
     def lazy_load(
         self, path: PureSequencePath
     ) -> (
