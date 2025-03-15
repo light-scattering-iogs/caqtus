@@ -12,7 +12,12 @@ class TakePicture:
 
 @attrs.define(init=False, eq=False, repr=False)
 class CameraTimeLane(TimeLane[TakePicture | None]):
-    pass
+    def get_picture_labels(self) -> list[ImageLabel]:
+        return [
+            picture.picture_name
+            for picture in self.block_values()
+            if isinstance(picture, TakePicture)
+        ]
 
 
 def unstructure_hook(lane: CameraTimeLane):
