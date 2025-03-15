@@ -531,7 +531,7 @@ class SequenceCollection(Protocol):
         return Success(schema)
 
     @abc.abstractmethod
-    def lazy_load(
+    def scan(
         self, path: PureSequencePath
     ) -> (
         Success[polars.LazyFrame]

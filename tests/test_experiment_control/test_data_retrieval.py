@@ -112,7 +112,7 @@ def test_saved_pictures_can_be_retrieved(done_sequence, session_maker: StorageMa
     logging.basicConfig(level=logging.DEBUG)
     with session_maker.session() as session:
         sequence = session.get_sequence(done_sequence)
-        schema = sequence.lazy_load().collect_schema()
+        schema = sequence.scan().collect_schema()
         assert schema == pl.Schema(
             {
                 "sequence": pl.Categorical(ordering="lexical"),
@@ -123,4 +123,4 @@ def test_saved_pictures_can_be_retrieved(done_sequence, session_maker: StorageMa
                 "Camera\\picture 1": pl.Array(pl.UInt32, shape=(100, 100)),
             }
         )
-        assert len(sequence.lazy_load().collect()) == 10
+        assert len(sequence.scan().collect()) == 10

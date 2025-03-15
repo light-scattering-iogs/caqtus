@@ -38,7 +38,7 @@ from caqtus.utils.result import (
     is_failure,
     unwrap,
 )
-from ._lazy_load import lazy_load, structure_shot_sql_data
+from ._lazy_load import scan, structure_shot_sql_data
 from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -563,7 +563,7 @@ class SQLSequenceCollection(SequenceCollection):
         result = self._get_sql_session().execute(stmt).scalars().all()
         return (PureSequencePath(row.path) for row in result)
 
-    def lazy_load(
+    def scan(
         self, path: PureSequencePath
     ) -> (
         Success[polars.LazyFrame]
@@ -590,7 +590,7 @@ class SQLSequenceCollection(SequenceCollection):
         )
         data_schema = data_schema_result.content()
         return Success(
-            lazy_load(
+            scan(
                 session,
                 sequence_model,
                 {str(k): v for k, v in parameter_schema.items()},

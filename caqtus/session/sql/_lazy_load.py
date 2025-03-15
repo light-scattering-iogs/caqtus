@@ -99,7 +99,7 @@ class RestrictedLoader:
         return shots_query
 
 
-def lazy_load(
+def scan(
     session: Session,
     sequence: SQLSequence,
     parameter_schema: Mapping[str, ParameterType],

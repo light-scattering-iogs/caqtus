@@ -263,10 +263,10 @@ class Sequence:
 
         return unwrap(self.session.sequences.get_parameter_schema(self.path))
 
-    def lazy_load(self, progress_bar: bool = True) -> polars.LazyFrame:
+    def scan(self) -> polars.LazyFrame:
         """Lazily load all the parameters and data from a sequence."""
 
-        return self.session.sequences.lazy_load(self.path).unwrap()
+        return self.session.sequences.scan(self.path).unwrap()
 
     def load_shots_data(
         self,
