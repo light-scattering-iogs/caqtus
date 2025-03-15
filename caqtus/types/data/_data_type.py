@@ -45,8 +45,9 @@ class DataType(abc.ABC):
     def to_polars_value(self, value: Data):
         raise NotImplementedError
 
+    @staticmethod
     @abc.abstractmethod
-    def is_saved_as_array(self) -> bool:
+    def is_saved_as_array() -> bool:
         raise NotImplementedError
 
 
@@ -64,5 +65,6 @@ class ImageType(DataType):
             raise ValueError("Expected an array")
         return value.astype(np.float64)
 
-    def is_saved_as_array(self) -> bool:
+    @staticmethod
+    def is_saved_as_array() -> bool:
         return True
