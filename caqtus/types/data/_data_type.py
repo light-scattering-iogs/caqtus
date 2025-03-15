@@ -52,14 +52,17 @@ class DataType(abc.ABC):
 
 @attrs.frozen
 class ImageType(DataType):
-    inner: polars.DataType
+    """A data type for images."""
+
     roi: RectangularROI
 
     def to_polars_dtype(self) -> polars.DataType:
-        return polars.Array(self.inner, (self.roi.width, self.roi.height))
+        return polars.Array(polars.Float64, (self.roi.width, self.roi.height))
 
     def to_polars_value(self, value: Data):
-        return value
+        if not isinstance(value, np.ndarray):
+            raise ValueError("Expected an array")
+        return value.astype(np.float64)
 
     def is_saved_as_array(self) -> bool:
         return True

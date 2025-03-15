@@ -8,15 +8,18 @@ from typing import (
     Optional,
     NewType,
     Generic,
+    TYPE_CHECKING,
 )
 
 import attrs
 
-from caqtus.device import DeviceName
 from caqtus.device.runtime import Device
-from caqtus.shot_compilation import SequenceContext
 from caqtus.types.data import DataType, DataLabel
 from caqtus.utils.result import Success, Failure
+from .._name import DeviceName
+
+if TYPE_CHECKING:
+    from caqtus.shot_compilation import SequenceContext
 
 DeviceServerName = NewType("DeviceServerName", str)
 
@@ -48,7 +51,7 @@ class DeviceConfiguration(Generic[DeviceType]):
     remote_server: Optional[DeviceServerName] = attrs.field()
 
     def get_data_schema(
-        self, name: DeviceName, sequence_context: SequenceContext
+        self, name: DeviceName, sequence_context: "SequenceContext"
     ) -> Success[Mapping[DataLabel, DataType]] | Failure[DataSchemaError]:
         return Success({})
 

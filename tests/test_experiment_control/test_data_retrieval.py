@@ -1,24 +1,25 @@
 import datetime
 import logging
-from typing import Mapping
 
 import numpy as np
 import polars as pl
 import pytest
 
-from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device import DeviceName
+from caqtus.device.camera import CameraConfiguration
 from caqtus.extension import Experiment
 from caqtus.session import StorageManager, PureSequencePath
 from caqtus.session._shot_id import ShotId
-from caqtus.types.data import DataLabel, DataType, ImageType
+from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.image import Width, Height, ImageLabel
 from caqtus.types.image.roi import RectangularROI
 from caqtus.types.iteration import StepsConfiguration, LinspaceLoop, ExecuteShot
-from caqtus.types.parameter import ParameterNamespace, ParameterSchema
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes, CameraTimeLane, TakePicture
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils import serialization
 
 
 def steps_configuration() -> StepsConfiguration:
@@ -50,23 +51,13 @@ def time_lanes() -> TimeLanes:
     )
 
 
-class MockCamera(DeviceConfiguration):
-    def get_data_schema(
-        self, parameter_schema: ParameterSchema, time_lanes: TimeLanes
-    ) -> Mapping[DataLabel, DataType]:
-        return {
-            DataLabel("picture 1"): ImageType(
-                pl.UInt32(),
-                RectangularROI((Width(100), Height(100)), 0, 100, 0, 100),
-            )
-        }
-
+class MockCamera(CameraConfiguration):
     @classmethod
     def load(cls, data) -> "MockCamera":
-        return cls(data["remote_server"])
+        return serialization.structure(data, MockCamera)
 
     def dump(self) -> dict:
-        return {"remote_server": self.remote_server}
+        return serialization.unstructure(self, MockCamera)
 
 
 @pytest.fixture
@@ -86,7 +77,12 @@ def done_sequence(session_maker: StorageManager):
         session.sequences.create(path, steps_configuration(), time_lanes())
         session.sequences.set_preparing(
             path,
-            {DeviceName("Camera"): MockCamera(remote_server=None)},
+            {
+                DeviceName("Camera"): MockCamera(
+                    remote_server=None,
+                    roi=RectangularROI((Width(100), Height(100)), 0, 100, 0, 100),
+                )
+            },
             ParameterNamespace.empty(),
         )
         session.sequences.set_running(path, start_time="now")
@@ -96,7 +92,7 @@ def done_sequence(session_maker: StorageManager):
                 shot_parameters={DottedVariableName("exposure"): shot_id * Unit("ms")},
                 shot_data={
                     DataLabel("Camera\\picture 1"): np.full(
-                        (100, 100), shot_id, dtype=np.uint32
+                        (100, 100), shot_id, dtype=np.uint64
                     )
                 },
                 shot_start_time=datetime.datetime.now(),
@@ -120,7 +116,7 @@ def test_saved_pictures_can_be_retrieved(done_sequence, session_maker: StorageMa
                 "shot_start_time": pl.Datetime(time_unit="ms", time_zone="UTC"),
                 "shot_end_time": pl.Datetime(time_unit="ms", time_zone="UTC"),
                 "exposure": pl.Float64(),
-                "Camera\\picture 1": pl.Array(pl.UInt32, shape=(100, 100)),
+                "Camera\\picture 1": pl.Array(pl.Float64, shape=(100, 100)),
             }
         )
         assert len(sequence.scan().collect()) == 10

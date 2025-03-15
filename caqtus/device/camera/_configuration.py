@@ -41,7 +41,7 @@ class CameraConfiguration[C: Camera](DeviceConfiguration[C]):
             )
         data_schema = {}
         for picture_label in lane.get_picture_labels():
-            data_schema[picture_label] = ImageType(polars.Float64(), self.roi)
+            data_schema[picture_label] = ImageType(self.roi)
         return Success(data_schema)
 
 
