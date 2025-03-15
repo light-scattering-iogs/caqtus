@@ -12,7 +12,7 @@ from caqtus.session import StorageManager, PureSequencePath
 from caqtus.session._shot_id import ShotId
 from caqtus.types.data import DataLabel, DataType, ImageType
 from caqtus.types.expression import Expression
-from caqtus.types.image import Width, Height
+from caqtus.types.image import Width, Height, ImageLabel
 from caqtus.types.image.roi import RectangularROI
 from caqtus.types.iteration import StepsConfiguration, LinspaceLoop, ExecuteShot
 from caqtus.types.parameter import ParameterNamespace, ParameterSchema
@@ -42,7 +42,11 @@ def time_lanes() -> TimeLanes:
     return TimeLanes(
         step_names=["start", "picture", "stop"],
         step_durations=[Expression("1 ms"), Expression("exposure"), Expression("2 ms")],
-        lanes={"Camera": CameraTimeLane([None, TakePicture("picture 1"), None])},  # pyright: ignore [reportArgumentType]
+        lanes={
+            "Camera": CameraTimeLane(
+                [None, TakePicture(ImageLabel(DataLabel("picture 1"))), None]
+            )
+        },
     )
 
 
