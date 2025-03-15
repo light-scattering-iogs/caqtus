@@ -45,6 +45,10 @@ class DataType(abc.ABC):
     def to_polars_value(self, value: Data):
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def is_saved_as_array(self) -> bool:
+        raise NotImplementedError
+
 
 @attrs.frozen
 class ImageType(DataType):
@@ -56,3 +60,6 @@ class ImageType(DataType):
 
     def to_polars_value(self, value: Data):
         return value
+
+    def is_saved_as_array(self) -> bool:
+        return True

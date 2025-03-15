@@ -78,7 +78,10 @@ class RestrictedLoader:
 
     def build_query(self):
         aliased_data = {
-            data_name: aliased(SQLShotArray) for data_name in self.data_schema.keys()
+            data_name: aliased(
+                SQLShotArray if data_type.is_saved_as_array() else SQLStructuredShotData
+            )
+            for data_name, data_type in self.data_schema.items()
         }
 
         shots_query = (
