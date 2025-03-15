@@ -3,6 +3,7 @@ from collections.abc import Mapping
 from typing import assert_never
 
 import attrs
+import polars
 
 from caqtus.types.parameter import Parameter
 from caqtus.types.units import Unit, Quantity
@@ -101,12 +102,34 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
 class QuantityType:
     units: Unit
 
+    @staticmethod
+    def to_polars_dtype() -> polars.DataType:
+        return polars.Float64()
+
+    def to_polars_value(self, value) -> float:
+        if not isinstance(value, Quantity):
+            raise ValueError(f"Expected a Quantity, got {value!r}.")
+        magnitude = value.to_unit(self.units).magnitude
+        if not isinstance(magnitude, float):
+            raise ValueError(f"Expected a float, got {magnitude!r}.")
+        return magnitude
+
 
 @attrs.frozen
 class Float:
     @property
     def units(self) -> None:
         return None
+
+    @staticmethod
+    def to_polars_dtype() -> polars.DataType:
+        return polars.Float64()
+
+    @staticmethod
+    def to_polars_value(value) -> float:
+        if not isinstance(value, float):
+            raise ValueError(f"Expected a float, got {value!r}.")
+        return value
 
 
 @attrs.frozen
@@ -115,9 +138,29 @@ class Boolean:
     def units(self) -> None:
         return None
 
+    @staticmethod
+    def to_polars_dtype() -> polars.DataType:
+        return polars.Boolean()
+
+    @staticmethod
+    def to_polars_value(value) -> bool:
+        if not isinstance(value, bool):
+            raise ValueError(f"Expected a bool, got {value!r}.")
+        return value
+
 
 @attrs.frozen
 class Integer:
     @property
     def units(self) -> None:
         return None
+
+    @staticmethod
+    def to_polars_dtype() -> polars.DataType:
+        return polars.Int64()
+
+    @staticmethod
+    def to_polars_value(value) -> int:
+        if not isinstance(value, int):
+            raise ValueError(f"Expected an int, got {value!r}.")
+        return value
