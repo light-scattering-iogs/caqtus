@@ -143,9 +143,9 @@ def scan(
                 if column in columns_set
             }
         if n_rows is None:
-            number_shots_to_load = sequence.number_shots()
+            number_shots_to_load = number_shots(session, sequence)
         else:
-            number_shots_to_load = min(n_rows, sequence.number_shots())
+            number_shots_to_load = min(n_rows, number_shots(session, sequence))
         if batch_size is None:
             batch_size = 10
 
@@ -166,6 +166,10 @@ def scan(
 
     # TODO: validate schema seems to have issues with ordering, to check
     return register_io_source(load, schema=pl_schema, validate_schema=False)
+
+
+def number_shots(session: Session, sequence: SQLSequence) -> int:
+    return session.query(SQLShot).filter(SQLShot.sequence == sequence).count()
 
 
 def get_shot_metadata_pl_schema() -> dict[str, polars.DataType]:
