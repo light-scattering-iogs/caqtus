@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from functools import cached_property
 from typing import TYPE_CHECKING, Optional, Self, Literal, assert_never
 
@@ -10,7 +10,7 @@ import polars
 from typing_extensions import deprecated
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.types.data import DataLabel
+from caqtus.types.data import DataLabel, DataType
 from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import ParameterNamespace, ParameterSchema
 from caqtus.types.timelane import TimeLanes
@@ -21,7 +21,7 @@ from .._exception_summary import TracebackSummary
 from .._exceptions import PathIsNotSequenceError, PathNotFoundError
 from .._path import PureSequencePath
 from .._state import State
-from ...utils.result import is_failure_type, unwrap
+from ...utils.result import is_failure_type
 
 if TYPE_CHECKING:
     from .._experiment_session import ExperimentSession
@@ -91,7 +91,7 @@ class Sequence:
                 The session must be active.
         """
 
-        unwrap(session.sequences.create(path, iteration_configuration, time_lanes))
+        session.sequences.create(path, iteration_configuration, time_lanes).unwrap()
         return cls(path, session)
 
     def __str__(self) -> str:
@@ -100,12 +100,12 @@ class Sequence:
     def __len__(self) -> int:
         """Return the number of shots that have been run for this sequence."""
 
-        return len(unwrap(self.session.sequences.get_shots(self.path)))
+        return len(self.session.sequences.get_shots(self.path).unwrap())
 
     def get_state(self) -> State:
         """Return the state of the sequence."""
 
-        return unwrap(self.session.sequences.get_state(self.path))
+        return self.session.sequences.get_state(self.path).unwrap()
 
     def get_global_parameters(self) -> ParameterNamespace:
         """Return a copy of the parameter tables set for this sequence.
@@ -115,7 +115,7 @@ class Sequence:
                 are only set once the sequence has entered the PREPARING state.
         """
 
-        return unwrap(self.session.sequences.get_global_parameters(self.path))
+        return self.session.sequences.get_global_parameters(self.path).unwrap()
 
     def get_iteration_configuration(self) -> IterationConfiguration:
         """Return the iteration configuration of the sequence."""
@@ -143,7 +143,7 @@ class Sequence:
         The shots are returned sorted by index.
         """
 
-        pure_shots = unwrap(self.session.sequences.get_shots(self.path))
+        pure_shots = self.session.sequences.get_shots(self.path).unwrap()
         sorted_shots = sorted(pure_shots, key=lambda x: x.index)
         return (Shot(self, shot.index, self.session) for shot in sorted_shots)
 
@@ -153,7 +153,7 @@ class Sequence:
         If the sequence has not been started, return None.
         """
 
-        return unwrap(self.session.sequences.get_stats(self.path)).start_time
+        return self.session.sequences.get_stats(self.path).unwrap().start_time
 
     def get_end_time(self) -> Optional[datetime.datetime]:
         """Return the time the sequence was ended.
@@ -161,7 +161,7 @@ class Sequence:
         If the sequence has not been ended, return None.
         """
 
-        return unwrap(self.session.sequences.get_stats(self.path)).stop_time
+        return self.session.sequences.get_stats(self.path).unwrap().stop_time
 
     def get_expected_number_of_shots(self) -> int | Unknown:
         """Return the expected number of shots for the sequence.
@@ -169,7 +169,9 @@ class Sequence:
         If the sequence has not been started, return None.
         """
 
-        return unwrap(self.session.sequences.get_stats(self.path)).expected_number_shots
+        return (
+            self.session.sequences.get_stats(self.path).unwrap().expected_number_shots
+        )
 
     def duplicate(self, target_path: PureSequencePath | str) -> Sequence:
         """Duplicate the sequence to a new path.
@@ -247,7 +249,7 @@ class Sequence:
             SequenceNotCrashedError: If the sequence is not in the CRASHED state.
         """
 
-        return unwrap(self.session.sequences.get_exception(self.path))
+        return self.session.sequences.get_exception(self.path).unwrap()
 
     def get_parameter_schema(self) -> ParameterSchema:
         """Return the types of the parameters used to run this sequence.
@@ -262,7 +264,10 @@ class Sequence:
                 # Unit("MHz")
         """
 
-        return unwrap(self.session.sequences.get_parameter_schema(self.path))
+        return self.session.sequences.get_parameter_schema(self.path).unwrap()
+
+    def get_data_schema(self) -> Mapping[DataLabel, DataType]:
+        return self.session.sequences.get_data_schema(self.path).unwrap()
 
     def scan(self) -> polars.LazyFrame:
         r"""Lazily read the data of the shots that have been run for this sequence.
