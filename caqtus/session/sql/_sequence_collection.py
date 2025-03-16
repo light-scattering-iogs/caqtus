@@ -39,6 +39,7 @@ from caqtus.utils.result import (
     unwrap,
 )
 from ._lazy_load import scan, structure_shot_sql_data
+from ._logger import logger
 from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -1115,11 +1116,27 @@ def _get_device_configurations(
     device_configurations = {}
 
     for device_configuration in sequence.device_configurations:
-        constructed = serializer.load_device_configuration(
-            device_configuration.device_type, device_configuration.content
-        )
+        try:
+            constructed = serializer.load_device_configuration(
+                device_configuration.device_type, device_configuration.content
+            )
+        except Exception as e:
+            logger.error(
+                "Could not load device configuration for %s\n%r",
+                device_configuration,
+                device_configuration.content,
+            )
+            raise DeserializationError(
+                f"Failed to load device configuration for "
+                f"<{device_configuration.name}> with tag "
+                f"<{device_configuration.device_type}>"
+            ) from e
         device_configurations[device_configuration.name] = constructed
     return Success(device_configurations)
+
+
+class DeserializationError(Exception):
+    pass
 
 
 def _reset_to_draft(
