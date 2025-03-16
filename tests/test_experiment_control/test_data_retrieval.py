@@ -105,7 +105,6 @@ def done_sequence(session_maker: StorageManager):
 
 
 def test_saved_pictures_can_be_retrieved(done_sequence, session_maker: StorageManager):
-    logging.basicConfig(level=logging.DEBUG)
     with session_maker.session() as session:
         sequence = session.get_sequence(done_sequence)
         schema = sequence.scan().collect_schema()
