@@ -22,6 +22,7 @@ from caqtus.types.timelane import TimeLanes
 from caqtus.utils._tblib import ensure_exception_pickling
 from ._shot_primitives import ShotParameters
 from ..device_manager_extension import DeviceManagerExtensionProtocol
+from ...types.parameter import ParameterSchema
 
 
 class ShotCompilerProtocol(Protocol):
@@ -57,14 +58,16 @@ class ShotCompiler(ShotCompilerProtocol):
     def __init__(
         self,
         shot_timelanes: TimeLanes,
+        parameter_schema: ParameterSchema,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
         device_compilers: Mapping[DeviceName, DeviceCompiler],
     ):
         self.shot_time_lanes = shot_timelanes
         self.device_configurations = device_configurations
         self._sequence_context = SequenceContext(
-            device_configurations=device_configurations,  # pyright: ignore[reportCallIssue]
-            time_lanes=shot_timelanes,  # pyright: ignore[reportCallIssue]
+            device_configurations=device_configurations,  # type: ignore[reportCallIssue]
+            time_lanes=shot_timelanes,  # type: ignore[reportCallIssue]
+            parameter_schema=parameter_schema,  # type: ignore[reportCallIssue]
         )
         self.device_compilers = device_compilers
         self.pickled_context = pickle.dumps(
@@ -150,7 +153,8 @@ def create_shot_compiler(
         for device_name in device_compilers
     }
     shot_compiler = _create_shot_compiler(
-        time_lanes=initial_sequence_context._time_lanes,  # noqa
+        _time_lanes=initial_sequence_context._time_lanes,
+        parameter_schema=initial_sequence_context._parameter_schema,
         device_configurations=in_use_configurations,
         device_compilers=device_compilers,
     )
@@ -180,11 +184,13 @@ def create_device_compilers(
 
 def _create_shot_compiler(
     time_lanes: TimeLanes,
+    parameter_schema: ParameterSchema,
     device_configurations: Mapping[DeviceName, DeviceConfiguration],
     device_compilers: Mapping[DeviceName, DeviceCompiler],
 ) -> ShotCompiler:
     shot_compiler = ShotCompiler(
         time_lanes,
+        parameter_schema=parameter_schema,
         device_configurations=device_configurations,
         device_compilers=device_compilers,
     )

@@ -2,35 +2,37 @@ from __future__ import annotations
 
 import abc
 import datetime
-from collections.abc import Mapping, Set, Iterable
-from typing import Protocol, Optional, Literal, TYPE_CHECKING
+from collections.abc import Iterable, Mapping, Set
+from typing import TYPE_CHECKING, Literal, Optional, Protocol
 
 import attrs
 import polars
 
-from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.types.data import DataLabel, Data, DataType
+from caqtus.device import DeviceConfiguration, DeviceName
+from caqtus.types.data import Data, DataLabel, DataType
 from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace, ParameterSchema
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils.result import Success, Failure, is_failure_type, is_failure
+from caqtus.utils.result import Failure, Success, is_failure, is_failure_type
+
+from ..shot_compilation.compilation_contexts import _ConcreteSequenceContext
 from ._data_id import DataId
 from ._exception_summary import TracebackSummary
 from ._exceptions import (
-    PathIsSequenceError,
-    PathIsNotSequenceError,
     InvalidStateTransitionError,
-    SequenceNotEditableError,
-    SequenceNotCrashedError,
-    PathNotFoundError,
     PathHasChildrenError,
+    PathIsNotSequenceError,
+    PathIsSequenceError,
+    PathNotFoundError,
+    SequenceNotCrashedError,
+    SequenceNotEditableError,
+    SequenceNotLaunchedError,
+    SequenceNotRunningError,
 )
-from ._exceptions import SequenceNotRunningError, SequenceNotLaunchedError
 from ._path import PureSequencePath
 from ._shot_id import ShotId
 from ._state import State
-from ..shot_compilation import SequenceContext
 
 if TYPE_CHECKING:
     from ._experiment_session import ExperimentSession
@@ -456,7 +458,7 @@ class SequenceCollection(Protocol):
         time_lanes = self.get_time_lanes(path)
         if is_failure(time_lanes):
             return time_lanes
-        sequence_context = SequenceContext(
+        sequence_context = _ConcreteSequenceContext(
             device_configurations, parameter_schema, time_lanes
         )
         schema = {}

@@ -1,3 +1,4 @@
+import abc
 from collections.abc import Mapping, Iterable, Sequence
 from typing import Any, TypeVar, TYPE_CHECKING
 
@@ -26,14 +27,10 @@ if TYPE_CHECKING:
 LaneType = TypeVar("LaneType", bound=TimeLane)
 
 
-@attrs.define(slots=False)
-class SequenceContext:
+class SequenceContext(abc.ABC):
     """Contains information about a sequence being compiled."""
 
-    _device_configurations: Mapping[DeviceName, DeviceConfiguration]
-    _parameter_schema: ParameterSchema
-    _time_lanes: TimeLanes
-
+    @abc.abstractmethod
     def get_device_configuration(self, device_name: DeviceName) -> DeviceConfiguration:
         """Returns the configuration for the given device.
 
@@ -41,57 +38,81 @@ class SequenceContext:
             KeyError: If no configuration is found for the given device.
         """
 
-        return self._device_configurations[device_name]
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def get_all_device_configurations(self) -> Mapping[DeviceName, DeviceConfiguration]:
         """Returns all device configurations available in this sequence."""
 
-        return self._device_configurations
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def get_parameter_schema(self) -> ParameterSchema:
         """Returns the schema for the parameters of the sequence."""
 
-        return self._parameter_schema
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def get_lane_by_name(self, name: str) -> Success[TimeLane] | Failure[KeyError]:
         """Returns the time lane with the given name."""
 
-        try:
-            return Success(self._time_lanes.lanes[name])
-        except KeyError:
-            return Failure(KeyError(name))
+        raise NotImplementedError
 
     @deprecated("Use get_lane_by_name instead", stacklevel=2)
     def get_lane(self, name: str) -> TimeLane:
-        """Returns the time lane with the given name.
+        return self.get_lane_by_name(name).unwrap()
 
-        raises:
-            KeyError: If no lane with the given name is not found in the sequence
-            context.
-        """
-
-        return self._time_lanes.lanes[name]
-
+    @abc.abstractmethod
     def get_lanes_with_type(self, lane_type: type[LaneType]) -> Mapping[str, LaneType]:
         """Returns the lanes used during the shot with the given type."""
 
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_step_names(self) -> tuple[str, ...]:
+        """Returns the names of the steps in the sequence."""
+
+        raise NotImplementedError
+
+
+@attrs.define(slots=False)
+class _ConcreteSequenceContext(SequenceContext):
+    device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    parameter_schema: ParameterSchema
+    time_lanes: TimeLanes
+
+    def get_device_configuration(self, device_name: DeviceName) -> DeviceConfiguration:
+        return self.device_configurations[device_name]
+
+    def get_all_device_configurations(self) -> Mapping[DeviceName, DeviceConfiguration]:
+        return self.device_configurations
+
+    def get_parameter_schema(self) -> ParameterSchema:
+
+        return self.parameter_schema
+
+    def get_lane_by_name(self, name: str) -> Success[TimeLane] | Failure[KeyError]:
+        try:
+            return Success(self.time_lanes.lanes[name])
+        except KeyError:
+            return Failure(KeyError(name))
+
+    def get_lanes_with_type(self, lane_type: type[LaneType]) -> Mapping[str, LaneType]:
         return {
             name: lane
-            for name, lane in self._time_lanes.lanes.items()
+            for name, lane in self.time_lanes.lanes.items()
             if isinstance(lane, lane_type)
         }
 
     def get_step_names(self) -> tuple[str, ...]:
-        """Returns the names of the steps in the sequence."""
-
-        return tuple(self._time_lanes.step_names)
+        return tuple(self.time_lanes.step_names)
 
 
 @attrs.define
 class ShotContext:
     """Contains information about a shot being compiled."""
 
-    _sequence_context: SequenceContext = attrs.field()
+    _sequence_context: _ConcreteSequenceContext = attrs.field()
     _variables: Mapping[DottedVariableName, Any] = attrs.field()
     _device_compilers: Mapping[DeviceName, "DeviceCompiler"] = attrs.field()
 
@@ -105,7 +126,7 @@ class ShotContext:
     @property
     def _time_lanes(self) -> TimeLanes:
         # noinspection PyProtectedMember
-        return self._sequence_context._time_lanes
+        return self._sequence_context.time_lanes
 
     def __attrs_post_init__(self):
         self._step_durations = tuple(
