@@ -50,13 +50,19 @@ dependencies = [
     "pyqtgraph>=0.13.4",
     "matplotlib>=3.8.3",
     "setuptools",
-    "caqtus-parsing>=0.4.0",
+    "caqtus-parsing>=0.5.0",
 ]
 
 [project.urls]
 Documentation = "https://caqtus.readthedocs.io/en/stable/"
 Issues = "https://github.com/light-scattering-io/caqtus/issues"
 Source = "https://github.com/light-scattering-io/caqtus"
+
+[tool.uv.sources]
+caqtus-parsing = { workspace = true }
+
+[tool.uv.workspace]
+members = ["parsing/caqtus-parsing-py"]
 
 [tool.hatch.version]
 path = "caqtus/__about__.py"
