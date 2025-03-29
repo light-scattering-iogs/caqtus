@@ -1,4 +1,5 @@
-from caqtus_parsing import parse, AST
+from caqtus_parsing import parse, ParseNode
+
 
 def test_successfully_parse_integer():
-    assert parse("123") == AST.Integer(123)
+    assert parse("123") == ParseNode.Integer(123)

@@ -1,3 +1,3 @@
-from caqtus_parsing._core import parse, AST
+from caqtus_parsing._core import parse, ParseNode
 
-__all__ = ["parse", "AST"]
+__all__ = ["parse", "ParseNode"]

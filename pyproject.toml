@@ -62,7 +62,7 @@ Source = "https://github.com/light-scattering-io/caqtus"
 caqtus-parsing = { workspace = true }
 
 [tool.uv.workspace]
-members = ["parsing/caqtus-parsing-py"]
+members = ["packages/parsing/caqtus-parsing-py"]
 
 [tool.hatch.version]
 path = "caqtus/__about__.py"

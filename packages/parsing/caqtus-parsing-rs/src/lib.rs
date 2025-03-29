@@ -3,12 +3,12 @@ mod lexer;
 use std::num::ParseIntError;
 
 #[derive(Debug, PartialEq)]
-pub enum AST {
+pub enum ParseNode {
     Integer(i64),
 }
 
-pub fn parse(string: &str) -> Result<AST, ParseIntError> {
-    Ok(AST::Integer(string.parse::<i64>()?))
+pub fn parse(string: &str) -> Result<ParseNode, ParseIntError> {
+    Ok(ParseNode::Integer(string.parse::<i64>()?))
 }
 
 #[cfg(test)]
@@ -18,6 +18,6 @@ mod tests {
     #[test]
     fn successfully_parse_integer_string() {
         let result = parse("45");
-        assert_eq!(result, Ok(AST::Integer(45)));
+        assert_eq!(result, Ok(ParseNode::Integer(45)));
     }
 }
