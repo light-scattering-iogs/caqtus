@@ -41,6 +41,10 @@ pub enum Token {
     Integer(isize),
     #[regex(r"[\+-]?(\d+(\.\d*)?|\.\d+)([eE][\+-]?\d+)?", callback_float)]
     Float(f64),
+    #[regex(r"[_a-zA-Z\p{Greek}][_a-zA-Z0-9\p{Greek}]*", |lex| lex.slice().to_string())]
+    Name(String),
+    #[token(".")]
+    Dot,
 }
 
 impl Display for Token {
@@ -48,6 +52,8 @@ impl Display for Token {
         match self {
             Token::Integer(value) => write!(f, "Integer({})", value),
             Token::Float(value) => write!(f, "Float({})", value),
+            Token::Name(name) => write!(f, "Name({})", name),
+            Token::Dot => write!(f, "Dot"),
             Token::Error(err) => write!(f, "Error({:?})", err),
         }
     }

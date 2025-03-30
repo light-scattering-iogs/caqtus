@@ -1,14 +1,15 @@
 use crate::lexer::{Token, lex};
 use chumsky::error::Rich;
 use chumsky::input::{Input, Stream, ValueInput};
+use chumsky::prelude::{end, just};
 use chumsky::span::SimpleSpan;
 use chumsky::{Parser, extra, select};
-use chumsky::prelude::end;
 
 #[derive(Debug, PartialEq)]
 pub enum ParseNode {
     Integer(isize),
     Float(f64),
+    Identifier(String),
 }
 
 fn parser<'a, I>() -> impl Parser<'a, I, ParseNode, extra::Err<Rich<'a, Token>>>
@@ -19,7 +20,23 @@ where
         Token::Integer(value) => ParseNode::Integer(value),
         Token::Float(value) => ParseNode::Float(value),
     };
-    number.then_ignore(end())
+    let identifier = select! {
+        Token::Name(name) => vec![name],
+    }
+    .foldl(
+        just(Token::Dot)
+            .ignore_then(select! {
+                Token::Name(name) => name,
+            })
+            .repeated(),
+        |mut lhs, name| {
+            lhs.push(name);
+            lhs
+        },
+    )
+    .map(|names| ParseNode::Identifier(names.join(".")));
+    let atom = number.or(identifier);
+    atom.then_ignore(end())
 }
 
 fn parse(input: &str) -> Result<ParseNode, Vec<Rich<Token>>> {
@@ -99,5 +116,17 @@ mod tests {
     fn fails_to_parse_number_seperated_by_space() {
         let result = parse("45 0");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn successfully_parse_identifier() {
+        let result = parse("a");
+        assert_eq!(result, Ok(ParseNode::Identifier("a".to_string())));
+    }
+
+    #[test]
+    fn successfully_parse_identifier_with_dot() {
+        let result = parse("a.b");
+        assert_eq!(result, Ok(ParseNode::Identifier("a.b".to_string())));
     }
 }
