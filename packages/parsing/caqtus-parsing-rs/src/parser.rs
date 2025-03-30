@@ -1,7 +1,7 @@
 use crate::lexer::{Token, lex};
 use chumsky::error::Rich;
 use chumsky::input::{Input, Stream, ValueInput};
-use chumsky::pratt::{infix, left};
+use chumsky::pratt::{infix, left, prefix, right};
 use chumsky::prelude::{end, just};
 use chumsky::span::SimpleSpan;
 use chumsky::{Parser, extra, select};
@@ -14,6 +14,10 @@ pub enum ParseNode {
     Identifier(String),
     Add(Box<ParseNode>, Box<ParseNode>),
     Subtract(Box<ParseNode>, Box<ParseNode>),
+    Multiply(Box<ParseNode>, Box<ParseNode>),
+    Divide(Box<ParseNode>, Box<ParseNode>),
+    Negate(Box<ParseNode>),
+    Power(Box<ParseNode>, Box<ParseNode>),
 }
 
 fn parser<'a, I>() -> impl Parser<'a, I, ParseNode, extra::Err<Rich<'a, Token>>>
@@ -47,6 +51,18 @@ where
     .map(|names| ParseNode::Identifier(names.join(".")));
     let atom = quantity.or(number).or(identifier);
     let expr = atom.pratt((
+        infix(right(4), just(Token::Power), |left, _, right, _| {
+            ParseNode::Power(Box::new(left), Box::new(right))
+        }),
+        prefix(3, just(Token::Minus), |_, right, _| {
+            ParseNode::Negate(Box::new(right))
+        }),
+        infix(left(2), just(Token::Multiply), |left, _, right, _| {
+            ParseNode::Multiply(Box::new(left), Box::new(right))
+        }),
+        infix(left(2), just(Token::Divide), |left, _, right, _| {
+            ParseNode::Divide(Box::new(left), Box::new(right))
+        }),
         infix(left(1), just(Token::Plus), |left, _, right, _| {
             ParseNode::Add(Box::new(left), Box::new(right))
         }),

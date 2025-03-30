@@ -37,7 +37,7 @@ fn callback_float(lex: &mut logos::Lexer<Token>) -> Result<f64, LexingError> {
 #[logos(skip r" ")]
 pub enum Token {
     Error(LexingError),
-    #[regex(r"[\+-]?\d+", callback_integer, priority=3)]
+    #[regex(r"[\+-]?\d+", callback_integer, priority = 3)]
     Integer(isize),
     #[regex(r"[\+-]?(\d+(\.\d*)?|\.\d+)([eE][\+-]?\d+)?", callback_float)]
     Float(f64),
@@ -49,6 +49,12 @@ pub enum Token {
     Plus,
     #[token("-")]
     Minus,
+    #[token("*")]
+    Multiply,
+    #[token("/")]
+    Divide,
+    #[token("^")]
+    Power,
 }
 
 impl Display for Token {
@@ -60,12 +66,15 @@ impl Display for Token {
             Token::Dot => write!(f, "Dot"),
             Token::Plus => write!(f, "Plus"),
             Token::Minus => write!(f, "Minus"),
+            Token::Multiply => write!(f, "Multiply"),
+            Token::Divide => write!(f, "Divide"),
+            Token::Power => write!(f, "Power"),
             Token::Error(err) => write!(f, "Error({:?})", err),
         }
     }
 }
 
-pub fn lex(input: &str) -> impl Iterator<Item=(Token, Span)> {
+pub fn lex(input: &str) -> impl Iterator<Item = (Token, Span)> {
     Token::lexer(input).spanned().map(|(tok, span)| match tok {
         Ok(token) => (token, span),
         Err(err) => (Token::Error(err), span),
