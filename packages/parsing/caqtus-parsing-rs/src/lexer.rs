@@ -41,7 +41,7 @@ pub enum Token {
     Integer(isize),
     #[regex(r"[\+-]?(\d+(\.\d*)?|\.\d+)([eE][\+-]?\d+)?", callback_float)]
     Float(f64),
-    #[regex(r"[_a-zA-Z\p{Greek}][_a-zA-Z0-9\p{Greek}]*", |lex| lex.slice().to_string())]
+    #[regex(r"[_a-zA-Z\p{Greek}°][_a-zA-Z0-9\p{Greek}°]*|%", |lex| lex.slice().to_string())]
     Name(String),
     #[token(".")]
     Dot,
