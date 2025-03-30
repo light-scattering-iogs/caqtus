@@ -20,7 +20,7 @@ impl From<ParseIntError> for LexingError {
 #[logos(skip r" ")]
 pub enum Token {
     Error(LexingError),
-    #[regex("[0-9]+", |lex| lex.slice().parse())]
+    #[regex(r"[\+|-]?[0-9]+", |lex| lex.slice().parse())]
     Integer(isize),
 }
 

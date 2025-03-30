@@ -34,4 +34,20 @@ mod tests {
         let result = parse("45");
         assert_eq!(result, Ok(ParseNode::Integer(45)));
     }
+    #[test]
+    fn successfully_parse_integer_string_with_plus() {
+        let result = parse("+45");
+        assert_eq!(result, Ok(ParseNode::Integer(45)));
+    }
+    #[test]
+    fn successfully_parse_negative_integer_string() {
+        let result = parse("-45");
+        assert_eq!(result, Ok(ParseNode::Integer(-45)));
+    }
+    #[test]
+    fn safely_fails_to_parse_huge_integer_string() {
+        let result = parse("123456789012345678901234567890");
+        assert!(result.is_err());
+    }
+
 }
