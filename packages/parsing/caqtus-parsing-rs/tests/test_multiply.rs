@@ -49,6 +49,26 @@ fn test_can_parse_multiplication_and_division()
 }
 
 #[test]
+fn test_parenthesis_priority()
+{
+    let result = parse("10 MHz / (s * 3)");
+    assert_eq!(
+        result,
+        Ok(ParseNode::Divide(
+            Box::new(ParseNode::Quantity {
+                value: 10.0,
+                unit: "MHz".to_string()
+            }),
+            Box::new(ParseNode::Multiply(
+                Box::new(ParseNode::Identifier("s".to_string())),
+                Box::new(ParseNode::Integer(3))
+            ))
+        ))
+    );
+
+}
+
+#[test]
 fn test_can_divide_quantities()
 {
     let result = parse("10 MHz / 2 kHz");

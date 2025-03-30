@@ -2,7 +2,7 @@ use crate::lexer::{Token, lex};
 use chumsky::error::Rich;
 use chumsky::input::{Input, Stream, ValueInput};
 use chumsky::pratt::{infix, left, prefix, right};
-use chumsky::prelude::{end, just};
+use chumsky::prelude::{end, just, recursive};
 use chumsky::span::SimpleSpan;
 use chumsky::{Parser, extra, select};
 
@@ -20,7 +20,7 @@ pub enum ParseNode {
     Power(Box<ParseNode>, Box<ParseNode>),
 }
 
-fn parser<'a, I>() -> impl Parser<'a, I, ParseNode, extra::Err<Rich<'a, Token>>>
+fn atom<'a, I>() -> impl Parser<'a, I, ParseNode, extra::Err<Rich<'a, Token>>> + Clone
 where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
@@ -49,28 +49,38 @@ where
         },
     )
     .map(|names| ParseNode::Identifier(names.join(".")));
-    let atom = quantity.or(number).or(identifier);
-    let expr = atom.pratt((
-        infix(right(4), just(Token::Power), |left, _, right, _| {
-            ParseNode::Power(Box::new(left), Box::new(right))
-        }),
-        prefix(3, just(Token::Minus), |_, right, _| {
-            ParseNode::Negate(Box::new(right))
-        }),
-        infix(left(2), just(Token::Multiply), |left, _, right, _| {
-            ParseNode::Multiply(Box::new(left), Box::new(right))
-        }),
-        infix(left(2), just(Token::Divide), |left, _, right, _| {
-            ParseNode::Divide(Box::new(left), Box::new(right))
-        }),
-        infix(left(1), just(Token::Plus), |left, _, right, _| {
-            ParseNode::Add(Box::new(left), Box::new(right))
-        }),
-        infix(left(1), just(Token::Minus), |left, _, right, _| {
-            ParseNode::Subtract(Box::new(left), Box::new(right))
-        }),
-    ));
-    expr.then_ignore(end())
+    quantity.or(number).or(identifier)
+}
+
+fn parser<'a, I>() -> impl Parser<'a, I, ParseNode, extra::Err<Rich<'a, Token>>>
+where
+    I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
+{
+    recursive(|expr| {
+        let sub_expr = atom().or(expr.delimited_by(just(Token::LParen), just(Token::RParen)));
+        let arithmetic_expr = sub_expr.pratt((
+            infix(right(4), just(Token::Power), |left, _, right, _| {
+                ParseNode::Power(Box::new(left), Box::new(right))
+            }),
+            prefix(3, just(Token::Minus), |_, right, _| {
+                ParseNode::Negate(Box::new(right))
+            }),
+            infix(left(2), just(Token::Multiply), |left, _, right, _| {
+                ParseNode::Multiply(Box::new(left), Box::new(right))
+            }),
+            infix(left(2), just(Token::Divide), |left, _, right, _| {
+                ParseNode::Divide(Box::new(left), Box::new(right))
+            }),
+            infix(left(1), just(Token::Plus), |left, _, right, _| {
+                ParseNode::Add(Box::new(left), Box::new(right))
+            }),
+            infix(left(1), just(Token::Minus), |left, _, right, _| {
+                ParseNode::Subtract(Box::new(left), Box::new(right))
+            }),
+        ));
+        arithmetic_expr
+    })
+    .then_ignore(end())
 }
 
 pub fn parse(input: &str) -> Result<ParseNode, Vec<Rich<Token>>> {

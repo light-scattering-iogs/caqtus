@@ -28,6 +28,20 @@ fn successfully_parse_left_associative_subtraction() {
 }
 
 #[test]
+fn test_parentheses_priority() {
+    let result = parse("1 - (2 - 3)");
+    assert_eq!(
+        result,
+        Ok(ParseNode::Subtract(
+            Box::new(ParseNode::Integer(1)),
+            Box::new(ParseNode::Subtract(
+                Box::new(ParseNode::Integer(2)),
+                Box::new(ParseNode::Integer(3))
+            ))
+        ))
+    );}
+
+#[test]
 fn test_can_parse_unit_addition() {
     let result = parse("1 kHz + 2 MHz");
     assert_eq!(

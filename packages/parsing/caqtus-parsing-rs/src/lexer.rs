@@ -55,6 +55,10 @@ pub enum Token {
     Divide,
     #[token("^")]
     Power,
+    #[token("(")]
+    LParen,
+    #[token(")")]
+    RParen,
 }
 
 impl Display for Token {
@@ -69,6 +73,8 @@ impl Display for Token {
             Token::Multiply => write!(f, "Multiply"),
             Token::Divide => write!(f, "Divide"),
             Token::Power => write!(f, "Power"),
+            Token::LParen => write!(f, "LParen"),
+            Token::RParen => write!(f, "RParen"),
             Token::Error(err) => write!(f, "Error({:?})", err),
         }
     }
