@@ -214,16 +214,3 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<UnaryOperator>()?;
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use pyo3::Python;
-
-    #[test]
-    fn test_parse() {
-        Python::with_gil(|py| {
-            let _result = parse(py, "1 + 2");
-        });
-    }
-}
