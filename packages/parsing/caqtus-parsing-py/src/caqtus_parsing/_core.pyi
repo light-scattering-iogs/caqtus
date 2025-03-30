@@ -31,6 +31,24 @@ class ParseNode:
         @property
         def name(self) -> str: ...
 
+    class Add(ParseNode):
+        def __init__(self, lhs: AST, rhs: AST) -> None: ...
+
+        __match_args__ = ("lhs", "rhs")
+        @property
+        def lhs(self) -> AST: ...
+        @property
+        def rhs(self) -> AST: ...
+
+    class Subtract(ParseNode):
+        def __init__(self, lhs: AST, rhs: AST) -> None: ...
+
+        __match_args__ = ("lhs", "rhs")
+        @property
+        def lhs(self) -> AST: ...
+        @property
+        def rhs(self) -> AST: ...
+
 type AST = (
     ParseNode.Integer | ParseNode.Float | ParseNode.Quantity | ParseNode.Identifier
 )
