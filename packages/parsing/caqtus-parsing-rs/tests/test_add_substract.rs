@@ -1,4 +1,4 @@
-use caqtus_parsing_rs::{parse, ParseNode};
+use caqtus_parsing_rs::{ParseNode, parse};
 
 #[test]
 fn successfully_parse_addition() {
@@ -39,7 +39,13 @@ fn test_parentheses_priority() {
                 Box::new(ParseNode::Integer(3))
             ))
         ))
-    );}
+    );
+}
+
+#[test]
+fn can_add_number_without_spaces() {
+    assert_eq!(parse("1+2").unwrap().to_string(), "(1 + 2)");
+}
 
 #[test]
 fn test_can_parse_unit_addition() {
