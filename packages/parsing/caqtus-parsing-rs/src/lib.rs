@@ -1,4 +1,5 @@
 mod lexer;
+mod parser;
 
 use std::num::ParseIntError;
 
@@ -14,7 +15,6 @@ pub fn parse(string: &str) -> Result<ParseNode, ParseIntError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn successfully_parse_integer_string() {
         let result = parse("45");
