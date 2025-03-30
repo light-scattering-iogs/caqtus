@@ -1,7 +1,9 @@
+use std::fmt::Display;
 use crate::lexer::{Token, lex};
 use chumsky::error::Rich;
 use chumsky::input::{Input, Stream, ValueInput};
 use chumsky::pratt::{infix, left, prefix, right};
+use chumsky::prelude::*;
 use chumsky::prelude::{end, just, recursive};
 use chumsky::span::SimpleSpan;
 use chumsky::{Parser, extra, select};
@@ -18,6 +20,53 @@ pub enum ParseNode {
     Divide(Box<ParseNode>, Box<ParseNode>),
     Negate(Box<ParseNode>),
     Power(Box<ParseNode>, Box<ParseNode>),
+    Call(String, Vec<ParseNode>),
+}
+
+impl Display for ParseNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseNode::Integer(i) => write!(f, "{}", i),
+            ParseNode::Float(fl) => write!(f, "{}", fl),
+            ParseNode::Quantity { value, unit } => write!(f, "{} {}", value, unit),
+            ParseNode::Identifier(name) => write!(f, "{}", name),
+            ParseNode::Add(lhs, rhs) => write!(f, "({} + {})", lhs, rhs),
+            ParseNode::Subtract(lhs, rhs) => write!(f, "({} - {})", lhs, rhs),
+            ParseNode::Multiply(lhs, rhs) => write!(f, "({} * {})", lhs, rhs),
+            ParseNode::Divide(lhs, rhs) => write!(f, "({} / {})", lhs, rhs),
+            ParseNode::Negate(rhs) => write!(f, "(-{})", rhs),
+            ParseNode::Power(lhs, rhs) => write!(f, "({}^{})", lhs, rhs),
+            ParseNode::Call(name, args) => {
+                let args_str = args
+                    .iter()
+                    .map(|arg| arg.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{}({})", name, args_str)
+            }
+        }
+    }
+}
+
+fn identifier<'a, I>() -> impl Parser<'a, I, String, extra::Err<Rich<'a, Token>>> + Clone
+where
+    I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
+{
+    select! {
+        Token::Name(name) => vec![name],
+    }
+    .foldl(
+        just(Token::Dot)
+            .ignore_then(select! {
+                Token::Name(name) => name,
+            })
+            .repeated(),
+        |mut lhs, name| {
+            lhs.push(name);
+            lhs
+        },
+    )
+    .map(|names| names.join("."))
 }
 
 fn atom<'a, I>() -> impl Parser<'a, I, ParseNode, extra::Err<Rich<'a, Token>>> + Clone
@@ -34,22 +83,9 @@ where
     }
     .then(select! {Token::Name(unit) => unit})
     .map(|(value, unit)| ParseNode::Quantity { value, unit });
-    let identifier = select! {
-        Token::Name(name) => vec![name],
-    }
-    .foldl(
-        just(Token::Dot)
-            .ignore_then(select! {
-                Token::Name(name) => name,
-            })
-            .repeated(),
-        |mut lhs, name| {
-            lhs.push(name);
-            lhs
-        },
-    )
-    .map(|names| ParseNode::Identifier(names.join(".")));
-    quantity.or(number).or(identifier)
+    quantity
+        .or(number)
+        .or(identifier().map(ParseNode::Identifier))
 }
 
 fn parser<'a, I>() -> impl Parser<'a, I, ParseNode, extra::Err<Rich<'a, Token>>>
@@ -57,7 +93,18 @@ where
     I: ValueInput<'a, Token = Token, Span = SimpleSpan>,
 {
     recursive(|expr| {
-        let sub_expr = atom().or(expr.delimited_by(just(Token::LParen), just(Token::RParen)));
+        let call = identifier()
+            .then(
+                expr.clone()
+                    .separated_by(just(Token::Comma))
+                    .allow_trailing()
+                    .collect::<Vec<_>>()
+                    .delimited_by(just(Token::LParen), just(Token::RParen)),
+            )
+            .map(|(name, args)| ParseNode::Call(name, args));
+        let sub_expr = call
+            .or(atom())
+            .or(expr.delimited_by(just(Token::LParen), just(Token::RParen)));
         let arithmetic_expr = sub_expr.pratt((
             infix(right(4), just(Token::Power), |left, _, right, _| {
                 ParseNode::Power(Box::new(left), Box::new(right))
