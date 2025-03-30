@@ -34,8 +34,15 @@ enum ParseNode {
     Identifier {
         name: String,
     },
-    UnaryOperation(UnaryOperator, Py<ParseNode>),
-    BinaryOperation(BinaryOperator, Py<ParseNode>, Py<ParseNode>),
+    UnaryOperation {
+        operator: UnaryOperator,
+        operand: Py<ParseNode>,
+    },
+    BinaryOperation {
+        operator: BinaryOperator,
+        lhs: Py<ParseNode>,
+        rhs: Py<ParseNode>,
+    },
     Call {
         name: String,
         args: Vec<Py<ParseNode>>,
@@ -53,12 +60,26 @@ impl PartialEq for ParseNode {
             ) => a == b && ua == ub,
             (ParseNode::Identifier { name: a }, ParseNode::Identifier { name: b }) => a == b,
             (
-                ParseNode::BinaryOperation(op_a, lhs_a, rhs_a),
-                ParseNode::BinaryOperation(op_b, lhs_b, rhs_b),
+                ParseNode::BinaryOperation {
+                    operator: op_a,
+                    lhs: lhs_a,
+                    rhs: rhs_a,
+                },
+                ParseNode::BinaryOperation {
+                    operator: op_b,
+                    lhs: lhs_b,
+                    rhs: rhs_b,
+                },
             ) => op_a == op_b && lhs_a.get() == lhs_b.get() && rhs_a.get() == rhs_b.get(),
             (
-                ParseNode::UnaryOperation(op_a, rhs_a),
-                ParseNode::UnaryOperation(op_b, rhs_b),
+                ParseNode::UnaryOperation {
+                    operator: op_a,
+                    operand: rhs_a,
+                },
+                ParseNode::UnaryOperation {
+                    operator: op_b,
+                    operand: rhs_b,
+                },
             ) => op_a == op_b && rhs_a.get() == rhs_b.get(),
             (
                 ParseNode::Call {
@@ -88,13 +109,13 @@ impl ParseNode {
                 format!("Quantity({}, {})", value, unit)
             }
             ParseNode::Identifier { name } => format!("Identifier({})", name),
-            ParseNode::UnaryOperation(op, rhs) => {
-                format!("UnaryOperation({:?}, {})", op, rhs.get().repr())
+            ParseNode::UnaryOperation { operator, operand } => {
+                format!("UnaryOperation({:?}, {})", operator, operand.get().repr())
             }
-            ParseNode::BinaryOperation(op, lhs, rhs) => {
+            ParseNode::BinaryOperation { operator, lhs, rhs } => {
                 format!(
                     "BinaryOperation({:?}, {}, {})",
-                    op,
+                    operator,
                     lhs.get().repr(),
                     rhs.get().repr()
                 )
@@ -146,56 +167,42 @@ fn convert(py: Python<'_>, ast: caqtus_parsing_rs::ParseNode) -> ParseNode {
             ParseNode::Quantity { value, unit }
         }
         caqtus_parsing_rs::ParseNode::Identifier(name) => ParseNode::Identifier { name },
-        caqtus_parsing_rs::ParseNode::Add(lhs, rhs) => {
-            ParseNode::BinaryOperation(
-                BinaryOperator::Plus,
-                Py::new(py, convert(py, *lhs)).unwrap(),
-                Py::new(py, convert(py, *rhs)).unwrap(),
-            )
-        }
-        caqtus_parsing_rs::ParseNode::Subtract(lhs, rhs) => {
-            ParseNode::BinaryOperation(
-                BinaryOperator::Minus,
-                Py::new(py, convert(py, *lhs)).unwrap(),
-                Py::new(py, convert(py, *rhs)).unwrap(),
-            )
-        }
-        caqtus_parsing_rs::ParseNode::Multiply(lhs, rhs) => {
-            ParseNode::BinaryOperation(
-                BinaryOperator::Times,
-                Py::new(py, convert(py, *lhs)).unwrap(),
-                Py::new(py, convert(py, *rhs)).unwrap(),
-            )
-        }
-        caqtus_parsing_rs::ParseNode::Divide(lhs, rhs) => {
-            ParseNode::BinaryOperation(
-                BinaryOperator::Div,
-                Py::new(py, convert(py, *lhs)).unwrap(),
-                Py::new(py, convert(py, *rhs)).unwrap(),
-            )
-        }
-        caqtus_parsing_rs::ParseNode::Negate(rhs) => {
-            ParseNode::UnaryOperation(
-                UnaryOperator::Neg,
-                Py::new(py, convert(py, *rhs)).unwrap(),
-            )
-        }
-        caqtus_parsing_rs::ParseNode::Power(lhs, rhs) => {
-            ParseNode::BinaryOperation(
-                BinaryOperator::Pow,
-                Py::new(py, convert(py, *lhs)).unwrap(),
-                Py::new(py, convert(py, *rhs)).unwrap(),
-            )
-        }
-        caqtus_parsing_rs::ParseNode::Call(name, args) => {
-            ParseNode::Call {
-                name,
-                args: args
-                    .into_iter()
-                    .map(|arg| Py::new(py, convert(py, arg)).unwrap())
-                    .collect(),
-            }
-        }
+        caqtus_parsing_rs::ParseNode::Add(lhs, rhs) => ParseNode::BinaryOperation {
+            operator: BinaryOperator::Plus,
+            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
+            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+        },
+        caqtus_parsing_rs::ParseNode::Subtract(lhs, rhs) => ParseNode::BinaryOperation {
+            operator: BinaryOperator::Minus,
+            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
+            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+        },
+        caqtus_parsing_rs::ParseNode::Multiply(lhs, rhs) => ParseNode::BinaryOperation {
+            operator: BinaryOperator::Times,
+            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
+            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+        },
+        caqtus_parsing_rs::ParseNode::Divide(lhs, rhs) => ParseNode::BinaryOperation {
+            operator: BinaryOperator::Div,
+            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
+            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+        },
+        caqtus_parsing_rs::ParseNode::Power(lhs, rhs) => ParseNode::BinaryOperation {
+            operator: BinaryOperator::Pow,
+            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
+            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+        },
+        caqtus_parsing_rs::ParseNode::Negate(operant) => ParseNode::UnaryOperation {
+            operator: UnaryOperator::Neg,
+            operand: Py::new(py, convert(py, *operant)).unwrap(),
+        },
+        caqtus_parsing_rs::ParseNode::Call(name, args) => ParseNode::Call {
+            name,
+            args: args
+                .into_iter()
+                .map(|arg| Py::new(py, convert(py, arg)).unwrap())
+                .collect(),
+        },
     }
 }
 
