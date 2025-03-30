@@ -9,6 +9,7 @@ use chumsky::{Parser, extra, select};
 pub enum ParseNode {
     Integer(isize),
     Float(f64),
+    Quantity { value: f64, unit: String },
     Identifier(String),
 }
 
@@ -20,6 +21,12 @@ where
         Token::Integer(value) => ParseNode::Integer(value),
         Token::Float(value) => ParseNode::Float(value),
     };
+    let quantity = select! {
+        Token::Integer(value) => value as f64,
+        Token::Float(value) => value,
+    }
+    .then(select! {Token::Name(unit) => unit})
+    .map(|(value, unit)| ParseNode::Quantity { value, unit });
     let identifier = select! {
         Token::Name(name) => vec![name],
     }
@@ -35,7 +42,7 @@ where
         },
     )
     .map(|names| ParseNode::Identifier(names.join(".")));
-    let atom = number.or(identifier);
+    let atom = quantity.or(number).or(identifier);
     atom.then_ignore(end())
 }
 

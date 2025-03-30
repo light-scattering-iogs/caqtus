@@ -1,12 +1,13 @@
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use std::fmt::Display;
-use pyo3::exceptions::PyValueError;
 
 #[pyclass(frozen, eq)]
 #[derive(PartialEq, Debug)]
 enum ParseNode {
     Integer { value: isize },
     Float { value: f64 },
+    Quantity { value: f64, unit: String },
     Identifier { name: String },
 }
 
@@ -35,6 +36,9 @@ impl From<caqtus_parsing_rs::ParseNode> for ParseNode {
         match ast {
             caqtus_parsing_rs::ParseNode::Integer(value) => ParseNode::Integer { value },
             caqtus_parsing_rs::ParseNode::Float(value) => ParseNode::Float { value },
+            caqtus_parsing_rs::ParseNode::Quantity { value, unit } => {
+                ParseNode::Quantity { value, unit }
+            },
             caqtus_parsing_rs::ParseNode::Identifier(name) => ParseNode::Identifier { name },
         }
     }
@@ -52,15 +56,4 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse, m)?)?;
     m.add_class::<ParseNode>()?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn successfully_parse_integer_string() {
-        let result = parse("45").unwrap();
-        assert_eq!(result, ParseNode::Integer { value: 45 });
-    }
 }

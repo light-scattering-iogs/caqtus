@@ -45,6 +45,10 @@ pub enum Token {
     Name(String),
     #[token(".")]
     Dot,
+    #[token("+")]
+    Plus,
+    #[token("-")]
+    Minus,
 }
 
 impl Display for Token {
@@ -54,6 +58,8 @@ impl Display for Token {
             Token::Float(value) => write!(f, "Float({})", value),
             Token::Name(name) => write!(f, "Name({})", name),
             Token::Dot => write!(f, "Dot"),
+            Token::Plus => write!(f, "Plus"),
+            Token::Minus => write!(f, "Minus"),
             Token::Error(err) => write!(f, "Error({:?})", err),
         }
     }

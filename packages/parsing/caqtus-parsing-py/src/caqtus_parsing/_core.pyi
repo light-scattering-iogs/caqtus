@@ -15,6 +15,15 @@ class ParseNode:
         @property
         def value(self) -> float: ...
 
+    class Quantity(ParseNode):
+        def __init__(self, value: float, unit: str) -> None: ...
+
+        __match_args__ = ("value", "unit")
+        @property
+        def value(self) -> float: ...
+        @property
+        def unit(self) -> str: ...
+
     class Identifier(ParseNode):
         def __init__(self, name: str) -> None: ...
 
@@ -22,6 +31,8 @@ class ParseNode:
         @property
         def name(self) -> str: ...
 
-type AST = ParseNode.Integer | ParseNode.Float | ParseNode.Identifier
+type AST = (
+    ParseNode.Integer | ParseNode.Float | ParseNode.Quantity | ParseNode.Identifier
+)
 
 def parse(string: str) -> AST: ...

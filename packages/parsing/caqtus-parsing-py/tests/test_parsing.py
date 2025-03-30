@@ -11,3 +11,7 @@ def test_successfully_parse_float():
 
 def test_successfully_parse_identifier():
     assert parse("a.b.c") == ParseNode.Identifier("a.b.c")
+
+
+def test_successfully_parse_quantity():
+    assert parse("123.45 m") == ParseNode.Quantity(123.45, "m")
