@@ -125,8 +125,33 @@ mod tests {
     }
 
     #[test]
-    fn successfully_parse_identifier_with_dot() {
+    fn successfully_parse_identifier_with_single_dot() {
         let result = parse("a.b");
         assert_eq!(result, Ok(ParseNode::Identifier("a.b".to_string())));
+    }
+
+    #[test]
+    fn successfully_parse_identifier_with_multiple_dots() {
+        let result = parse("a.b.c");
+        assert_eq!(result, Ok(ParseNode::Identifier("a.b.c".to_string())));
+    }
+
+    #[test]
+    fn fails_to_parse_identifier_with_trailing_dot() {
+        let result = parse("a.");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn fails_to_parse_identifier_with_leading_dot() {
+        let result = parse(".a");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn fails_to_parse_identifier_with_consecutive_dots() {
+        let result = parse("a..b");
+        assert!(result.is_err());
+
     }
 }
