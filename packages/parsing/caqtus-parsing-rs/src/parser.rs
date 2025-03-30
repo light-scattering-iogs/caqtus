@@ -1,6 +1,7 @@
 use crate::lexer::{Token, lex};
 use chumsky::error::Rich;
 use chumsky::input::{Input, Stream, ValueInput};
+use chumsky::pratt::{infix, left};
 use chumsky::prelude::{end, just};
 use chumsky::span::SimpleSpan;
 use chumsky::{Parser, extra, select};
@@ -11,6 +12,8 @@ pub enum ParseNode {
     Float(f64),
     Quantity { value: f64, unit: String },
     Identifier(String),
+    Add(Box<ParseNode>, Box<ParseNode>),
+    Subtract(Box<ParseNode>, Box<ParseNode>),
 }
 
 fn parser<'a, I>() -> impl Parser<'a, I, ParseNode, extra::Err<Rich<'a, Token>>>
@@ -43,7 +46,15 @@ where
     )
     .map(|names| ParseNode::Identifier(names.join(".")));
     let atom = quantity.or(number).or(identifier);
-    atom.then_ignore(end())
+    let expr = atom.pratt((
+        infix(left(1), just(Token::Plus), |left, _, right, _| {
+            ParseNode::Add(Box::new(left), Box::new(right))
+        }),
+        infix(left(1), just(Token::Minus), |left, _, right, _| {
+            ParseNode::Subtract(Box::new(left), Box::new(right))
+        }),
+    ));
+    expr.then_ignore(end())
 }
 
 pub fn parse(input: &str) -> Result<ParseNode, Vec<Rich<Token>>> {
