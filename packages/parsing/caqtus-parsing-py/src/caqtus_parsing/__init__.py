@@ -1,6 +1,9 @@
+from typing import TypeAlias
+
 from caqtus_parsing._core import (
     BinaryOperator,
     ParseNode,
+    UnaryOperator,
     parse,
 )
 
@@ -17,6 +20,10 @@ Div = BinaryOperator.Div
 Pow = BinaryOperator.Pow
 Call = ParseNode.Call
 
+AST: TypeAlias = (
+    Integer | Float | Quantity | Identifier | UnaryOperation | BinaryOperation | Call
+)
+
 
 __all__ = [
     "parse",
@@ -26,10 +33,13 @@ __all__ = [
     "Identifier",
     "UnaryOperation",
     "BinaryOperation",
+    "BinaryOperator",
+    "UnaryOperator",
     "Plus",
     "Minus",
     "Times",
     "Div",
     "Pow",
     "Call",
+    "AST",
 ]

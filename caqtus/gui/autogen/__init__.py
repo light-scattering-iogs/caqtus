@@ -16,6 +16,7 @@ from ._editor_builder import (
 from ._int_editor import IntegerEditor
 from ._string_editor import StringEditor
 from ._value_editor import ValueEditor
+from ._expression_editor import ExpressionEditor
 
 
 __all__ = [
@@ -31,4 +32,5 @@ __all__ = [
     "ValueEditor",
     "TypeNotRegisteredError",
     "AttributeOverride",
+    "ExpressionEditor",
 ]
