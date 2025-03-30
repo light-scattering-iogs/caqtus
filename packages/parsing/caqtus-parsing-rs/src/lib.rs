@@ -1,16 +1,7 @@
 mod lexer;
 mod parser;
 
-use std::num::ParseIntError;
-
-#[derive(Debug, PartialEq)]
-pub enum ParseNode {
-    Integer(i64),
-}
-
-pub fn parse(string: &str) -> Result<ParseNode, ParseIntError> {
-    Ok(ParseNode::Integer(string.parse::<i64>()?))
-}
+pub use crate::parser::{parse, ParseNode};
 
 #[cfg(test)]
 mod tests {

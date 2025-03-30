@@ -39,7 +39,7 @@ where
     atom.then_ignore(end())
 }
 
-fn parse(input: &str) -> Result<ParseNode, Vec<Rich<Token>>> {
+pub fn parse(input: &str) -> Result<ParseNode, Vec<Rich<Token>>> {
     let token_iter = lex(input).map(|(token, span)| (token, span.into()));
     let token_stream =
         Stream::from_iter(token_iter).map((0..input.len()).into(), |(t, s): (_, _)| (t, s));
