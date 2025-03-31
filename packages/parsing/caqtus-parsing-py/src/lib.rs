@@ -160,6 +160,8 @@ impl From<ParseError> for PyErr {
 }
 
 fn convert(py: Python<'_>, ast: caqtus_parsing_rs::ParseNode) -> ParseNode {
+    // TODO: replace all the .into_pyobject(py).unwrap().unbind() Py::new once
+    //  https://github.com/PyO3/pyo3/issues/3747 is resolved
     match ast {
         caqtus_parsing_rs::ParseNode::Integer(value) => ParseNode::Integer { value },
         caqtus_parsing_rs::ParseNode::Float(value) => ParseNode::Float { value },
@@ -169,38 +171,38 @@ fn convert(py: Python<'_>, ast: caqtus_parsing_rs::ParseNode) -> ParseNode {
         caqtus_parsing_rs::ParseNode::Identifier(name) => ParseNode::Identifier { name },
         caqtus_parsing_rs::ParseNode::Add(lhs, rhs) => ParseNode::BinaryOperation {
             operator: BinaryOperator::Plus,
-            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
-            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
+            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
         },
         caqtus_parsing_rs::ParseNode::Subtract(lhs, rhs) => ParseNode::BinaryOperation {
             operator: BinaryOperator::Minus,
-            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
-            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
+            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
         },
         caqtus_parsing_rs::ParseNode::Multiply(lhs, rhs) => ParseNode::BinaryOperation {
             operator: BinaryOperator::Times,
-            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
-            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
+            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
         },
         caqtus_parsing_rs::ParseNode::Divide(lhs, rhs) => ParseNode::BinaryOperation {
             operator: BinaryOperator::Div,
-            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
-            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
+            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
         },
         caqtus_parsing_rs::ParseNode::Power(lhs, rhs) => ParseNode::BinaryOperation {
             operator: BinaryOperator::Pow,
-            lhs: Py::new(py, convert(py, *lhs)).unwrap(),
-            rhs: Py::new(py, convert(py, *rhs)).unwrap(),
+            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
+            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
         },
         caqtus_parsing_rs::ParseNode::Negate(operant) => ParseNode::UnaryOperation {
             operator: UnaryOperator::Neg,
-            operand: Py::new(py, convert(py, *operant)).unwrap(),
+            operand: convert(py, *operant).into_pyobject(py).unwrap().unbind(),
         },
         caqtus_parsing_rs::ParseNode::Call(name, args) => ParseNode::Call {
             name,
             args: args
                 .into_iter()
-                .map(|arg| Py::new(py, convert(py, arg)).unwrap())
+                .map(|arg| convert(py, arg).into_pyobject(py).unwrap().unbind())
                 .collect(),
         },
     }
@@ -220,4 +222,10 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<BinaryOperator>()?;
     m.add_class::<UnaryOperator>()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_parse() {}
 }
