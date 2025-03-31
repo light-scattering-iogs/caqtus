@@ -48,3 +48,9 @@ def test_can_parse_call():
     assert parse("sin(omega * t)") == Call(
         "sin", [BinaryOperation(Times, Identifier("omega"), Identifier("t"))]
     )
+
+
+def test_is_instance_nested_children():
+    expr = parse("f(a + b)")
+    assert isinstance(expr, Call)
+    assert isinstance(expr.args[0], BinaryOperation), type(expr.args[0])
