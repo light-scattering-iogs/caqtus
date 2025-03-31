@@ -106,9 +106,9 @@ impl ParseNode {
             ParseNode::Integer { value } => format!("Integer({})", value),
             ParseNode::Float { value } => format!("Float({})", value),
             ParseNode::Quantity { value, unit } => {
-                format!("Quantity({}, {})", value, unit)
+                format!("Quantity({}, \"{}\")", value, unit)
             }
-            ParseNode::Identifier { name } => format!("Identifier({})", name),
+            ParseNode::Identifier { name } => format!("Identifier(\"{}\")", name),
             ParseNode::UnaryOperation { operator, operand } => {
                 format!("UnaryOperation({:?}, {})", operator, operand.get().repr())
             }
@@ -126,7 +126,7 @@ impl ParseNode {
                     .map(|arg| arg.get().repr())
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("Call({}, [{}])", name, args_str)
+                format!("Call(\"{}\", [{}])", name, args_str)
             }
         }
     }
