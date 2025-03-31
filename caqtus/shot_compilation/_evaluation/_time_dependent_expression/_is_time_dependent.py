@@ -1,29 +1,30 @@
 import functools
 from typing import assert_never
 
-import caqtus_parsing.nodes as nodes
+from caqtus_parsing import (
+    AST,
+    BinaryOperation,
+    Call,
+    Float,
+    Identifier,
+    Integer,
+    UnaryOperation,
+)
+from caqtus_parsing import Quantity as QuantityNode
 
 
 @functools.lru_cache
-def is_time_dependent(expression: nodes.Expression) -> bool:
+def is_time_dependent(expression: AST) -> bool:
     match expression:
-        case int() | float() | nodes.Quantity():
+        case Integer() | Float() | QuantityNode():
             return False
-        case nodes.Variable(name=name):
+        case Identifier(name):
             return name == "t"
-        case (
-            nodes.Add()
-            | nodes.Subtract()
-            | nodes.Multiply()
-            | nodes.Divide()
-            | nodes.Power() as binary_operator
-        ):
-            return is_time_dependent(binary_operator.left) or is_time_dependent(
-                binary_operator.right
-            )
-        case nodes.Plus() | nodes.Minus() as unary_operator:
-            return is_time_dependent(unary_operator.operand)
-        case nodes.Call():
+        case BinaryOperation(_, lhs, rhs):
+            return is_time_dependent(lhs) or is_time_dependent(rhs)
+        case UnaryOperation(_, operand):
+            return is_time_dependent(operand)
+        case Call():
             return any(is_time_dependent(arg) for arg in expression.args)
         case _:
             assert_never(expression)

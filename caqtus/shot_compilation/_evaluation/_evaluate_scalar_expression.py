@@ -1,26 +1,33 @@
-import functools
-import operator
-from collections.abc import Sequence
-from typing import assert_never, Any
+from typing import Any, assert_never
 
+from caqtus_parsing import (
+    AST,
+    BinaryOperation,
+    BinaryOperator,
+    Call,
+    Float,
+    Identifier,
+    Integer,
+    UnaryOperation,
+    UnaryOperator,
+    parse,
+)
+from caqtus_parsing import Quantity as QuantityNode
 from typing_extensions import TypeIs
 
 import caqtus.formatter as fmt
-import caqtus_parsing.nodes as nodes
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameters
 from caqtus.types.recoverable_exceptions import EvaluationError, InvalidTypeError
-from caqtus.types.units import Quantity, is_scalar_quantity, Unit, DimensionalityError
-from caqtus_parsing import parse, InvalidSyntaxError
+from caqtus.types.units import DimensionalityError, Quantity, Unit, is_scalar_quantity
+
 from ._constants import CONSTANTS
 from ._exceptions import (
-    UndefinedParameterError,
     InvalidOperationError,
-    UndefinedUnitError,
+    UndefinedParameterError,
 )
 from ._functions import SCALAR_FUNCTIONS
 from ._scalar import Scalar
-from ._units import units
 
 
 def evaluate_scalar_expression(
@@ -49,9 +56,7 @@ def evaluate_scalar_expression(
         ) from error
 
 
-def evaluate_bool_expression(
-    expression: nodes.Expression, parameters: Parameters
-) -> bool:
+def evaluate_bool_expression(expression: AST, parameters: Parameters) -> bool:
     value = evaluate_expression(expression, parameters)
     if not isinstance(value, bool):
         raise InvalidTypeError(
@@ -61,9 +66,7 @@ def evaluate_bool_expression(
     return value
 
 
-def evaluate_float_expression(
-    expression: nodes.Expression, parameters: Parameters
-) -> float:
+def evaluate_float_expression(expression: AST, parameters: Parameters) -> float:
     value = evaluate_expression(expression, parameters)
     try:
         return float(value)
@@ -73,34 +76,25 @@ def evaluate_float_expression(
         ) from error
 
 
-def evaluate_expression(expression: nodes.Expression, parameters: Parameters) -> Scalar:
+def evaluate_expression(expression: AST, parameters: Parameters) -> Scalar:
     match expression:
-        case int() | float():
-            return expression
-        case nodes.Variable() as variable:
-            return evaluate_scalar_variable(variable, parameters)
-        case (
-            nodes.Add()
-            | nodes.Subtract()
-            | nodes.Multiply()
-            | nodes.Divide()
-            | nodes.Power() as binary_operator
-        ):
-            return evaluate_binary_operator(binary_operator, parameters)
-        case nodes.Plus() | nodes.Minus() as unary_operator:
+        case Integer(value) | Float(value):
+            return value
+        case Identifier(name):
+            return evaluate_scalar_variable(name, parameters)
+        case BinaryOperation() as binary_operation:
+            return evaluate_binary_operator(binary_operation, parameters)
+        case UnaryOperation() as unary_operator:
             return evaluate_unary_operator(unary_operator, parameters)
-        case nodes.Quantity():
+        case QuantityNode():
             return evaluate_quantity(expression)
-        case nodes.Call():
+        case Call():
             return evaluate_function_call(expression, parameters)
         case _:  # pragma: no cover
             assert_never(expression)
 
 
-def evaluate_scalar_variable(
-    variable: nodes.Variable, parameters: Parameters
-) -> Scalar:
-    name = variable.name
+def evaluate_scalar_variable(name: str, parameters: Parameters) -> Scalar:
     if name in parameters:
         # We can use str as key instead of DottedVariableName because they have the
         # same hash.
@@ -112,10 +106,10 @@ def evaluate_scalar_variable(
 
 
 def evaluate_function_call(
-    function_call: nodes.Call,
+    function_call: Call,
     parameters: Parameters,
 ) -> Scalar:
-    function_name = function_call.function
+    function_name = function_call.name
     try:
         # We can use str as key instead of VariableName because they have the
         # same hash.
@@ -131,74 +125,49 @@ def evaluate_function_call(
 
 
 def evaluate_binary_operator(
-    binary_operator: nodes.BinaryOperator,
+    binary_operation: BinaryOperation,
     parameters: Parameters,
 ) -> Scalar:
-    left = evaluate_expression(binary_operator.left, parameters)
-    right = evaluate_expression(binary_operator.right, parameters)
-    match binary_operator:
-        case nodes.Add():
+    left = evaluate_expression(binary_operation.lhs, parameters)
+    right = evaluate_expression(binary_operation.rhs, parameters)
+    match binary_operation.operator:
+        case BinaryOperator.Plus:
             result = left + right
-        case nodes.Subtract():
+        case BinaryOperator.Minus:
             result = left - right
-        case nodes.Multiply():
+        case BinaryOperator.Times:
             result = left * right
-        case nodes.Divide():
+        case BinaryOperator.Div:
             result = left / right
-        case nodes.Power(exponent):
+        case BinaryOperator.Pow:
             if not isinstance(right, (int, float)):
                 raise InvalidOperationError(
-                    f"The exponent {exponent} must be a real number, not {right}."
+                    f"The exponent {binary_operation.rhs} must be a real number, not "
+                    f"{right}."
                 )
             result = left**right
         case _:  # pragma: no cover
-            assert_never(binary_operator)
+            assert_never(binary_operation.operator)
     assert is_scalar(result)
     return result
 
 
 def evaluate_unary_operator(
-    unary_operator: nodes.UnaryOperator,
+    unary_operation: UnaryOperation,
     parameters: Parameters,
 ) -> Scalar:
-    operand = evaluate_expression(unary_operator.operand, parameters)
-    match unary_operator:
-        case nodes.Plus():
-            result = operand
-        case nodes.Minus():
+    operand = evaluate_expression(unary_operation.operand, parameters)
+    match unary_operation.operator:
+        case UnaryOperator.Neg:
             result = -operand
         case _:  # pragma: no cover
-            assert_never(unary_operator)
+            assert_never(unary_operation.operator)
     assert is_scalar(result)
     return result
 
 
-def evaluate_quantity(quantity: nodes.Quantity) -> Quantity[float]:
-    magnitude = quantity.magnitude
-
-    multiplicative_units = evaluate_units(quantity.multiplicative_units)
-
-    if not quantity.divisional_units:
-        return Quantity(magnitude, multiplicative_units)
-    else:
-        divisive_units = evaluate_units(quantity.divisional_units)
-        total_units = multiplicative_units / divisive_units
-        assert isinstance(total_units, Unit)
-        return Quantity(magnitude, total_units)
-
-
-@functools.lru_cache
-def evaluate_units(unit_nodes: Sequence[nodes.UnitTerm]) -> Unit:
-    assert unit_nodes
-    accumulated_units = []
-    for unit_term in unit_nodes:
-        try:
-            base = units[unit_term.unit]
-        except KeyError:
-            raise UndefinedUnitError(f"Unit {unit_term.unit} is not defined.") from None
-        exponent = unit_term.exponent or 1
-        accumulated_units.append(base**exponent)
-    return functools.reduce(operator.mul, accumulated_units)
+def evaluate_quantity(quantity: QuantityNode) -> Quantity[float]:
+    return Quantity(quantity.value, Unit(quantity.unit))
 
 
 def is_scalar(value: Any) -> TypeIs[Scalar]:

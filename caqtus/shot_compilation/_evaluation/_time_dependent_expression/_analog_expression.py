@@ -1,32 +1,46 @@
 import functools
-from typing import assert_type, assert_never
+from typing import assert_never, assert_type
 
 import attrs
 import numpy as np
+from caqtus_parsing import (
+    AST,
+    BinaryOperation,
+    BinaryOperator,
+    Call,
+    Float,
+    Identifier,
+    Integer,
+    UnaryOperation,
+    UnaryOperator,
+)
+from caqtus_parsing import (
+    Quantity as QuantityNode,
+)
 
-import caqtus_parsing.nodes as nodes
 from caqtus.shot_compilation.timed_instructions import (
-    TimedInstruction,
-    Pattern,
-    create_ramp,
     Concatenated,
-    Repeated,
+    Pattern,
     Ramp,
-    merge_instructions,
+    Repeated,
+    TimedInstruction,
     concatenate,
+    create_ramp,
+    merge_instructions,
 )
 from caqtus.shot_compilation.timing import Time, number_ticks, start_tick, stop_tick
 from caqtus.types.parameter import Parameters
 from caqtus.types.units import (
-    BaseUnit,
-    dimensionless,
-    Quantity,
     SECOND,
-    Unit,
+    BaseUnit,
     InvalidDimensionalityError,
+    Quantity,
+    Unit,
+    dimensionless,
 )
-from ._is_time_dependent import is_time_dependent
+
 from .._evaluate_scalar_expression import evaluate_expression
+from ._is_time_dependent import is_time_dependent
 
 
 @attrs.define
@@ -36,7 +50,7 @@ class AnalogInstruction:
 
 
 def evaluate_analog_ast(
-    ast: nodes.Expression, parameters: Parameters, t1: Time, t2: Time, timestep: Time
+    ast: AST, parameters: Parameters, t1: Time, t2: Time, timestep: Time
 ) -> AnalogInstruction:
     if not is_time_dependent(ast):
         value = evaluate_expression(ast, parameters)
@@ -55,9 +69,9 @@ def evaluate_analog_ast(
             )
     else:
         match ast:
-            case int() | float() | nodes.Quantity():
+            case Integer() | Float() | QuantityNode():
                 raise AssertionError("Unreachable")
-            case nodes.Variable(name=name):
+            case Identifier(name):
                 if name != "t":
                     raise AssertionError("Unreachable")
                 tick_start = start_tick(t1, timestep)
@@ -69,73 +83,77 @@ def evaluate_analog_ast(
                     magnitudes=create_ramp(value_start, value_stop, length),
                     units=SECOND,
                 )
-            case nodes.Call():
+            case Call():
                 raise NotImplementedError(
                     "Time dependent function calls are not yet supported."
                 )
-            case nodes.Plus() | nodes.Minus() as unary_operator:
+            case UnaryOperation(operator, operand):
                 return evaluate_unary_operator(
-                    unary_operator, parameters, t1, t2, timestep
+                    operator, operand, parameters, t1, t2, timestep
                 )
-            case nodes.Multiply():
-                left = evaluate_analog_ast(ast.left, parameters, t1, t2, timestep)
-                right = evaluate_analog_ast(ast.right, parameters, t1, t2, timestep)
-                units = left.units * right.units
-                assert isinstance(units, Unit)
-                return AnalogInstruction(
-                    magnitudes=multiply(left.magnitudes, right.magnitudes),
-                    units=units.to_base(),
-                )
-            case nodes.Divide():
-                left = evaluate_analog_ast(ast.left, parameters, t1, t2, timestep)
-                right = evaluate_analog_ast(ast.right, parameters, t1, t2, timestep)
-                units = left.units / right.units
-                assert isinstance(units, Unit)
-                return AnalogInstruction(
-                    magnitudes=divide(left.magnitudes, right.magnitudes),
-                    units=units.to_base(),
-                )
-            case nodes.Add() | nodes.Subtract() as binary_operator:
-                left = evaluate_analog_ast(ast.left, parameters, t1, t2, timestep)
-                right = evaluate_analog_ast(ast.right, parameters, t1, t2, timestep)
-                if left.units != right.units:
-                    raise InvalidDimensionalityError(
-                        f"Cannot add {ast.left} with units {left.units} to "
-                        f"{ast.right} with units {right.units}."
-                    )
-                left_magnitudes = left.magnitudes
-                if isinstance(binary_operator, nodes.Subtract):
-                    right_magnitudes = negate(right.magnitudes)
-                else:
-                    right_magnitudes = right.magnitudes
-                return AnalogInstruction(
-                    magnitudes=add(left_magnitudes, right_magnitudes),
-                    units=left.units,
-                )
-            case nodes.Power():
-                raise NotImplementedError(
-                    "Power operator is not yet supported for time dependent "
-                    "expressions."
-                )
+            case BinaryOperation(operator, lhs, rhs):
+                left = evaluate_analog_ast(lhs, parameters, t1, t2, timestep)
+                right = evaluate_analog_ast(rhs, parameters, t1, t2, timestep)
+                match operator:
+                    case BinaryOperator.Times:
+                        units = left.units * right.units
+                        assert isinstance(units, Unit)
+                        return AnalogInstruction(
+                            magnitudes=multiply(left.magnitudes, right.magnitudes),
+                            units=units.to_base(),
+                        )
+                    case BinaryOperator.Div:
+                        units = left.units / right.units
+                        assert isinstance(units, Unit)
+                        return AnalogInstruction(
+                            magnitudes=divide(left.magnitudes, right.magnitudes),
+                            units=units.to_base(),
+                        )
+                    case BinaryOperator.Plus:
+                        if left.units != right.units:
+                            raise InvalidDimensionalityError(
+                                f"Cannot add {lhs} with units {left.units} to "
+                                f"{rhs} with units {right.units}."
+                            )
+                        return AnalogInstruction(
+                            magnitudes=add(left.magnitudes, right.magnitudes),
+                            units=left.units,
+                        )
+                    case BinaryOperator.Minus:
+                        if left.units != right.units:
+                            raise InvalidDimensionalityError(
+                                f"Cannot subtract {lhs} with units {left.units} from "
+                                f"{rhs} with units {right.units}."
+                            )
+                        return AnalogInstruction(
+                            magnitudes=add(left.magnitudes, negate(right.magnitudes)),
+                            units=left.units,
+                        )
+                    case BinaryOperator.Times.Pow:
+                        raise NotImplementedError(
+                            "Power operator is not yet supported for time dependent "
+                            "expressions."
+                        )
+                    case _:
+                        assert_never(operator)
             case _:
                 assert_never(ast)
 
 
 def evaluate_unary_operator(
-    unary_operator: nodes.UnaryOperator,
+    unary_operator: UnaryOperator,
+    operand: AST,
     parameters: Parameters,
     t1: Time,
     t2: Time,
     timestep: Time,
 ) -> AnalogInstruction:
-    operand = evaluate_analog_ast(unary_operator.operand, parameters, t1, t2, timestep)
+    evaluated = evaluate_analog_ast(operand, parameters, t1, t2, timestep)
     match unary_operator:
-        case nodes.Plus():
-            return operand
-        case nodes.Minus():
+        case UnaryOperator.Neg:
             return AnalogInstruction(
-                magnitudes=negate(operand.magnitudes),
-                units=operand.units,
+                magnitudes=negate(evaluated.magnitudes),
+                units=evaluated.units,
             )
         case _:
             assert_never(unary_operator)

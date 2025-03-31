@@ -2,29 +2,41 @@ import functools
 from typing import assert_never
 
 import numpy as np
+from caqtus_parsing import (
+    AST,
+    BinaryOperation,
+    BinaryOperator,
+    Float,
+    Identifier,
+    Integer,
+    parse,
+    Call,
+    UnaryOperator,
+    UnaryOperation,
+)
+from caqtus_parsing import Quantity as QuantityNode
 
 import caqtus.formatter as fmt
-import caqtus_parsing.nodes as nodes
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameters
 from caqtus.types.recoverable_exceptions import EvaluationError, InvalidValueError
-from caqtus.types.units import dimensionless, InvalidDimensionalityError
-from caqtus_parsing import parse, InvalidSyntaxError
-from ._analog_expression import evaluate_analog_ast
-from ._is_time_dependent import is_time_dependent
+from caqtus.types.units import InvalidDimensionalityError, dimensionless
+
+from ...timed_instructions import (
+    Concatenated,
+    Pattern,
+    Ramp,
+    Repeated,
+    TimedInstruction,
+    concatenate,
+)
+from ...timing import Time, number_ticks
 from .._evaluate_scalar_expression import (
     evaluate_bool_expression,
     evaluate_float_expression,
 )
-from ...timed_instructions import (
-    TimedInstruction,
-    Pattern,
-    Concatenated,
-    concatenate,
-    Repeated,
-    Ramp,
-)
-from ...timing import Time, number_ticks
+from ._analog_expression import evaluate_analog_ast
+from ._is_time_dependent import is_time_dependent
 
 type DigitalInstruction = TimedInstruction[np.bool]
 
@@ -52,14 +64,14 @@ def evaluate_time_dependent_digital_expression(
     try:
         ast = parse(str(expression))
         return evaluate_digital_expression(ast, parameters, t1, t2, timestep)
-    except (EvaluationError, InvalidSyntaxError) as error:
+    except (EvaluationError, SyntaxError) as error:
         raise EvaluationError(
             f"Could not evaluate {fmt.expression(expression)}."
         ) from error
 
 
 def evaluate_digital_expression(
-    expression: nodes.Expression,
+    expression: AST,
     parameters: Parameters,
     t1: Time,
     t2: Time,
@@ -71,45 +83,49 @@ def evaluate_digital_expression(
         return Pattern([value]) * length
 
     match expression:
-        case int() | float() | nodes.Quantity():
+        case Integer() | Float() | QuantityNode():
             raise AssertionError(
                 "This should never happen, because at this point, the expression "
                 "is known to be time-dependent."
             )
-        case nodes.Variable(name=name):
+        case Identifier(name):
             assert name == "t"
             raise InvalidOperationError(
                 f"{fmt.expression(expression)} is not a valid digital expression."
             )
-        case (
-            nodes.Add()
-            | nodes.Subtract()
-            | nodes.Multiply()
-            | nodes.Divide()
-            | nodes.Power()
-            | nodes.Plus()
-            | nodes.Minus()
+        case BinaryOperation(
+            BinaryOperator.Plus
+            | BinaryOperator.Minus
+            | BinaryOperator.Times
+            | BinaryOperator.Div
+            | BinaryOperator.Pow,
+            _,
+            _,
         ):
             raise InvalidOperationError(
                 f"{fmt.expression(expression)} is not a valid digital expression."
             )
-        case nodes.Call():
+        case UnaryOperation(UnaryOperator.Neg):
+            raise InvalidOperationError(
+                f"{fmt.expression(expression)} is not a valid digital expression."
+            )
+        case Call():
             return evaluate_call(expression, parameters, t1, t2, timestep)
         case _:
             assert_never(expression)
 
 
 def evaluate_call(
-    call: nodes.Call,
+    call: Call,
     parameters: Parameters,
     t1: Time,
     t2: Time,
     timestep: Time,
 ) -> DigitalInstruction:
-    if call.function == "square_wave":
+    if call.name == "square_wave":
         if len(call.args) == 0:
             raise InvalidOperationError(
-                f"Function {call.function} requires at least 1 argument, got 0."
+                f"Function {call.name} requires at least 1 argument, got 0."
             )
         if len(call.args) == 1:
             x_expression = call.args[0]
@@ -125,7 +141,7 @@ def evaluate_call(
                 )
         else:
             raise InvalidOperationError(
-                f"Function {call.function} takes at most 2 arguments, got "
+                f"Function {call.name} takes at most 2 arguments, got "
                 f"{len(call.args)}."
             )
         x_instr = evaluate_analog_ast(x_expression, parameters, t1, t2, timestep)
@@ -137,7 +153,7 @@ def evaluate_call(
         return square_wave(x_instr.magnitudes, duty_cycle)
     else:
         raise InvalidOperationError(
-            f"Function {call.function} is not supported in digital expressions."
+            f"Function {call.name} is not supported in digital expressions."
         )
 
 
