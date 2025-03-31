@@ -46,7 +46,7 @@ def test_can_parse_sum():
 
 def test_can_parse_call():
     assert parse("sin(omega * t)") == Call(
-        "sin", [BinaryOperation(Times, Identifier("omega"), Identifier("t"))]
+        "sin", (BinaryOperation(Times, Identifier("omega"), Identifier("t")),)
     )
 
 

@@ -1,7 +1,7 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyTuple;
 use std::fmt::Display;
-
 #[pyclass(frozen, eq)]
 #[derive(Debug, PartialEq, Clone)]
 enum BinaryOperator {
@@ -18,8 +18,7 @@ enum UnaryOperator {
     Neg,
 }
 
-#[pyclass(frozen, eq)]
-#[derive(Debug)]
+#[pyclass(frozen)]
 enum ParseNode {
     Integer {
         value: isize,
@@ -45,20 +44,20 @@ enum ParseNode {
     },
     Call {
         name: String,
-        args: Vec<Py<ParseNode>>,
+        args: Py<PyTuple>,
     },
 }
 
-impl PartialEq for ParseNode {
-    fn eq(&self, other: &Self) -> bool {
+impl ParseNode {
+    fn equal(&self, py: Python<'_>, other: &ParseNode) -> PyResult<bool> {
         match (self, other) {
-            (ParseNode::Integer { value: a }, ParseNode::Integer { value: b }) => a == b,
-            (ParseNode::Float { value: a }, ParseNode::Float { value: b }) => a == b,
+            (ParseNode::Integer { value: a }, ParseNode::Integer { value: b }) => Ok(a == b),
+            (ParseNode::Float { value: a }, ParseNode::Float { value: b }) => Ok(a == b),
             (
                 ParseNode::Quantity { value: a, unit: ua },
                 ParseNode::Quantity { value: b, unit: ub },
-            ) => a == b && ua == ub,
-            (ParseNode::Identifier { name: a }, ParseNode::Identifier { name: b }) => a == b,
+            ) => Ok(a == b && ua == ub),
+            (ParseNode::Identifier { name: a }, ParseNode::Identifier { name: b }) => Ok(a == b),
             (
                 ParseNode::BinaryOperation {
                     operator: op_a,
@@ -70,7 +69,9 @@ impl PartialEq for ParseNode {
                     lhs: lhs_b,
                     rhs: rhs_b,
                 },
-            ) => op_a == op_b && lhs_a.get() == lhs_b.get() && rhs_a.get() == rhs_b.get(),
+            ) => Ok(op_a == op_b
+                && lhs_a.bind(py).as_any().eq(lhs_b.bind(py))?
+                && rhs_a.bind(py).as_any().eq(rhs_b.bind(py))?),
             (
                 ParseNode::UnaryOperation {
                     operator: op_a,
@@ -80,7 +81,7 @@ impl PartialEq for ParseNode {
                     operator: op_b,
                     operand: rhs_b,
                 },
-            ) => op_a == op_b && rhs_a.get() == rhs_b.get(),
+            ) => Ok(op_a == op_b && rhs_a.bind(py).as_any().eq(rhs_b.bind(py))?),
             (
                 ParseNode::Call {
                     name: a_name,
@@ -90,18 +91,15 @@ impl PartialEq for ParseNode {
                     name: b_name,
                     args: b_args,
                 },
-            ) => {
-                a_name == b_name
-                    && a_args.len() == b_args.len()
-                    && a_args.iter().zip(b_args).all(|(a, b)| a.get() == b.get())
-            }
-            _ => false,
+            ) => Ok(a_args.bind(py).eq(b_args.bind(py))? && a_name == b_name),
+            _ => Ok(false),
         }
     }
 }
 
+#[pymethods]
 impl ParseNode {
-    fn repr(&self) -> String {
+    fn __repr__(&self, py: Python<'_>) -> String {
         match self {
             ParseNode::Integer { value } => format!("Integer({})", value),
             ParseNode::Float { value } => format!("Float({})", value),
@@ -110,32 +108,34 @@ impl ParseNode {
             }
             ParseNode::Identifier { name } => format!("Identifier(\"{}\")", name),
             ParseNode::UnaryOperation { operator, operand } => {
-                format!("UnaryOperation({:?}, {})", operator, operand.get().repr())
+                format!(
+                    "UnaryOperation({:?}, {})",
+                    operator,
+                    operand.bind(py).as_any().repr().unwrap()
+                )
             }
             ParseNode::BinaryOperation { operator, lhs, rhs } => {
                 format!(
                     "BinaryOperation({:?}, {}, {})",
                     operator,
-                    lhs.get().repr(),
-                    rhs.get().repr()
+                    lhs.bind(py).as_any().repr().unwrap(),
+                    rhs.bind(py).as_any().repr().unwrap()
                 )
             }
             ParseNode::Call { name, args } => {
-                let args_str = args
-                    .iter()
-                    .map(|arg| arg.get().repr())
-                    .collect::<Vec<_>>()
-                    .join(", ");
+                let args_str = args.bind(py).repr().unwrap().to_string();
                 format!("Call(\"{}\", [{}])", name, args_str)
             }
         }
     }
-}
 
-#[pymethods]
-impl ParseNode {
-    fn __repr__(&self) -> String {
-        self.repr()
+    fn __eq__<'py>(&self, py: Python<'_>, other: Py<PyAny>) -> bool {
+        if let Ok(other) = other.bind(py).downcast::<ParseNode>() {
+            let other = other.get();
+            self.equal(py, other).unwrap()
+        } else {
+            false
+        }
     }
 }
 
@@ -200,10 +200,14 @@ fn convert(py: Python<'_>, ast: caqtus_parsing_rs::ParseNode) -> ParseNode {
         },
         caqtus_parsing_rs::ParseNode::Call(name, args) => ParseNode::Call {
             name,
-            args: args
-                .into_iter()
-                .map(|arg| convert(py, arg).into_pyobject(py).unwrap().unbind())
-                .collect(),
+            args: PyTuple::new(
+                py,
+                args.into_iter()
+                    .map(|arg| convert(py, arg).into_pyobject(py).unwrap())
+                    .collect::<Vec<_>>(),
+            )
+            .unwrap()
+            .unbind(),
         },
     }
 }
