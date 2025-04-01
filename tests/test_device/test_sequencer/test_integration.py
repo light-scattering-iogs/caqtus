@@ -3,11 +3,13 @@ from caqtus.device.sequencer import SequencerCompiler
 from caqtus.device.sequencer.timing import number_time_steps
 from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.shot_compilation.timing import to_time
+from caqtus.types.iteration import StepsConfiguration
+from caqtus.types.parameter import ParameterNamespace
 from .fixtures import (
-    time_lanes,
     spincore_config,
     swabian_configuration,
     ni6738_configuration,
+    time_lanes,
     variables,
 )
 
@@ -15,13 +17,15 @@ from .fixtures import (
 def test_single_digital_lane(
     time_lanes, spincore_config, swabian_configuration, ni6738_configuration, variables
 ):
-    sequence_context = SequenceContext(
-        device_configurations={  # pyright: ignore[reportCallIssue]
+    sequence_context = SequenceContext._new(
+        device_configurations={
             DeviceName("Spincore"): spincore_config,
             DeviceName("Swabian pulse streamer"): swabian_configuration,
             DeviceName("NI6738"): ni6738_configuration,
         },
-        time_lanes=time_lanes,  # pyright: ignore[reportCallIssue]
+        iterations=StepsConfiguration.empty(),
+        constants=ParameterNamespace.empty(),
+        time_lanes=time_lanes,
     )
     compilers = {
         name: SequencerCompiler(name, sequence_context)
@@ -29,9 +33,9 @@ def test_single_digital_lane(
     }
 
     shot_context = ShotContext(
-        sequence_context=sequence_context,  # pyright: ignore[reportCallIssue]
-        variables=variables,  # pyright: ignore[reportCallIssue]
-        device_compilers=compilers,  # pyright: ignore[reportCallIssue]
+        sequence_context,
+        variables,
+        compilers,
     )
     spincore_sequence = compilers[DeviceName("Spincore")].compile_shot_parameters(
         shot_context

@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Method `Sequence.get_data_schema` to get the schema of the data produced by a sequence
 - Better error message when failing to load a device configuration
 
+### Fixed
+
+- Bug preventing to launch sequences
+
 ## [6.25.2] - 2025-03-16
 
 ### Fixed

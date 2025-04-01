@@ -1,22 +1,24 @@
-import decimal
 import os
 
 import numpy as np
-from PySide6.QtWidgets import QApplication
 from matplotlib import pyplot as plt
+from PySide6.QtWidgets import QApplication
+from screenshot_output_graph import screenshot_node, screenshot_output
 
 from caqtus.device.sequencer.channel_commands import Constant, LaneValues
+from caqtus.device.sequencer.timing import to_time_step
 from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor.channel_output_editor._constant_node import (
     ConstantNode,
 )
 from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor.channel_output_editor._lane_node import (
     LaneNode,
 )
-from caqtus.shot_compilation import ShotContext, SequenceContext
+from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.types.expression import Expression
-from caqtus.types.timelane import TimeLanes, AnalogTimeLane, Ramp, DigitalTimeLane
+from caqtus.types.iteration import StepsConfiguration
+from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.timelane import AnalogTimeLane, DigitalTimeLane, Ramp, TimeLanes
 from doc.source.generate_figures.screen_shot_time_lanes import screenshot_time_lanes
-from screenshot_output_graph import screenshot_output, screenshot_node
 
 
 def generate_for_constant():
@@ -26,11 +28,16 @@ def generate_for_constant():
     node.set_value(Expression(""))
     screenshot_node(node, "images/sequencer_outputs/constant_node.png")
 
-    sequence_context = SequenceContext({}, TimeLanes(["step1"], [Expression("2 s")]))
+    sequence_context = SequenceContext._new(
+        {},
+        StepsConfiguration.empty(),
+        ParameterNamespace.empty(),
+        TimeLanes(["step1"], [Expression("2 s")]),
+    )
     shot_context = ShotContext(sequence_context, {}, {})
 
     time_step = 3e3
-    series = output.evaluate(decimal.Decimal(time_step), 0, 0, shot_context)
+    series = output.evaluate(to_time_step(time_step), 0, 0, shot_context)
 
     fig, ax = plt.subplots()
 
@@ -81,11 +88,13 @@ def generate_for_lane():
     )
     screenshot_time_lanes(time_lanes, "images/sequencer_outputs/lane_time_lanes.png")
 
-    sequence_context = SequenceContext({}, time_lanes)
+    sequence_context = SequenceContext._new(
+        {}, StepsConfiguration.empty(), ParameterNamespace.empty(), time_lanes
+    )
     shot_context = ShotContext(sequence_context, {}, {})
 
     time_step = 3e3
-    series = output.evaluate(decimal.Decimal(time_step), 0, 0, shot_context)
+    series = output.evaluate(to_time_step(time_step), 0, 0, shot_context)
 
     fig, ax = plt.subplots()
 

@@ -4,18 +4,20 @@ import pytest
 
 from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
-    SequencerConfiguration,
+    ChannelConfiguration,
     DigitalChannelConfiguration,
     SequencerCompiler,
-    ChannelConfiguration,
+    SequencerConfiguration,
 )
-from caqtus.device.sequencer.channel_commands import LaneValues, Constant
+from caqtus.device.sequencer.channel_commands import Constant, LaneValues
 from caqtus.device.sequencer.timing import to_time_step
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.shot_compilation.compilation_contexts import SequenceContext, ShotContext
 from caqtus.shot_compilation.timed_instructions import Pattern
 from caqtus.types.expression import Expression
-from caqtus.types.timelane import TimeLanes, DigitalTimeLane
+from caqtus.types.iteration import StepsConfiguration
+from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.timelane import DigitalTimeLane, TimeLanes
 
 
 class MockSequencerConfiguration(SequencerConfiguration):
@@ -47,8 +49,11 @@ def test_single_digital_lane(sequencer_config):
         step_durations=[Expression("10 ms"), Expression("20 ms")],
         lanes={"test": DigitalTimeLane([True, False])},
     )
-    sequence_context = SequenceContext(
-        {DeviceName("sequencer"): sequencer_config}, time_lanes
+    sequence_context = SequenceContext._new(
+        {DeviceName("sequencer"): sequencer_config},
+        StepsConfiguration.empty(),
+        ParameterNamespace.empty(),
+        time_lanes,
     )
 
     shot_context = ShotContext(sequence_context, {}, {})
@@ -71,8 +76,11 @@ def test_multiple_digital_lane(sequencer_config):
             "test 1": DigitalTimeLane([False, True, True]),
         },
     )
-    sequence_context = SequenceContext(
-        {DeviceName("sequencer"): sequencer_config}, time_lanes
+    sequence_context = SequenceContext._new(
+        {DeviceName("sequencer"): sequencer_config},
+        StepsConfiguration.empty(),
+        ParameterNamespace.empty(),
+        time_lanes,
     )
 
     shot_context = ShotContext(sequence_context, {}, {})

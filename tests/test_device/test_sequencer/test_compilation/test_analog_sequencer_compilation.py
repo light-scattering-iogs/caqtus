@@ -4,18 +4,20 @@ import pytest
 
 from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
-    SequencerConfiguration,
-    SequencerCompiler,
-    ChannelConfiguration,
     AnalogChannelConfiguration,
+    ChannelConfiguration,
+    SequencerCompiler,
+    SequencerConfiguration,
 )
-from caqtus.device.sequencer.channel_commands import LaneValues, CalibratedAnalogMapping
+from caqtus.device.sequencer.channel_commands import CalibratedAnalogMapping, LaneValues
 from caqtus.device.sequencer.timing import to_time_step
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.shot_compilation.compilation_contexts import SequenceContext, ShotContext
 from caqtus.shot_compilation.timed_instructions import Pattern, create_ramp
 from caqtus.types.expression import Expression
-from caqtus.types.timelane import TimeLanes, AnalogTimeLane, Ramp
+from caqtus.types.iteration import StepsConfiguration
+from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.timelane import AnalogTimeLane, Ramp, TimeLanes
 
 
 class MockSequencerConfiguration(SequencerConfiguration):
@@ -56,8 +58,11 @@ def test_multiple_analog_lane(sequencer_config):
             "test 1": AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")]),
         },
     )
-    sequence_context = SequenceContext(
-        {DeviceName("sequencer"): sequencer_config}, time_lanes
+    sequence_context = SequenceContext._new(
+        {DeviceName("sequencer"): sequencer_config},
+        StepsConfiguration.empty(),
+        ParameterNamespace.empty(),
+        time_lanes,
     )
 
     shot_context = ShotContext(sequence_context, {}, {})

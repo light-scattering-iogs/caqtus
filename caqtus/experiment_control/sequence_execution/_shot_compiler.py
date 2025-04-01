@@ -2,26 +2,25 @@ from __future__ import annotations
 
 import abc
 import pickle
-from collections.abc import Mapping, Callable
-from typing import Any
-from typing import Protocol
+from collections.abc import Callable, Mapping
+from typing import Any, Protocol
 
 import anyio.to_process
 import attrs
 
-from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device import DeviceName
 from caqtus.shot_compilation import (
-    SequenceContext,
     DeviceCompiler,
     DeviceNotUsedException,
+    SequenceContext,
 )
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.recoverable_exceptions import InvalidValueError
-from caqtus.types.timelane import TimeLanes
 from caqtus.utils._tblib import ensure_exception_pickling
-from ._shot_primitives import ShotParameters
+
 from ..device_manager_extension import DeviceManagerExtensionProtocol
+from ._shot_primitives import ShotParameters
 
 
 class ShotCompilerProtocol(Protocol):
@@ -56,16 +55,10 @@ type ShotCompilerFactory = Callable[
 class ShotCompiler(ShotCompilerProtocol):
     def __init__(
         self,
-        shot_timelanes: TimeLanes,
-        device_configurations: Mapping[DeviceName, DeviceConfiguration],
+        sequence_context: SequenceContext,
         device_compilers: Mapping[DeviceName, DeviceCompiler],
     ):
-        self.shot_time_lanes = shot_timelanes
-        self.device_configurations = device_configurations
-        self._sequence_context = SequenceContext(
-            device_configurations=device_configurations,  # pyright: ignore[reportCallIssue]
-            time_lanes=shot_timelanes,  # pyright: ignore[reportCallIssue]
-        )
+        self._sequence_context = sequence_context
         self.device_compilers = device_compilers
         self.pickled_context = pickle.dumps(
             CompilationContext(
@@ -150,8 +143,7 @@ def create_shot_compiler(
         for device_name in device_compilers
     }
     shot_compiler = _create_shot_compiler(
-        time_lanes=initial_sequence_context._time_lanes,  # noqa
-        device_configurations=in_use_configurations,
+        initial_sequence_context._with_devices(in_use_configurations),
         device_compilers=device_compilers,
     )
     return shot_compiler
@@ -179,13 +171,11 @@ def create_device_compilers(
 
 
 def _create_shot_compiler(
-    time_lanes: TimeLanes,
-    device_configurations: Mapping[DeviceName, DeviceConfiguration],
+    sequence_context: SequenceContext,
     device_compilers: Mapping[DeviceName, DeviceCompiler],
 ) -> ShotCompiler:
     shot_compiler = ShotCompiler(
-        time_lanes,
-        device_configurations=device_configurations,
+        sequence_context,
         device_compilers=device_compilers,
     )
     return shot_compiler

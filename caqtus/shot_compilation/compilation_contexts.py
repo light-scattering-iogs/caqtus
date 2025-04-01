@@ -1,24 +1,31 @@
-from collections.abc import Mapping, Iterable, Sequence
-from typing import Any, TypeVar, TYPE_CHECKING
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Self, TypeVar, assert_never
 
 import attrs
 from typing_extensions import deprecated
 
-from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.types.timelane import TimeLanes, TimeLane
+from caqtus.device import DeviceConfiguration, DeviceName
+from caqtus.types.timelane import TimeLane, TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from .timing import to_time, get_step_bounds, Time
+
 from ..formatter import fmt
 from ..types.expression import Expression
-from ..types.parameter import NotQuantityError, Parameters, ParameterSchema
-from ..types.recoverable_exceptions import InvalidValueError, EvaluationError
+from ..types.iteration import IterationConfiguration
+from ..types.parameter import (
+    NotQuantityError,
+    ParameterNamespace,
+    Parameters,
+    ParameterSchema,
+)
+from ..types.recoverable_exceptions import EvaluationError, InvalidValueError
 from ..types.units import (
+    SECOND,
     DimensionalityError,
     InvalidDimensionalityError,
-    SECOND,
     is_scalar_quantity,
 )
-from ..utils.result import Success, Failure
+from ..utils.result import Failure, Success
+from .timing import Time, get_step_bounds, to_time
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import DeviceCompiler
@@ -26,7 +33,7 @@ if TYPE_CHECKING:
 LaneType = TypeVar("LaneType", bound=TimeLane)
 
 
-@attrs.define(slots=False)
+@attrs.frozen
 class SequenceContext:
     """Contains information about a sequence being compiled."""
 
@@ -86,6 +93,25 @@ class SequenceContext:
 
         return tuple(self._time_lanes.step_names)
 
+    @classmethod
+    def _new(
+        cls,
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
+        iterations: IterationConfiguration,
+        constants: ParameterNamespace,
+        time_lanes: TimeLanes,
+    ) -> Self:
+        return cls(
+            device_configurations,
+            iterations.get_parameter_schema(constants.evaluate()),
+            time_lanes,
+        )
+
+    def _with_devices(
+        self, device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    ) -> Self:
+        return attrs.evolve(self, device_configurations=device_configurations)
+
 
 @attrs.define
 class ShotContext:
@@ -126,10 +152,13 @@ class ShotContext:
             KeyError: If no lane with the given name is present for the shot.
         """
 
-        lane = self._sequence_context.get_lane(name)
-        self.mark_lane_used(name)
-
-        return lane
+        match result := self._sequence_context.get_lane_by_name(name):
+            case Success(lane):
+                return lane
+            case Failure(_):
+                raise KeyError(name)
+            case _:
+                assert_never(result)
 
     def mark_lane_used(self, name: str) -> None:
         """Signal that a lane was consumed during the shot.
