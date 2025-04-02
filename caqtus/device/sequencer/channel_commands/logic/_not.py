@@ -39,12 +39,12 @@ class NotGate(ChannelOutput):
     ) -> DimensionedSeries[np.bool]:
         input_ = self.input_.evaluate(required_time_step, prepend, append, shot_context)
 
-        if input_.values != np.bool:
+        if input_.values.dtype != np.bool:
             raise InvalidTypeError(
                 f"Cannot evaluate {self} because the input of the not gate is not a "
                 "logic level."
             )
-        assert input_.values is dimensionless
+        assert input_.units is dimensionless
         return DimensionedSeries(input_.values.apply(np.logical_not), dimensionless)
 
     def evaluate_max_advance_and_delay(
