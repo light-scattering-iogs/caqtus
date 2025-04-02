@@ -13,7 +13,7 @@ from caqtus.device.sequencer.channel_commands import (
     DeviceTrigger,
     LaneValues,
 )
-from caqtus.device.sequencer.channel_commands.logic import NotGate
+from caqtus.device.sequencer.channel_commands.logic import AndGate, NotGate
 from caqtus.device.sequencer.channel_commands.timing import Advance, BroadenLeft
 from caqtus.gui._common.NodeGraphQt import BaseNode, NodeGraph, NodesPaletteWidget
 
@@ -21,7 +21,7 @@ from ._analog_mapping_node import CalibratedAnalogMappingNode
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
 from ._lane_node import LaneNode
-from ._not_gate_node import NotGateNode
+from ._not_gate_node import AndGateNode, NotGateNode
 from ._output_node import OutputNode
 from ._timing_nodes import AdvanceNode, BroadenLeftNode
 
@@ -62,6 +62,7 @@ class ChannelOutputGraph(NodeGraph):
         self.register_node(CalibratedAnalogMappingNode)
         self.register_node(BroadenLeftNode)
         self.register_node(NotGateNode)
+        self.register_node(AndGateNode)
 
         self.output_node = OutputNode("out")
         self.add_node(self.output_node, selected=False, pos=[0, 0], push_undo=False)
@@ -178,6 +179,16 @@ class ChannelOutputGraph(NodeGraph):
         input_node.outputs()["out"].connect_to(node.input_port)
         return node
 
+    @build_node.register
+    def build_and_gate_node(self, and_gate: AndGate) -> AndGateNode:
+        node = AndGateNode()
+        self.add_node(node, selected=False, push_undo=False)
+        input_node_1 = self.build_node(and_gate.input_1)
+        input_node_2 = self.build_node(and_gate.input_2)
+        input_node_1.outputs()["out"].connect_to(node.input_port_1)
+        input_node_2.outputs()["out"].connect_to(node.input_port_2)
+        return node
+
 
 @functools.singledispatch
 def construct_output(node) -> ChannelOutput:
@@ -263,6 +274,26 @@ def construct_not_gate(node: NotGateNode) -> NotGate:
     else:
         input_ = construct_output(input_node)
     return NotGate(input_=input_)
+
+
+@construct_output.register
+def construct_and_gate(node: AndGateNode) -> AndGate:
+    input_node_1, input_node_2 = node.get_input_nodes()
+    if input_node_1 is None:
+        raise MissingInputError(
+            f"And gate node {node.name()} must have an input node 1"
+        )
+    else:
+        input_1 = construct_output(input_node_1)
+
+    if input_node_2 is None:
+        raise MissingInputError(
+            f"And gate node {node.name()} must have an input node 2"
+        )
+    else:
+        input_2 = construct_output(input_node_2)
+
+    return AndGate(input_1=input_1, input_2=input_2)
 
 
 class InvalidNodeConfigurationError(ValueError):

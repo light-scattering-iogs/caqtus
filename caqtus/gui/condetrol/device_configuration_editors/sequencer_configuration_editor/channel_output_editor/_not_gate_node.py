@@ -25,6 +25,38 @@ class NotGateNode(BaseNode):
             raise AssertionError("There can't be multiple nodes connected to the input")
 
 
+class AndGateNode(BaseNode):
+    __identifier__ = "caqtus.sequencer_node.logic"
+    NODE_NAME = "And"
+
+    def __init__(self):
+        super().__init__()
+        self.add_output("out", multi_output=False, display_name=False)
+        self.input_port_1 = self.add_input("in_1", multi_input=False)
+        self.input_port_2 = self.add_input("in_2", multi_input=False)
+        node_widget = IconWidgetWrapper(get_icon("mdi6.gate-and"), self.view)
+        self.add_custom_widget(node_widget, tab="Custom")
+
+    def get_input_nodes(self) -> tuple[BaseNode | None, BaseNode | None]:
+        input_nodes_1 = self.connected_input_nodes()[self.input_port_1]
+        input_nodes_2 = self.connected_input_nodes()[self.input_port_2]
+        if len(input_nodes_1) == 0:
+            input_node_1 = None
+        elif len(input_nodes_1) == 1:
+            input_node_1 = input_nodes_1[0]
+        else:
+            raise AssertionError("There can't be multiple nodes connected to the input")
+
+        if len(input_nodes_2) == 0:
+            input_node_2 = None
+        elif len(input_nodes_2) == 1:
+            input_node_2 = input_nodes_2[0]
+        else:
+            raise AssertionError("There can't be multiple nodes connected to the input")
+
+        return input_node_1, input_node_2
+
+
 class IconWidget(QLabel):
     def __init__(self, icon, parent=None):
         super().__init__(parent)
