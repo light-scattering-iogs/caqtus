@@ -92,6 +92,148 @@ class AndGate(ChannelOutput):
         return advance, delay
 
 
+@attrs.define
+class OrGate(ChannelOutput):
+    """Logical OR gate.
+
+    This class represents a OR operation applied to two boolean lanes.
+
+    Attributes:
+        input_1: The first input channel output to be ORed.
+        input_2: The second input channel output to be ORed.
+    """
+
+    input_1: ChannelOutput = attrs.field(
+        validator=attrs.validators.instance_of(ChannelOutput),
+        on_setattr=attrs.setters.validate,
+    )
+    input_2: ChannelOutput = attrs.field(
+        validator=attrs.validators.instance_of(ChannelOutput),
+        on_setattr=attrs.setters.validate,
+    )
+
+    def __str__(self):
+        return f"({self.input_1} | {self.input_2})"
+
+    def evaluate(
+        self,
+        required_time_step: TimeStep,
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> DimensionedSeries[np.bool]:
+        input_1 = self.input_1.evaluate(
+            required_time_step, prepend, append, shot_context
+        )
+        if input_1.values.dtype != np.bool:
+            raise InvalidTypeError(
+                f"Cannot evaluate {self} because the first input of the or gate is "
+                f"not a logic level."
+            )
+        assert input_1.units is dimensionless
+        input_2 = self.input_2.evaluate(
+            required_time_step, prepend, append, shot_context
+        )
+        if input_2.values.dtype != np.bool:
+            raise InvalidTypeError(
+                f"Cannot evaluate {self} because the second input of the or gate is "
+                f"not a logic level."
+            )
+        assert input_2.units is dimensionless
+        merged = merge_instructions(
+            lhs=input_1.values,
+            rhs=input_2.values,
+        )
+        result = binary_operator(merged, np.logical_or)
+        return DimensionedSeries(result, dimensionless)
+
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: TimeStep,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        advance_1, delay_1 = self.input_1.evaluate_max_advance_and_delay(
+            time_step, variables
+        )
+        advance_2, delay_2 = self.input_2.evaluate_max_advance_and_delay(
+            time_step, variables
+        )
+        advance = max(advance_1, advance_2)
+        delay = max(delay_1, delay_2)
+        return advance, delay
+
+
+@attrs.define
+class XorGate(ChannelOutput):
+    """Logical XOR gate.
+
+    This class represents a XOR operation applied to two boolean lanes.
+
+    Attributes:
+        input_1: The first input channel output to be XORed.
+        input_2: The second input channel output to be XORed.
+    """
+
+    input_1: ChannelOutput = attrs.field(
+        validator=attrs.validators.instance_of(ChannelOutput),
+        on_setattr=attrs.setters.validate,
+    )
+    input_2: ChannelOutput = attrs.field(
+        validator=attrs.validators.instance_of(ChannelOutput),
+        on_setattr=attrs.setters.validate,
+    )
+
+    def __str__(self):
+        return f"({self.input_1} ^ {self.input_2})"
+
+    def evaluate(
+        self,
+        required_time_step: TimeStep,
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> DimensionedSeries[np.bool]:
+        input_1 = self.input_1.evaluate(
+            required_time_step, prepend, append, shot_context
+        )
+        if input_1.values.dtype != np.bool:
+            raise InvalidTypeError(
+                f"Cannot evaluate {self} because the first input of the xor gate is "
+                f"not a logic level."
+            )
+        assert input_1.units is dimensionless
+        input_2 = self.input_2.evaluate(
+            required_time_step, prepend, append, shot_context
+        )
+        if input_2.values.dtype != np.bool:
+            raise InvalidTypeError(
+                f"Cannot evaluate {self} because the second input of the xor gate is "
+                f"not a logic level."
+            )
+        assert input_2.units is dimensionless
+        merged = merge_instructions(
+            lhs=input_1.values,
+            rhs=input_2.values,
+        )
+        result = binary_operator(merged, np.logical_xor)
+        return DimensionedSeries(result, dimensionless)
+
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: TimeStep,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        advance_1, delay_1 = self.input_1.evaluate_max_advance_and_delay(
+            time_step, variables
+        )
+        advance_2, delay_2 = self.input_2.evaluate_max_advance_and_delay(
+            time_step, variables
+        )
+        advance = max(advance_1, advance_2)
+        delay = max(delay_1, delay_2)
+        return advance, delay
+
+
 @functools.singledispatch
 def binary_operator(instr: TimedInstruction, op) -> TimedInstruction:
     raise NotImplementedError(

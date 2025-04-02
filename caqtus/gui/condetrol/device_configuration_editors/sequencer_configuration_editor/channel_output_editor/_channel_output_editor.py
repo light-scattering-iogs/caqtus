@@ -13,7 +13,12 @@ from caqtus.device.sequencer.channel_commands import (
     DeviceTrigger,
     LaneValues,
 )
-from caqtus.device.sequencer.channel_commands.logic import AndGate, NotGate
+from caqtus.device.sequencer.channel_commands.logic import (
+    AndGate,
+    NotGate,
+    OrGate,
+    XorGate,
+)
 from caqtus.device.sequencer.channel_commands.timing import Advance, BroadenLeft
 from caqtus.gui._common.NodeGraphQt import BaseNode, NodeGraph, NodesPaletteWidget
 
@@ -21,7 +26,7 @@ from ._analog_mapping_node import CalibratedAnalogMappingNode
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
 from ._lane_node import LaneNode
-from ._not_gate_node import AndGateNode, NotGateNode
+from ._not_gate_node import AndGateNode, NotGateNode, OrGateNode, XorGateNode
 from ._output_node import OutputNode
 from ._timing_nodes import AdvanceNode, BroadenLeftNode
 
@@ -63,6 +68,8 @@ class ChannelOutputGraph(NodeGraph):
         self.register_node(BroadenLeftNode)
         self.register_node(NotGateNode)
         self.register_node(AndGateNode)
+        self.register_node(OrGateNode)
+        self.register_node(XorGateNode)
 
         self.output_node = OutputNode("out")
         self.add_node(self.output_node, selected=False, pos=[0, 0], push_undo=False)
@@ -189,6 +196,26 @@ class ChannelOutputGraph(NodeGraph):
         input_node_2.outputs()["out"].connect_to(node.input_port_2)
         return node
 
+    @build_node.register
+    def build_or_gate_node(self, or_gate: OrGate) -> OrGateNode:
+        node = OrGateNode()
+        self.add_node(node, selected=False, push_undo=False)
+        input_node_1 = self.build_node(or_gate.input_1)
+        input_node_2 = self.build_node(or_gate.input_2)
+        input_node_1.outputs()["out"].connect_to(node.input_port_1)
+        input_node_2.outputs()["out"].connect_to(node.input_port_2)
+        return node
+
+    @build_node.register
+    def build_xor_gate_node(self, xor_gate: XorGate) -> XorGateNode:
+        node = XorGateNode()
+        self.add_node(node, selected=False, push_undo=False)
+        input_node_1 = self.build_node(xor_gate.input_1)
+        input_node_2 = self.build_node(xor_gate.input_2)
+        input_node_1.outputs()["out"].connect_to(node.input_port_1)
+        input_node_2.outputs()["out"].connect_to(node.input_port_2)
+        return node
+
 
 @functools.singledispatch
 def construct_output(node) -> ChannelOutput:
@@ -294,6 +321,42 @@ def construct_and_gate(node: AndGateNode) -> AndGate:
         input_2 = construct_output(input_node_2)
 
     return AndGate(input_1=input_1, input_2=input_2)
+
+
+@construct_output.register
+def construct_or_gate(node: OrGateNode) -> OrGate:
+    input_node_1, input_node_2 = node.get_input_nodes()
+    if input_node_1 is None:
+        raise MissingInputError(f"Or gate node {node.name()} must have an input node 1")
+    else:
+        input_1 = construct_output(input_node_1)
+
+    if input_node_2 is None:
+        raise MissingInputError(f"Or gate node {node.name()} must have an input node 2")
+    else:
+        input_2 = construct_output(input_node_2)
+
+    return OrGate(input_1=input_1, input_2=input_2)
+
+
+@construct_output.register
+def construct_xor_gate(node: XorGateNode) -> XorGate:
+    input_node_1, input_node_2 = node.get_input_nodes()
+    if input_node_1 is None:
+        raise MissingInputError(
+            f"Xor gate node {node.name()} must have an input node 1"
+        )
+    else:
+        input_1 = construct_output(input_node_1)
+
+    if input_node_2 is None:
+        raise MissingInputError(
+            f"Xor gate node {node.name()} must have an input node 2"
+        )
+    else:
+        input_2 = construct_output(input_node_2)
+
+    return XorGate(input_1=input_1, input_2=input_2)
 
 
 class InvalidNodeConfigurationError(ValueError):
