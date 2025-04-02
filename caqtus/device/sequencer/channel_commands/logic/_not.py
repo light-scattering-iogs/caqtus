@@ -3,7 +3,7 @@ from typing import Any, Mapping
 import attrs
 import numpy as np
 
-from caqtus.device.sequencer import TimeStep
+from ...timing import TimeStep
 from caqtus.device.sequencer.channel_commands import ChannelOutput
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilation import DimensionedSeries

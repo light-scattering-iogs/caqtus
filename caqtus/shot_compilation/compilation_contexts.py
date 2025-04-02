@@ -154,6 +154,7 @@ class ShotContext:
 
         match result := self._sequence_context.get_lane_by_name(name):
             case Success(lane):
+                self.mark_lane_used(name)
                 return lane
             case Failure(_):
                 raise KeyError(name)

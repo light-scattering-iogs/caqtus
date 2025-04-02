@@ -1,13 +1,14 @@
 from caqtus.device import DeviceName
 from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import (
-    LaneValues,
-    Constant,
-    ChannelOutput,
-    DeviceTrigger,
     CalibratedAnalogMapping,
+    ChannelOutput,
+    Constant,
+    DeviceTrigger,
+    LaneValues,
 )
-from caqtus.device.sequencer.channel_commands.timing import Advance, Delay, BroadenLeft
+from caqtus.device.sequencer.channel_commands.logic import NotGate
+from caqtus.device.sequencer.channel_commands.timing import Advance, BroadenLeft, Delay
 from caqtus.types.expression import Expression
 
 
@@ -17,6 +18,17 @@ def test_0():
     u = converter.unstructure(lane_output, ChannelOutput)
     s = converter.structure(u, ChannelOutput)
     assert lane_output == s
+
+
+def test_can_unstructure_and_restructure_not_gate():
+    lane_output = NotGate(Constant(Expression("Disabled")))
+    u1 = {
+        "input_": {"value": "Disabled", "type": "Constant"},
+        "type": "NotGate",
+    }
+    u2 = converter.unstructure(lane_output, ChannelOutput)
+    assert converter.structure(u1, ChannelOutput) == lane_output
+    assert converter.structure(u2, ChannelOutput) == lane_output
 
 
 def test_1():

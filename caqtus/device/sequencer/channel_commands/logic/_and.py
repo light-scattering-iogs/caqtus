@@ -4,7 +4,6 @@ from typing import Any, Mapping
 import attrs
 import numpy as np
 
-from caqtus.device.sequencer import TimeStep
 from caqtus.device.sequencer.channel_commands import ChannelOutput
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilation import DimensionedSeries
@@ -19,6 +18,8 @@ from caqtus.shot_compilation.timed_instructions import (
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.units import dimensionless
 from caqtus.types.variable_name import DottedVariableName
+
+from ...timing import TimeStep
 
 
 @attrs.define
