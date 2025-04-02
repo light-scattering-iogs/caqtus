@@ -3,22 +3,25 @@ from typing import Optional
 
 from PySide6 import QtCore
 from PySide6.QtCore import QRect
-from PySide6.QtGui import QKeySequence, QAction
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from caqtus.device.sequencer.channel_commands import (
+    CalibratedAnalogMapping,
     ChannelOutput,
     Constant,
     DeviceTrigger,
     LaneValues,
-    CalibratedAnalogMapping,
 )
+from caqtus.device.sequencer.channel_commands.logic import NotGate
 from caqtus.device.sequencer.channel_commands.timing import Advance, BroadenLeft
-from caqtus.gui._common.NodeGraphQt import NodeGraph, BaseNode, NodesPaletteWidget
+from caqtus.gui._common.NodeGraphQt import BaseNode, NodeGraph, NodesPaletteWidget
+
 from ._analog_mapping_node import CalibratedAnalogMappingNode
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
 from ._lane_node import LaneNode
+from ._not_gate_node import NotGateNode
 from ._output_node import OutputNode
 from ._timing_nodes import AdvanceNode, BroadenLeftNode
 
@@ -35,6 +38,7 @@ class ChannelOutputEditor(QWidget):
         self.nodes_palette.set_category_label(
             "caqtus.sequencer_node.mapping", "Mapping"
         )
+        self.nodes_palette.set_category_label("caqtus.sequencer_node.logic", "Logic")
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.graph.widget, 1)
@@ -57,6 +61,7 @@ class ChannelOutputGraph(NodeGraph):
         self.register_node(AdvanceNode)
         self.register_node(CalibratedAnalogMappingNode)
         self.register_node(BroadenLeftNode)
+        self.register_node(NotGateNode)
 
         self.output_node = OutputNode("out")
         self.add_node(self.output_node, selected=False, pos=[0, 0], push_undo=False)
@@ -165,6 +170,14 @@ class ChannelOutputGraph(NodeGraph):
         input_node.outputs()["out"].connect_to(node.input_port)
         return node
 
+    @build_node.register
+    def build_not_gate_node(self, not_gate: NotGate) -> NotGateNode:
+        node = NotGateNode()
+        self.add_node(node, selected=False, push_undo=False)
+        input_node = self.build_node(not_gate.input_)
+        input_node.outputs()["out"].connect_to(node.input_port)
+        return node
+
 
 @functools.singledispatch
 def construct_output(node) -> ChannelOutput:
@@ -240,6 +253,16 @@ def construct_broaden_left(node: BroadenLeftNode) -> BroadenLeft:
     else:
         input_ = construct_output(input_node)
     return BroadenLeft(width=width, input_=input_)
+
+
+@construct_output.register
+def construct_not_gate(node: NotGateNode) -> NotGate:
+    input_node = node.get_input_node()
+    if input_node is None:
+        raise MissingInputError(f"Not gate node {node.name()} must have an input node")
+    else:
+        input_ = construct_output(input_node)
+    return NotGate(input_=input_)
 
 
 class InvalidNodeConfigurationError(ValueError):

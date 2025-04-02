@@ -10,4 +10,5 @@ def test(qtbot):
     editor = ChannelOutputEditor(output)
     qtbot.addWidget(editor)
     editor.show()
+    qtbot.stop()
     assert editor.get_output() == output
