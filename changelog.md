@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Method `Sequence.get_data_schema` to get the schema of the data produced by a sequence
 - Better error message when failing to load a device configuration
 - How-to for registering a new device server
+- Logic gates can be applied to the channels of a sequencer
 
 ### Fixed
 
