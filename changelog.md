@@ -5,12 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [6.26.1] - 2025-04-02
+
+### Fixed
+
+- Bug causing lane to not be used during a shot
+- Bug preventing from loading configuration of logic gates for sequencer channels
+
+## [6.26.0] - 2025-04-02
 
 ### Added
 
 - Method `Sequence.get_data_schema` to get the schema of the data produced by a sequence
 - Better error message when failing to load a device configuration
+- How-to for registering a new device server
+- Logic gates can be applied to the channels of a sequencer
+
+### Fixed
+
+- Bug preventing to launch sequences
 
 ## [6.25.2] - 2025-03-16
 
@@ -51,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Display more accurate location when auditing a blocking task during sequence 
+- Display more accurate location when auditing a blocking task during sequence
   execution.
 
 ## [6.23.0] - 2025-03-01

@@ -5,16 +5,18 @@ from cattrs.gen import make_dict_structure_fn, override
 
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
+
 from .channel_commands import (
     CalibratedAnalogMapping,
     ChannelOutput,
-    LaneValues,
     Constant,
     DeviceTrigger,
+    LaneValues,
 )
-from .channel_commands.timing import Advance, Delay, BroadenLeft
+from .channel_commands.logic import AndGate, NotGate, OrGate
+from .channel_commands.timing import Advance, BroadenLeft, Delay
 from .timing import TimeStep
-from .trigger import TriggerEdge, Trigger
+from .trigger import Trigger, TriggerEdge
 
 converter = serialization.copy_converter()
 """A converter than can serialize and deserialize sequencer configuration."""
@@ -86,6 +88,45 @@ broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(
 )
 
 converter.register_structure_hook(BroadenLeft, broaden_left_structure_hook)
+
+converter.register_structure_hook(
+    NotGate,
+    cattrs.gen.make_dict_structure_fn(
+        NotGate,
+        converter,
+        input_=cattrs.override(struct_hook=structure_channel_output),
+    ),
+)
+
+converter.register_structure_hook(
+    AndGate,
+    cattrs.gen.make_dict_structure_fn(
+        AndGate,
+        converter,
+        input_1=cattrs.override(struct_hook=structure_channel_output),
+        input_2=cattrs.override(struct_hook=structure_channel_output),
+    ),
+)
+
+converter.register_structure_hook(
+    OrGate,
+    cattrs.gen.make_dict_structure_fn(
+        OrGate,
+        converter,
+        input_1=cattrs.override(struct_hook=structure_channel_output),
+        input_2=cattrs.override(struct_hook=structure_channel_output),
+    ),
+)
+
+converter.register_structure_hook(
+    AndGate,
+    cattrs.gen.make_dict_structure_fn(
+        AndGate,
+        converter,
+        input_1=cattrs.override(struct_hook=structure_channel_output),
+        input_2=cattrs.override(struct_hook=structure_channel_output),
+    ),
+)
 
 
 def structure_default(data, _):

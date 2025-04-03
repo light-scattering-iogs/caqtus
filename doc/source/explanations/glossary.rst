@@ -26,3 +26,19 @@ Glossary
         Globals are a set of :term:`parameters<Parameter>` that are shared between all :term:`sequences<Sequence>`.
 
         Any change to the globals will be reflected on the future sequences, unless these sequences override the globals.
+
+    Device server
+        A computer that controls devices.
+
+        When a sequence is launched, for each device in use, the experiment manager
+        connects to the device server that controls the device.
+        The experiment manager asks the device server to connect to the device and
+        to execute remote commands on the device.
+
+    Experiment manager
+        Program responsible for running sequences and coordinating devices.
+
+        The experiment manager typically runs in a background terminal in permanence.
+        When a sequence is launched, either in the GUI or programmatically, the name
+        of the sequence is passed to the experiment manager.
+        The experiment manager then executes the shots and saves the data acquired.

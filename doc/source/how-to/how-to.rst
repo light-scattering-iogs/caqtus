@@ -5,6 +5,7 @@ How to
    :maxdepth: 1
 
    install
+   add-device-server
    device-extension
    handle-recoverable-exceptions
    cleanup-in-enter

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import contextlib
 import copy
-from collections.abc import Mapping, AsyncGenerator, AsyncIterable
+from collections.abc import AsyncGenerator, AsyncIterable, Mapping
 from typing import Optional
 
 import anyio
 import anyio.to_process
 
-from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
@@ -19,19 +19,20 @@ from caqtus.shot_compilation import (
     DeviceCompiler,
     SequenceContext,
 )
-from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import split_recoverable
 from caqtus.types.timelane.timelane import TimeLanes
 from caqtus.utils.result import unwrap
 from caqtus.utils.result._result import is_failure
+
+from ...types.iteration import StepsConfiguration
+from ...types.iteration._step_context import StepContext
+from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ._logger import logger
 from ._shot_compiler import ShotCompilerFactory, create_shot_compiler
 from ._shot_runner import ShotRunnerFactory, create_shot_runner
 from .sequence_runner import execute_steps
-from .shots_manager import ShotManager, ShotData, ShotScheduler, ShotRetryConfig
-from ..device_manager_extension import DeviceManagerExtensionProtocol
-from ...types.iteration._step_context import StepContext
+from .shots_manager import ShotData, ShotManager, ShotRetryConfig, ShotScheduler
 
 
 async def run_sequence(
@@ -81,10 +82,6 @@ async def run_sequence(
             compile shots.
     """
 
-    with session_maker.session() as session:
-        iteration = session.sequences.get_iteration_configuration(sequence)
-    if not isinstance(iteration, StepsConfiguration):
-        raise NotImplementedError("Only steps iteration is supported at the moment.")
     sequence_manager = SequenceManager(
         sequence=sequence,
         session_maker=session_maker,
@@ -95,9 +92,19 @@ async def run_sequence(
         shot_runner_factory=shot_runner_factory,
         shot_compiler_factory=shot_compiler_factory,
     )
-    initial_context = StepContext(sequence_manager.sequence_parameters.evaluate())
+
+    if not isinstance(sequence_manager.sequence_iteration, StepsConfiguration):
+        raise NotImplementedError("Only steps iterations is supported for now.")
     async with sequence_manager.run_sequence() as shot_scheduler:
-        await execute_steps(iteration, initial_context, shot_scheduler)
+        assert sequence_manager.sequence_context is not None
+        initial_context = StepContext(
+            sequence_manager.sequence_context.get_parameter_schema().constant_schema
+        )
+        await execute_steps(
+            sequence_manager.sequence_iteration,
+            initial_context,
+            shot_scheduler,
+        )
 
 
 class SequenceManager:
@@ -136,10 +143,15 @@ class SequenceManager:
                 self.device_configurations,
                 self.sequence_parameters,
             )
+            self.sequence_iteration = session.sequences.get_iteration_configuration(
+                sequence
+            )
             time_lanes = session.sequences.get_time_lanes(self._sequence_path)
             if is_failure(time_lanes):
                 raise time_lanes.exception()
             self.time_lanes: TimeLanes = time_lanes
+
+        self.sequence_context: SequenceContext | None = None
 
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
@@ -169,12 +181,14 @@ class SequenceManager:
         """
 
         try:
-            sequence_context = SequenceContext(
-                device_configurations=self.device_configurations,  # pyright: ignore[reportCallIssue]
-                time_lanes=self.time_lanes,  # pyright: ignore[reportCallIssue]
+            self.sequence_context = SequenceContext._new(
+                self.device_configurations,
+                self.sequence_iteration,
+                self.sequence_parameters,
+                self.time_lanes,
             )
             shot_compiler = self._shot_compiler_factory(
-                sequence_context,
+                self.sequence_context,
                 self._device_manager_extension,
             )
 
@@ -185,7 +199,7 @@ class SequenceManager:
                     tg.start_soon(anyio.to_process.run_sync, nothing)
             async with (
                 self._shot_runner_factory(
-                    sequence_context, shot_compiler, self._device_manager_extension
+                    self.sequence_context, shot_compiler, self._device_manager_extension
                 ) as shot_runner,
                 ShotManager(
                     shot_runner,
