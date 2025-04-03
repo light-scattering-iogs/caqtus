@@ -1,7 +1,7 @@
 mod lexer;
 mod parser;
 
-pub use crate::parser::{parse, ParseNode};
+pub use crate::parser::{parse, ParseNode, BinaryOperator, UnaryOperator};
 
 #[cfg(test)]
 mod tests {

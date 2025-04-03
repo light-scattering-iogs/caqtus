@@ -12,10 +12,32 @@ enum BinaryOperator {
     Pow,
 }
 
+impl From<caqtus_parsing_rs::BinaryOperator> for BinaryOperator {
+    fn from(op: caqtus_parsing_rs::BinaryOperator) -> Self {
+        match op {
+            caqtus_parsing_rs::BinaryOperator::Add => BinaryOperator::Plus,
+            caqtus_parsing_rs::BinaryOperator::Subtract => BinaryOperator::Minus,
+            caqtus_parsing_rs::BinaryOperator::Multiply => BinaryOperator::Times,
+            caqtus_parsing_rs::BinaryOperator::Divide => BinaryOperator::Div,
+            caqtus_parsing_rs::BinaryOperator::Power => BinaryOperator::Pow,
+        }
+    }
+}
+
 #[pyclass(frozen, eq)]
 #[derive(Debug, PartialEq, Clone)]
 enum UnaryOperator {
     Neg,
+    Plus,
+}
+
+impl From<caqtus_parsing_rs::UnaryOperator> for UnaryOperator {
+    fn from(op: caqtus_parsing_rs::UnaryOperator) -> Self {
+        match op {
+            caqtus_parsing_rs::UnaryOperator::Negate => UnaryOperator::Neg,
+            caqtus_parsing_rs::UnaryOperator::Plus => UnaryOperator::Plus,
+        }
+    }
 }
 
 #[pyclass(frozen)]
@@ -169,34 +191,14 @@ fn convert(py: Python<'_>, ast: caqtus_parsing_rs::ParseNode) -> ParseNode {
             ParseNode::Quantity { value, unit }
         }
         caqtus_parsing_rs::ParseNode::Identifier(name) => ParseNode::Identifier { name },
-        caqtus_parsing_rs::ParseNode::Add(lhs, rhs) => ParseNode::BinaryOperation {
-            operator: BinaryOperator::Plus,
+        caqtus_parsing_rs::ParseNode::BinaryOperation(op, lhs, rhs) => ParseNode::BinaryOperation {
+            operator: op.into(),
             lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
             rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
         },
-        caqtus_parsing_rs::ParseNode::Subtract(lhs, rhs) => ParseNode::BinaryOperation {
-            operator: BinaryOperator::Minus,
-            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
-            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
-        },
-        caqtus_parsing_rs::ParseNode::Multiply(lhs, rhs) => ParseNode::BinaryOperation {
-            operator: BinaryOperator::Times,
-            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
-            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
-        },
-        caqtus_parsing_rs::ParseNode::Divide(lhs, rhs) => ParseNode::BinaryOperation {
-            operator: BinaryOperator::Div,
-            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
-            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
-        },
-        caqtus_parsing_rs::ParseNode::Power(lhs, rhs) => ParseNode::BinaryOperation {
-            operator: BinaryOperator::Pow,
-            lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
-            rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
-        },
-        caqtus_parsing_rs::ParseNode::Negate(operant) => ParseNode::UnaryOperation {
-            operator: UnaryOperator::Neg,
-            operand: convert(py, *operant).into_pyobject(py).unwrap().unbind(),
+        caqtus_parsing_rs::ParseNode::UnaryOperation(op, operand) => ParseNode::UnaryOperation {
+            operator: op.into(),
+            operand: convert(py, *operand).into_pyobject(py).unwrap().unbind(),
         },
         caqtus_parsing_rs::ParseNode::Call(name, args) => ParseNode::Call {
             name,
