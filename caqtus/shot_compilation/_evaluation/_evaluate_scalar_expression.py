@@ -90,7 +90,7 @@ def evaluate_expression(expression: AST, parameters: Parameters) -> Scalar:
             return evaluate_quantity(expression)
         case Call():
             return evaluate_function_call(expression, parameters)
-        case _:  # pragma: no cover
+        case _:
             assert_never(expression)
 
 
@@ -160,6 +160,8 @@ def evaluate_unary_operator(
     match unary_operation.operator:
         case UnaryOperator.Neg:
             result = -operand
+        case UnaryOperator.Plus:
+            result = +operand
         case _:  # pragma: no cover
             assert_never(unary_operation.operator)
     assert is_scalar(result)

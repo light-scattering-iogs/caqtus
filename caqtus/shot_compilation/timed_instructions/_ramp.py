@@ -237,7 +237,7 @@ class Ramp[T: (np.floating, np.void)](
             assert isinstance(self._stop, np.void)
             values = np.empty(len(self), dtype=self.dtype)
             for name in self.dtype.names:
-                values[name] = np.linspace(
+                values[name] = np.linspace(  # pyright: ignore [reportArgumentType]
                     self._start[name], self._stop[name], len(self), endpoint=False
                 )
             return Pattern.create_without_copy(values)

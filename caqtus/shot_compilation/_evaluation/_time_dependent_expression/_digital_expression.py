@@ -105,7 +105,7 @@ def evaluate_digital_expression(
             raise InvalidOperationError(
                 f"{fmt.expression(expression)} is not a valid digital expression."
             )
-        case UnaryOperation(UnaryOperator.Neg):
+        case UnaryOperation(UnaryOperator.Neg | UnaryOperator.Plus, _):
             raise InvalidOperationError(
                 f"{fmt.expression(expression)} is not a valid digital expression."
             )

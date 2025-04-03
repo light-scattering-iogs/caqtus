@@ -155,6 +155,11 @@ def evaluate_unary_operator(
                 magnitudes=negate(evaluated.magnitudes),
                 units=evaluated.units,
             )
+        case UnaryOperator.Plus:
+            return AnalogInstruction(
+                magnitudes=evaluated.magnitudes,
+                units=evaluated.units,
+            )
         case _:
             assert_never(unary_operator)
 
