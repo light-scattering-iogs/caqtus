@@ -37,9 +37,12 @@ fn callback_float(lex: &mut logos::Lexer<Token>) -> Result<f64, LexingError> {
 #[logos(skip r" ")]
 pub enum Token {
     Error(LexingError),
-    #[regex(r"[\+-]?\d+", callback_integer, priority = 3)]
+    // The sign is handled by the parser and not the lexer.
+    // This is because in situation such a "1+2", the lexer would return [1, +2] that the parser
+    // assumes is a syntax error.
+    #[regex(r"\d+", callback_integer, priority = 3)]
     Integer(isize),
-    #[regex(r"[\+-]?(\d+(\.\d*)?|\.\d+)([eE][\+-]?\d+)?", callback_float)]
+    #[regex(r"(\d+(\.\d*)?|\.\d+)([eE][\+-]?\d+)?", callback_float)]
     Float(f64),
     #[regex(r"[_a-zA-Z\p{Greek}°][_a-zA-Z0-9\p{Greek}°]*|%", |lex| lex.slice().to_string())]
     Name(String),

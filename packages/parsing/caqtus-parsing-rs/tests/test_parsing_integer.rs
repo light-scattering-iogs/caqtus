@@ -7,13 +7,11 @@ fn successfully_parse_integer_string() {
 }
 #[test]
 fn successfully_parse_integer_string_with_plus() {
-    let result = parse("+45");
-    assert_eq!(result, Ok(ParseNode::Integer(45)));
+    assert_eq!(parse("+45").unwrap().to_string(), "+(45)");
 }
 #[test]
 fn successfully_parse_negative_integer_string() {
-    let result = parse("-45");
-    assert_eq!(result, Ok(ParseNode::Integer(-45)));
+    assert_eq!(parse("-45").unwrap().to_string(), "-(45)");
 }
 
 #[test]

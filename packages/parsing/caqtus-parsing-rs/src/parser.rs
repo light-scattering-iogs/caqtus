@@ -31,6 +31,7 @@ pub enum BinaryOperator {
 #[derive(Debug, PartialEq)]
 pub enum UnaryOperator {
     Negate,
+    Plus,
 }
 
 impl Display for BinaryOperator {
@@ -48,6 +49,7 @@ impl Display for BinaryOperator {
 impl Display for UnaryOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            UnaryOperator::Plus => write!(f, "+"),
             UnaryOperator::Negate => write!(f, "-"),
         }
     }
@@ -57,8 +59,8 @@ impl Display for ParseNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParseNode::Integer(i) => write!(f, "{}", i),
-            ParseNode::Float(fl) => write!(f, "{}", fl),
-            ParseNode::Quantity { value, unit } => write!(f, "{} {}", value, unit),
+            ParseNode::Float(fl) => write!(f, "{:?}", fl),
+            ParseNode::Quantity { value, unit } => write!(f, "{:?} {}", value, unit),
             ParseNode::Identifier(name) => write!(f, "{}", name),
             ParseNode::UnaryOperation(operator, operand) => write!(f, "{}({})", operator, operand),
             ParseNode::BinaryOperation(operator, left, right) => {
@@ -136,6 +138,9 @@ where
         let arithmetic_expr = sub_expr.pratt((
             infix(right(4), just(Token::Power), |left, _, right, _| {
                 ParseNode::BinaryOperation(BinaryOperator::Power, Box::new(left), Box::new(right))
+            }),
+            prefix(3, just(Token::Plus), |_, right, _| {
+                ParseNode::UnaryOperation(UnaryOperator::Plus, Box::new(right))
             }),
             prefix(3, just(Token::Minus), |_, right, _| {
                 ParseNode::UnaryOperation(UnaryOperator::Negate, Box::new(right))

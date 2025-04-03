@@ -14,7 +14,7 @@ fn test_can_parse_three_factors() {
 fn test_can_parse_multiplication_and_division() {
     assert_eq!(
         parse("10 MHz / s * 3").unwrap().to_string(),
-        "((10 MHz / s) * 3)"
+        "((10.0 MHz / s) * 3)"
     );
 }
 
@@ -22,7 +22,7 @@ fn test_can_parse_multiplication_and_division() {
 fn test_parenthesis_priority() {
     assert_eq!(
         parse("10 MHz / (s * 3)").unwrap().to_string(),
-        "(10 MHz / (s * 3))"
+        "(10.0 MHz / (s * 3))"
     );
 }
 
@@ -30,7 +30,7 @@ fn test_parenthesis_priority() {
 fn test_can_divide_quantities() {
     assert_eq!(
         parse("10 MHz / 2 kHz").unwrap().to_string(),
-        "(10 MHz / 2 kHz)"
+        "(10.0 MHz / 2.0 kHz)"
     );
 }
 

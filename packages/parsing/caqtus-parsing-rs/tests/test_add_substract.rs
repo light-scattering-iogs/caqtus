@@ -24,11 +24,11 @@ fn can_add_number_without_spaces() {
 fn test_can_parse_unit_addition() {
     assert_eq!(
         parse("1 kHz + 2 MHz").unwrap().to_string(),
-        "(1 kHz + 2 MHz)"
+        "(1.0 kHz + 2.0 MHz)"
     );
 }
 
 #[test]
 fn can_add_negative_numbers() {
-    assert_eq!(parse("-1 + -2").unwrap().to_string(), "(-1 + -2)");
+    assert_eq!(parse("-1 + -2").unwrap().to_string(), "(-(1) + -(2))");
 }
