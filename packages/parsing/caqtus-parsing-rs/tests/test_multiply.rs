@@ -1,103 +1,43 @@
-use caqtus_parsing_rs::{parse, ParseNode};
+use caqtus_parsing_rs::parse;
 
 #[test]
-fn test_can_parse_two_factors()
-{
-    let result = parse("1 * 2");
+fn test_can_parse_two_factors() {
+    assert_eq!(parse("1 * 2").unwrap().to_string(), "(1 * 2)");
+}
+
+#[test]
+fn test_can_parse_three_factors() {
+    assert_eq!(parse("1 * 2 * 3").unwrap().to_string(), "((1 * 2) * 3)");
+}
+
+#[test]
+fn test_can_parse_multiplication_and_division() {
     assert_eq!(
-        result,
-        Ok(ParseNode::Multiply(
-            Box::new(ParseNode::Integer(1)),
-            Box::new(ParseNode::Integer(2))
-        ))
+        parse("10 MHz / s * 3").unwrap().to_string(),
+        "((10 MHz / s) * 3)"
     );
 }
 
 #[test]
-fn test_can_parse_three_factors()
-{
-    let result = parse("1 * 2 * 3");
+fn test_parenthesis_priority() {
     assert_eq!(
-        result,
-        Ok(ParseNode::Multiply(
-            Box::new(ParseNode::Multiply(
-                Box::new(ParseNode::Integer(1)),
-                Box::new(ParseNode::Integer(2))
-            )),
-            Box::new(ParseNode::Integer(3))
-        ))
+        parse("10 MHz / (s * 3)").unwrap().to_string(),
+        "(10 MHz / (s * 3))"
     );
 }
 
 #[test]
-fn test_can_parse_multiplication_and_division()
-{
-    let result = parse("10 MHz / s * 3");
+fn test_can_divide_quantities() {
     assert_eq!(
-        result,
-        Ok(ParseNode::Multiply(
-            Box::new(ParseNode::Divide(
-                Box::new(ParseNode::Quantity {
-                    value: 10.0,
-                    unit: "MHz".to_string()
-                }),
-                Box::new(ParseNode::Identifier("s".to_string()))
-            )),
-            Box::new(ParseNode::Integer(3))
-        ))
+        parse("10 MHz / 2 kHz").unwrap().to_string(),
+        "(10 MHz / 2 kHz)"
     );
 }
 
 #[test]
-fn test_parenthesis_priority()
-{
-    let result = parse("10 MHz / (s * 3)");
+fn test_can_multiply_unary() {
     assert_eq!(
-        result,
-        Ok(ParseNode::Divide(
-            Box::new(ParseNode::Quantity {
-                value: 10.0,
-                unit: "MHz".to_string()
-            }),
-            Box::new(ParseNode::Multiply(
-                Box::new(ParseNode::Identifier("s".to_string())),
-                Box::new(ParseNode::Integer(3))
-            ))
-        ))
-    );
-
-}
-
-#[test]
-fn test_can_divide_quantities()
-{
-    let result = parse("10 MHz / 2 kHz");
-    assert_eq!(
-        result,
-        Ok(ParseNode::Divide(
-            Box::new(ParseNode::Quantity {
-                value: 10.0,
-                unit: "MHz".to_string()
-            }),
-            Box::new(ParseNode::Quantity {
-                value: 2.0,
-                unit: "kHz".to_string()
-            })
-        ))
-    );
-}
-
-#[test]
-fn test_can_multiply_unary()
-{
-    let result = parse("2 * -variable");
-    assert_eq!(
-        result,
-        Ok(ParseNode::Multiply(
-            Box::new(ParseNode::Integer(2)),
-            Box::new(ParseNode::Negate(Box::new(ParseNode::Identifier(
-                "variable".to_string()
-            ))))
-        ))
+        parse("2 * -variable").unwrap().to_string(),
+        "(2 * -(variable))"
     );
 }

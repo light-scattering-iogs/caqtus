@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use crate::lexer::{Token, lex};
 use chumsky::error::Rich;
 use chumsky::input::{Input, Stream, ValueInput};
@@ -7,6 +6,7 @@ use chumsky::prelude::*;
 use chumsky::prelude::{end, just, recursive};
 use chumsky::span::SimpleSpan;
 use chumsky::{Parser, extra, select};
+use std::fmt::Display;
 
 #[derive(Debug, PartialEq)]
 pub enum ParseNode {
@@ -14,13 +14,43 @@ pub enum ParseNode {
     Float(f64),
     Quantity { value: f64, unit: String },
     Identifier(String),
-    Add(Box<ParseNode>, Box<ParseNode>),
-    Subtract(Box<ParseNode>, Box<ParseNode>),
-    Multiply(Box<ParseNode>, Box<ParseNode>),
-    Divide(Box<ParseNode>, Box<ParseNode>),
-    Negate(Box<ParseNode>),
-    Power(Box<ParseNode>, Box<ParseNode>),
+    UnaryOperation(UnaryOperator, Box<ParseNode>),
+    BinaryOperation(BinaryOperator, Box<ParseNode>, Box<ParseNode>),
     Call(String, Vec<ParseNode>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BinaryOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Power,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum UnaryOperator {
+    Negate,
+}
+
+impl Display for BinaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BinaryOperator::Add => write!(f, "+"),
+            BinaryOperator::Subtract => write!(f, "-"),
+            BinaryOperator::Multiply => write!(f, "*"),
+            BinaryOperator::Divide => write!(f, "/"),
+            BinaryOperator::Power => write!(f, "^"),
+        }
+    }
+}
+
+impl Display for UnaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UnaryOperator::Negate => write!(f, "-"),
+        }
+    }
 }
 
 impl Display for ParseNode {
@@ -30,12 +60,10 @@ impl Display for ParseNode {
             ParseNode::Float(fl) => write!(f, "{}", fl),
             ParseNode::Quantity { value, unit } => write!(f, "{} {}", value, unit),
             ParseNode::Identifier(name) => write!(f, "{}", name),
-            ParseNode::Add(lhs, rhs) => write!(f, "({} + {})", lhs, rhs),
-            ParseNode::Subtract(lhs, rhs) => write!(f, "({} - {})", lhs, rhs),
-            ParseNode::Multiply(lhs, rhs) => write!(f, "({} * {})", lhs, rhs),
-            ParseNode::Divide(lhs, rhs) => write!(f, "({} / {})", lhs, rhs),
-            ParseNode::Negate(rhs) => write!(f, "(-{})", rhs),
-            ParseNode::Power(lhs, rhs) => write!(f, "({}^{})", lhs, rhs),
+            ParseNode::UnaryOperation(operator, operand) => write!(f, "{}({})", operator, operand),
+            ParseNode::BinaryOperation(operator, left, right) => {
+                write!(f, "({} {} {})", left, operator, right)
+            }
             ParseNode::Call(name, args) => {
                 let args_str = args
                     .iter()
@@ -107,22 +135,30 @@ where
             .or(expr.delimited_by(just(Token::LParen), just(Token::RParen)));
         let arithmetic_expr = sub_expr.pratt((
             infix(right(4), just(Token::Power), |left, _, right, _| {
-                ParseNode::Power(Box::new(left), Box::new(right))
+                ParseNode::BinaryOperation(BinaryOperator::Power, Box::new(left), Box::new(right))
             }),
             prefix(3, just(Token::Minus), |_, right, _| {
-                ParseNode::Negate(Box::new(right))
+                ParseNode::UnaryOperation(UnaryOperator::Negate, Box::new(right))
             }),
             infix(left(2), just(Token::Multiply), |left, _, right, _| {
-                ParseNode::Multiply(Box::new(left), Box::new(right))
+                ParseNode::BinaryOperation(
+                    BinaryOperator::Multiply,
+                    Box::new(left),
+                    Box::new(right),
+                )
             }),
             infix(left(2), just(Token::Divide), |left, _, right, _| {
-                ParseNode::Divide(Box::new(left), Box::new(right))
+                ParseNode::BinaryOperation(BinaryOperator::Divide, Box::new(left), Box::new(right))
             }),
             infix(left(1), just(Token::Plus), |left, _, right, _| {
-                ParseNode::Add(Box::new(left), Box::new(right))
+                ParseNode::BinaryOperation(BinaryOperator::Add, Box::new(left), Box::new(right))
             }),
             infix(left(1), just(Token::Minus), |left, _, right, _| {
-                ParseNode::Subtract(Box::new(left), Box::new(right))
+                ParseNode::BinaryOperation(
+                    BinaryOperator::Subtract,
+                    Box::new(left),
+                    Box::new(right),
+                )
             }),
         ));
         arithmetic_expr
