@@ -1,7 +1,7 @@
 import pytest
 
 from caqtus.shot_compilation import CompilationContext, CompilationError
-from caqtus.shot_compilation._expression_compilation import Literal
+from caqtus.shot_compilation._expression_compilation import Constant
 from caqtus.shot_compilation._expression_compilation._compiled_expression import (
     ConstantParameter,
     Negate,
@@ -29,7 +29,7 @@ def test_negating_float_returns_float():
 
     compiled = expr.compile(ctx, False)
 
-    assert compiled == Literal(-1.0)
+    assert compiled == Constant(-1.0)
 
 
 def test_negating_integer_returns_integer():
@@ -38,7 +38,7 @@ def test_negating_integer_returns_integer():
 
     compiled = expr.compile(ctx, False)
 
-    assert compiled == Literal(-1)
+    assert compiled == Constant(-1)
 
 
 def test_multiple_literal_negations_are_swallowed():
@@ -47,7 +47,7 @@ def test_multiple_literal_negations_are_swallowed():
 
     compiled = expr.compile(ctx, False)
 
-    assert compiled == Literal(1)
+    assert compiled == Constant(1)
 
 
 def test_negative_quantity_returns_negative_quantity():
@@ -56,7 +56,7 @@ def test_negative_quantity_returns_negative_quantity():
 
     compiled = expr.compile(ctx, False)
 
-    assert compiled == Literal(-1.0 * units["MHz"])
+    assert compiled == Constant(-1.0 * units["MHz"])
 
 
 def test_cant_negate_boolean_constant():
@@ -101,13 +101,13 @@ def test_can_apply_pos_to_constant():
     ctx = CompilationContext(ParameterSchema.empty(), units=units)
 
     expr = Expression("+1.0")
-    assert expr.compile(ctx, False) == Literal(1.0)
+    assert expr.compile(ctx, False) == Constant(1.0)
 
     expr = Expression("+1")
-    assert expr.compile(ctx, False) == Literal(1)
+    assert expr.compile(ctx, False) == Constant(1)
 
     expr = Expression("+10 MHz")
-    assert expr.compile(ctx, False) == Literal(10 * units["MHz"])
+    assert expr.compile(ctx, False) == Constant(10 * units["MHz"])
 
 
 def test_can_apply_pos_to_parameter():

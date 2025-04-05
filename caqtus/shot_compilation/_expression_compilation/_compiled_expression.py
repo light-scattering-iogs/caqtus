@@ -21,13 +21,13 @@ class CompiledExpression(abc.ABC):
         raise NotImplementedError
 
 
-type _CompiledExpression = Literal | ConstantParameter | VariableParameter | Negate
+type _CompiledExpression = Constant | ConstantParameter | VariableParameter | Negate
 
 T = TypeVar("T", bound=Parameter, default=Parameter, covariant=True)
 
 
 @attrs.frozen
-class Literal(CompiledExpression, Generic[T]):
+class Constant(CompiledExpression, Generic[T]):
     value: T
 
     def __str__(self):
@@ -41,25 +41,25 @@ class Literal(CompiledExpression, Generic[T]):
             case _:
                 assert_never(self.value)
 
-    def __neg__(self) -> Literal[int | float | Quantity[float, Unit]]:
+    def __neg__(self) -> Constant[int | float | Quantity[float, Unit]]:
         match self.value:
             case bool():
                 raise TypeError(f"Cannot negate boolean literal {self}.")
             case float(x) | int(x):
-                return Literal(-x)
+                return Constant(-x)
             case Quantity() as quantity:
-                return Literal(-1.0 * quantity)
+                return Constant(-1.0 * quantity)
             case _:
                 assert_never(self.value)
 
-    def __pos__(self) -> Literal[int | float | Quantity[float, Unit]]:
+    def __pos__(self) -> Constant[int | float | Quantity[float, Unit]]:
         match self.value:
             case bool():
                 raise TypeError(f"Cannot apply unary plus to boolean literal {self}.")
             case float(x) | int(x):
-                return Literal(+x)
+                return Constant(+x)
             case Quantity() as quantity:
-                return Literal(+1.0 * quantity)
+                return Constant(+1.0 * quantity)
             case _:
                 assert_never(self.value)
 

@@ -15,7 +15,7 @@ from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
     CompiledExpression,
     ConstantParameter,
-    Literal,
+    Constant,
     VariableParameter,
     _CompiledExpression,
 )
@@ -50,9 +50,9 @@ def _compile_ast(
 ) -> _CompiledExpression | Unit:
     match ast:
         case ParseNode.Integer(x):
-            return Literal(x)
+            return Constant(x)
         case ParseNode.Float(x):
-            return Literal(x)
+            return Constant(x)
         case ParseNode.Quantity(magnitude, unit_name):
             try:
                 unit = ctx.units[unit_name]
@@ -61,7 +61,7 @@ def _compile_ast(
                     raise UndefinedUnitError(
                         f"Unit {unit_name} is not defined."
                     ) from None
-            return Literal(Quantity(magnitude, unit))
+            return Constant(Quantity(magnitude, unit))
         case ParseNode.Identifier(name):
             with error_context(expression, ast):
                 return compile_identifier(DottedVariableName(name), ctx)
