@@ -9,14 +9,13 @@ from caqtus_parsing import AST, ParseNode, parse
 from caqtus.types.parameter import ParameterSchema
 
 from ...types.recoverable_exceptions import RecoverableException
-from ...types.units import Quantity, Unit
+from ...types.units import Unit
 from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
-    BooleanLiteral,
     CompiledExpression,
-    FloatLiteral,
-    IntegerLiteral,
-    QuantityLiteral,
+    ConstantParameter,
+    Literal,
+    VariableParameter,
     _CompiledExpression,
 )
 
@@ -50,9 +49,9 @@ def _compile_ast(
 ) -> _CompiledExpression | Unit:
     match ast:
         case ParseNode.Integer(x):
-            return IntegerLiteral(x)
+            return Literal(x)
         case ParseNode.Float(x):
-            return FloatLiteral(x)
+            return Literal(x)
         case ParseNode.Quantity(magnitude, unit_name):
             try:
                 unit = ctx.units[unit_name]
@@ -61,7 +60,7 @@ def _compile_ast(
                     raise UndefinedUnitError(
                         f"Unit {unit_name} is not defined."
                     ) from None
-            return QuantityLiteral(magnitude, unit)
+            return Literal(magnitude * unit)
         case ParseNode.Identifier(name):
             with error_context(expression, ast):
                 return compile_identifier(DottedVariableName(name), ctx)
@@ -78,24 +77,17 @@ def compile_identifier(
         return ctx.units[str(name)]
     elif name in ctx.parameter_schema.constant_schema:
         parameter = ctx.parameter_schema.constant_schema[name]
-        match parameter:
-            case bool():
-                return BooleanLiteral(parameter)
-            case int():
-                return IntegerLiteral(parameter)
-            case float():
-                return FloatLiteral(parameter)
-            case Quantity():
-                return QuantityLiteral(parameter.magnitude, parameter.units)
-            case _:
-                assert_never(parameter)
+        return ConstantParameter(parameter, str(name))
     elif name in ctx.parameter_schema.variable_schema:
-        raise NotImplementedError
+        parameter_type = ctx.parameter_schema.variable_schema[name]
+        return VariableParameter(parameter_type, str(name))
     else:
         matches = difflib.get_close_matches(
-            str(name), [str(n) for n in ctx.parameter_schema.names()], n=1
+            str(name),
+            {str(n) for n in ctx.parameter_schema.names()} | set(ctx.units),
+            n=1,
         )
-        error = UndefinedParameterError(f'Parameter "{name}" is not defined.')
+        error = UndefinedIdentifierError(f'Identifier "{name}" is not defined.')
         if matches:
             error.add_note(f'Did you mean "{matches[0]}"?')
         raise error
@@ -112,11 +104,12 @@ def compile_unary_operation(
         case Unit():
             with error_context(expression, unary_op):
                 raise ValueError(f"Cannot apply {unary_op.operator} to {operand:~}")
+
         case _:
-            raise NotImplementedError(f"Cannot apply {unary_op.operator} to {operand}")
+            assert_never(operand)
 
 
-class UndefinedParameterError(ValueError):
+class UndefinedIdentifierError(ValueError):
     pass
 
 

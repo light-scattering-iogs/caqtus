@@ -11,4 +11,5 @@ def test_applying_unary_operator_to_unit_raise_error():
 
     ctx = CompilationContext(ParameterSchema.empty(), units=units)
 
-    expr.compile(ctx, False)
+    with pytest.raises(CompilationError):
+        expr.compile(ctx, False)
