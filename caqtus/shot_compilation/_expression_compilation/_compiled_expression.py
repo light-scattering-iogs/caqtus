@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import abc
-from typing import Generic, assert_never
+from typing import Generic, Self, assert_never
 
 import attrs
 from typing_extensions import TypeVar
@@ -14,6 +14,10 @@ from ...types.units import Quantity, Unit
 class CompiledExpression(abc.ABC):
     @abc.abstractmethod
     def __neg__(self) -> CompiledExpression:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def __pos__(self) -> CompiledExpression:
         raise NotImplementedError
 
 
@@ -48,6 +52,17 @@ class Literal(CompiledExpression, Generic[T]):
             case _:
                 assert_never(self.value)
 
+    def __pos__(self) -> Literal[int | float | Quantity[float, Unit]]:
+        match self.value:
+            case bool():
+                raise TypeError(f"Cannot apply unary plus to boolean literal {self}.")
+            case float(x) | int(x):
+                return Literal(+x)
+            case Quantity() as quantity:
+                return Literal(+1.0 * quantity)
+            case _:
+                assert_never(self.value)
+
 
 @attrs.frozen
 class ConstantParameter(CompiledExpression, Generic[T]):
@@ -63,6 +78,13 @@ class ConstantParameter(CompiledExpression, Generic[T]):
                 raise TypeError(f"Cannot negate boolean parameter {self}.")
             case _:
                 return Negate(self)
+
+    def __pos__(self) -> _CompiledExpression:
+        match self.value:
+            case bool():
+                raise TypeError(f"Cannot apply unary plus to boolean parameter {self}.")
+            case _:
+                return self
 
 
 PT = TypeVar("PT", bound=ParameterType, default=ParameterType, covariant=True)
@@ -83,6 +105,11 @@ class VariableParameter(CompiledExpression, Generic[PT]):
             raise TypeError(f"Cannot negate boolean parameter {self}.")
         return Negate(VariableParameter(self.type_, self.name))
 
+    def __pos__(self) -> Self:
+        if isinstance(self.type_, Boolean):
+            raise TypeError(f"Cannot apply unary plus to boolean parameter {self}.")
+        return self
+
 
 @attrs.frozen
 class Negate(CompiledExpression):
@@ -93,3 +120,6 @@ class Negate(CompiledExpression):
 
     def __neg__(self) -> _CompiledExpression:
         return self.operand
+
+    def __pos__(self) -> Self:
+        return self

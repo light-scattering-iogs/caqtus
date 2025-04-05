@@ -106,9 +106,8 @@ def compile_unary_operation(
             raise ValueError(f"Cannot apply {unary_op.operator} to {operand:~}")
     match unary_op.operator:
         case UnaryOperator.Plus:
-            match operand:
-                case _:
-                    assert_never(operand)
+            with error_context(expression, unary_op):
+                return +operand
         case UnaryOperator.Neg:
             with error_context(expression, unary_op):
                 return -operand
