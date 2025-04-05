@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+from builtins import float
 from typing import Generic, Self, assert_never
 
 import attrs
@@ -8,7 +9,7 @@ from typing_extensions import TypeVar
 
 from ...types.parameter import Parameter, ParameterType
 from ...types.parameter._schema import Boolean, Float, Integer, QuantityType
-from ...types.units import Quantity, Unit
+from ...types.units import Quantity, Unit, dimensionless
 
 
 class CompiledExpression(abc.ABC):
@@ -62,6 +63,79 @@ class Constant(CompiledExpression, Generic[T]):
                 return Constant(+1.0 * quantity)
             case _:
                 assert_never(self.value)
+
+    def __add__(self, other: _CompiledExpression) -> _CompiledExpression:
+        if isinstance(other, Constant):
+            return _add_constants(self, other)
+        else:
+            raise NotImplementedError
+
+
+def _add_constants(left: Constant, right: Constant) -> Constant:
+    lhs = left.value
+    rhs = right.value
+    if isinstance(lhs, bool):
+        raise TypeError(f"Cannot add boolean constant {left} to {right}.")
+    if isinstance(rhs, bool):
+        raise TypeError(f"Cannot add {left} to boolean constant {right}.")
+    match lhs:
+        case int(x):
+            match rhs:
+                case int(y):
+                    return Constant[int](x + y)
+                case float(y):
+                    return Constant[float](x + y)
+                case Quantity() as y:
+                    if not y.units.is_compatible_with(dimensionless):
+                        raise TypeError(
+                            f"Cannot add dimensionless {left} to {right} with units "
+                            f"{y.units:~}"
+                        )
+                    return Constant[float](x + y.to_unit(dimensionless).magnitude)
+                case _:
+                    assert_never(rhs)
+        case float(x):
+            match rhs:
+                case int(y) | float(y):
+                    return Constant[float](x + y)
+                case Quantity() as y:
+                    if not y.units.is_compatible_with(dimensionless):
+                        raise TypeError(
+                            f"Cannot add dimensionless {left} to {right} with units "
+                            f"{y.units:~}"
+                        )
+                    return Constant[float](x + y.to_unit(dimensionless).magnitude)
+                case _:
+                    assert_never(rhs)
+        case Quantity() as x:
+            match rhs:
+                case int(y) | float(y):
+                    if not x.units.is_compatible_with(dimensionless):
+                        raise TypeError(
+                            f"Cannot add {left} with units {x.units:~} to "
+                            f"dimensionless {right}"
+                        )
+                    x_base = x.to_unit(dimensionless)
+                    return Constant(
+                        Quantity(x_base.magnitude + y, dimensionless).to_unit(x.units)
+                    )
+                case Quantity() as y:
+                    if not x.units.is_compatible_with(y.units):
+                        raise TypeError(
+                            f"Cannot add {left} with units {x.units:~} to "
+                            f"{right} with units {y.units:~}"
+                        )
+                    x_base = x.to_base_units()
+                    y_base = y.to_base_units()
+                    return Constant(
+                        Quantity(
+                            x_base.magnitude + y_base.magnitude, x_base.units
+                        ).to_unit(x.units)
+                    )
+                case _:
+                    assert_never(rhs)
+        case _:
+            assert_never(lhs)
 
 
 @attrs.frozen

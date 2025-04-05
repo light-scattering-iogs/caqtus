@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from typing import Self, assert_never, assert_type
 
 import attrs
-from caqtus_parsing import AST, ParseNode, UnaryOperator, parse
+from caqtus_parsing import AST, BinaryOperator, ParseNode, UnaryOperator, parse
 
 from caqtus.types.parameter import ParameterSchema
 
@@ -14,8 +14,8 @@ from ...types.units import Quantity, Unit
 from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
     CompiledExpression,
-    ConstantParameter,
     Constant,
+    ConstantParameter,
     VariableParameter,
     _CompiledExpression,
 )
@@ -123,7 +123,22 @@ def compile_binary_operation(
     ctx: CompilationContext,
     time_dependent: bool,
 ) -> _CompiledExpression | Unit:
-    raise NotImplementedError()
+    lhs = _compile_ast(expression, binary_op.lhs, ctx, time_dependent)
+    rhs = _compile_ast(expression, binary_op.rhs, ctx, time_dependent)
+    lhs_string = expression[binary_op.lhs.span[0] : binary_op.lhs.span[1]]
+    rhs_string = expression[binary_op.rhs.span[0] : binary_op.rhs.span[1]]
+    match binary_op.operator:
+        case BinaryOperator.Plus:
+            if isinstance(lhs, Unit):
+                with error_context(expression, binary_op):
+                    raise TypeError(f"Cannot add unit {lhs:~} to {rhs_string}.")
+            if isinstance(rhs, Unit):
+                with error_context(expression, binary_op):
+                    raise TypeError(f"Cannot add {lhs_string} to unit {rhs:~}.")
+            with error_context(expression, binary_op):
+                return lhs + rhs
+        case _:
+            assert_never(binary_op.operator)
 
 
 class UndefinedIdentifierError(ValueError):
