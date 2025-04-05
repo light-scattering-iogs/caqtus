@@ -1,27 +1,23 @@
-use caqtus_parsing_rs::{parse, ParseNode};
+use caqtus_parsing_rs::parse;
 
 #[test]
 fn successfully_parse_identifier() {
-    let result = parse("a");
-    assert_eq!(result, Ok(ParseNode::Identifier("a".to_string())));
+    assert_eq!(parse("a").unwrap().to_string(), "a");
 }
 
 #[test]
 fn successfully_parse_greek_characters() {
-    let result = parse("αβγ");
-    assert_eq!(result, Ok(ParseNode::Identifier("αβγ".to_string())));
+    assert_eq!(parse("αβγ").unwrap().to_string(), "αβγ");
 }
 
 #[test]
 fn successfully_parse_degree_sign() {
-    let result = parse("°C");
-    assert_eq!(result, Ok(ParseNode::Identifier("°C".to_string())));
+    assert_eq!(parse("°C").unwrap().to_string(), "°C");
 }
 
 #[test]
 fn successfully_parse_percent() {
-    let result = parse("%");
-    assert_eq!(result, Ok(ParseNode::Identifier("%".to_string())));
+    assert_eq!(parse("%").unwrap().to_string(), "%");
 }
 
 #[test]
@@ -31,14 +27,12 @@ fn fails_to_parse_identifier_with_percent() {
 }
 #[test]
 fn successfully_parse_identifier_with_single_dot() {
-    let result = parse("a.b");
-    assert_eq!(result, Ok(ParseNode::Identifier("a.b".to_string())));
+    assert_eq!(parse("a.b").unwrap().to_string(), "a.b");
 }
 
 #[test]
 fn successfully_parse_identifier_with_multiple_dots() {
-    let result = parse("a.b.c");
-    assert_eq!(result, Ok(ParseNode::Identifier("a.b.c".to_string())));
+    assert_eq!(parse("a.b.c").unwrap().to_string(), "a.b.c");
 }
 
 #[test]
