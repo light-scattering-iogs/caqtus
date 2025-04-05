@@ -1,15 +1,16 @@
+# pyright: strict
 import contextlib
 import difflib
 from collections.abc import Mapping
 from typing import Self, assert_never, assert_type
 
 import attrs
-from caqtus_parsing import AST, ParseNode, parse, UnaryOperator
+from caqtus_parsing import AST, ParseNode, UnaryOperator, parse
 
 from caqtus.types.parameter import ParameterSchema
 
 from ...types.recoverable_exceptions import RecoverableException
-from ...types.units import Unit, Quantity
+from ...types.units import Unit
 from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
     CompiledExpression,
@@ -109,16 +110,8 @@ def compile_unary_operation(
                 case _:
                     assert_never(operand)
         case UnaryOperator.Neg:
-            match operand:
-                case Literal(bool()):
-                    with error_context(expression, unary_op):
-                        raise ValueError("Cannot negate a boolean.")
-                case Literal(float(x) | int(x)):
-                    return Literal(-x)
-                case Literal(Quantity() as quantity):
-                    return Literal(-1.0 * quantity)
-                case _:
-                    assert_never(operand)
+            with error_context(expression, unary_op):
+                return -operand
         case _:
             assert_never(unary_op.operator)
 
