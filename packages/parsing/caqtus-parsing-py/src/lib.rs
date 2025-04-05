@@ -44,52 +44,69 @@ impl From<caqtus_parsing_rs::UnaryOperator> for UnaryOperator {
 enum ParseNode {
     Integer {
         value: isize,
+        span: (usize, usize),
     },
     Float {
         value: f64,
+        span: (usize, usize),
     },
     Quantity {
         value: f64,
         unit: String,
+        span: (usize, usize),
     },
     Identifier {
         name: String,
+        span: (usize, usize),
     },
     UnaryOperation {
         operator: UnaryOperator,
         operand: Py<ParseNode>,
+        span: (usize, usize),
     },
     BinaryOperation {
         operator: BinaryOperator,
         lhs: Py<ParseNode>,
         rhs: Py<ParseNode>,
+        span: (usize, usize),
     },
     Call {
         name: String,
         args: Py<PyTuple>,
+        span: (usize, usize),
     },
 }
 
 impl ParseNode {
     fn equal(&self, py: Python<'_>, other: &ParseNode) -> PyResult<bool> {
         match (self, other) {
-            (ParseNode::Integer { value: a }, ParseNode::Integer { value: b }) => Ok(a == b),
-            (ParseNode::Float { value: a }, ParseNode::Float { value: b }) => Ok(a == b),
+            (ParseNode::Integer { value: a, .. }, ParseNode::Integer { value: b, .. }) => {
+                Ok(a == b)
+            }
+            (ParseNode::Float { value: a, .. }, ParseNode::Float { value: b, .. }) => Ok(a == b),
             (
-                ParseNode::Quantity { value: a, unit: ua },
-                ParseNode::Quantity { value: b, unit: ub },
+                ParseNode::Quantity {
+                    value: a, unit: ua, ..
+                },
+                ParseNode::Quantity {
+                    value: b, unit: ub, ..
+                },
             ) => Ok(a == b && ua == ub),
-            (ParseNode::Identifier { name: a }, ParseNode::Identifier { name: b }) => Ok(a == b),
+            (ParseNode::Identifier { name: a, .. }, ParseNode::Identifier { name: b, .. }) => {
+                Ok(a == b)
+            }
             (
                 ParseNode::BinaryOperation {
                     operator: op_a,
                     lhs: lhs_a,
                     rhs: rhs_a,
+                    ..
                 },
                 ParseNode::BinaryOperation {
                     operator: op_b,
                     lhs: lhs_b,
                     rhs: rhs_b,
+                    ..
                 },
             ) => Ok(op_a == op_b
                 && lhs_a.bind(py).as_any().eq(lhs_b.bind(py))?
@@ -98,20 +115,24 @@ impl ParseNode {
                 ParseNode::UnaryOperation {
                     operator: op_a,
                     operand: rhs_a,
+                    ..
                 },
                 ParseNode::UnaryOperation {
                     operator: op_b,
                     operand: rhs_b,
+                    ..
                 },
             ) => Ok(op_a == op_b && rhs_a.bind(py).as_any().eq(rhs_b.bind(py))?),
             (
                 ParseNode::Call {
                     name: a_name,
                     args: a_args,
+                    ..
                 },
                 ParseNode::Call {
                     name: b_name,
                     args: b_args,
+                    ..
                 },
             ) => Ok(a_args.bind(py).eq(b_args.bind(py))? && a_name == b_name),
             _ => Ok(false),
@@ -123,20 +144,24 @@ impl ParseNode {
 impl ParseNode {
     fn __repr__(&self, py: Python<'_>) -> String {
         match self {
-            ParseNode::Integer { value } => format!("Integer({})", value),
-            ParseNode::Float { value } => format!("Float({})", value),
-            ParseNode::Quantity { value, unit } => {
+            ParseNode::Integer { value, .. } => format!("Integer({})", value),
+            ParseNode::Float { value, .. } => format!("Float({})", value),
+            ParseNode::Quantity { value, unit, .. } => {
                 format!("Quantity({}, \"{}\")", value, unit)
             }
-            ParseNode::Identifier { name } => format!("Identifier(\"{}\")", name),
-            ParseNode::UnaryOperation { operator, operand } => {
+            ParseNode::Identifier { name, .. } => format!("Identifier(\"{}\")", name),
+            ParseNode::UnaryOperation {
+                operator, operand, ..
+            } => {
                 format!(
                     "UnaryOperation({:?}, {})",
                     operator,
                     operand.bind(py).as_any().repr().unwrap()
                 )
             }
-            ParseNode::BinaryOperation { operator, lhs, rhs } => {
+            ParseNode::BinaryOperation {
+                operator, lhs, rhs, ..
+            } => {
                 format!(
                     "BinaryOperation({:?}, {}, {})",
                     operator,
@@ -144,7 +169,7 @@ impl ParseNode {
                     rhs.bind(py).as_any().repr().unwrap()
                 )
             }
-            ParseNode::Call { name, args } => {
+            ParseNode::Call { name, args, .. } => {
                 let args_str = args.bind(py).repr().unwrap().to_string();
                 format!("Call(\"{}\", [{}])", name, args_str)
             }
@@ -185,22 +210,44 @@ fn convert(py: Python<'_>, ast: caqtus_parsing_rs::ParseNode) -> ParseNode {
     // TODO: replace all the .into_pyobject(py).unwrap().unbind() Py::new once
     //  https://github.com/PyO3/pyo3/issues/3747 is resolved
     match ast {
-        caqtus_parsing_rs::ParseNode::Integer(value) => ParseNode::Integer { value },
-        caqtus_parsing_rs::ParseNode::Float(value) => ParseNode::Float { value },
-        caqtus_parsing_rs::ParseNode::Quantity { value, unit } => {
-            ParseNode::Quantity { value, unit }
-        }
-        caqtus_parsing_rs::ParseNode::Identifier(name) => ParseNode::Identifier { name },
-        caqtus_parsing_rs::ParseNode::BinaryOperation(op, lhs, rhs) => ParseNode::BinaryOperation {
-            operator: op.into(),
+        caqtus_parsing_rs::ParseNode::Integer { value, span } => ParseNode::Integer {
+            value,
+            span: (span.start, span.end),
+        },
+        caqtus_parsing_rs::ParseNode::Float { value, span } => ParseNode::Float {
+            value,
+            span: (span.start, span.end),
+        },
+        caqtus_parsing_rs::ParseNode::Quantity { value, unit, span } => ParseNode::Quantity {
+            value,
+            unit,
+            span: (span.start, span.end),
+        },
+        caqtus_parsing_rs::ParseNode::Identifier { name, span } => ParseNode::Identifier {
+            name,
+            span: (span.start, span.end),
+        },
+        caqtus_parsing_rs::ParseNode::BinaryOperation {
+            operator,
+            lhs,
+            rhs,
+            span,
+        } => ParseNode::BinaryOperation {
+            operator: operator.into(),
             lhs: convert(py, *lhs).into_pyobject(py).unwrap().unbind(),
             rhs: convert(py, *rhs).into_pyobject(py).unwrap().unbind(),
+            span: (span.start, span.end),
         },
-        caqtus_parsing_rs::ParseNode::UnaryOperation(op, operand) => ParseNode::UnaryOperation {
-            operator: op.into(),
+        caqtus_parsing_rs::ParseNode::UnaryOperation {
+            operator,
+            operand,
+            span,
+        } => ParseNode::UnaryOperation {
+            operator: operator.into(),
             operand: convert(py, *operand).into_pyobject(py).unwrap().unbind(),
+            span: (span.start, span.end),
         },
-        caqtus_parsing_rs::ParseNode::Call(name, args) => ParseNode::Call {
+        caqtus_parsing_rs::ParseNode::Call { name, args, span } => ParseNode::Call {
             name,
             args: PyTuple::new(
                 py,
@@ -210,6 +257,7 @@ fn convert(py: Python<'_>, ast: caqtus_parsing_rs::ParseNode) -> ParseNode {
             )
             .unwrap()
             .unbind(),
+            span: (span.start, span.end),
         },
     }
 }
