@@ -27,4 +27,3 @@ class ConstantParameter(CompiledExpression):
 class VariableParameter(CompiledExpression):
     type_: ParameterType
     name: str
-
