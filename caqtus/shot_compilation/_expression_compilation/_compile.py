@@ -68,9 +68,7 @@ def _compile_ast(
         case ParseNode.UnaryOperation() as unary_op:
             return compile_unary_operation(expression, unary_op, ctx, time_dependent)
         case ParseNode.BinaryOperation() as binary_op:
-            return compile_binary_operation(
-                expression, binary_op, ctx, time_dependent
-            )
+            return compile_binary_operation(expression, binary_op, ctx, time_dependent)
         case _:
             assert_never(ast)
 
@@ -117,6 +115,7 @@ def compile_unary_operation(
                 return -operand
         case _:
             assert_never(unary_op.operator)
+
 
 def compile_binary_operation(
     expression: str,
