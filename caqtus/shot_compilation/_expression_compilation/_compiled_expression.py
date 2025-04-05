@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import abc
-from builtins import float
 from typing import Generic, Self, assert_never
 
 import attrs
@@ -45,7 +44,7 @@ class Constant(CompiledExpression, Generic[T]):
     def __neg__(self) -> Constant[int | float | Quantity[float, Unit]]:
         match self.value:
             case bool():
-                raise TypeError(f"Cannot negate boolean literal {self}.")
+                raise TypeError("Cannot negate boolean literal.")
             case float(x) | int(x):
                 return Constant(-x)
             case Quantity() as quantity:
@@ -56,7 +55,7 @@ class Constant(CompiledExpression, Generic[T]):
     def __pos__(self) -> Constant[int | float | Quantity[float, Unit]]:
         match self.value:
             case bool():
-                raise TypeError(f"Cannot apply unary plus to boolean literal {self}.")
+                raise TypeError("Cannot apply unary plus to boolean literal.")
             case float(x) | int(x):
                 return Constant(+x)
             case Quantity() as quantity:
@@ -88,8 +87,8 @@ def _add_constants(left: Constant, right: Constant) -> Constant:
                 case Quantity() as y:
                     if not y.units.is_compatible_with(dimensionless):
                         raise TypeError(
-                            f"Cannot add dimensionless {left} to {right} with units "
-                            f"{y.units:~}"
+                            f"Cannot add dimensionless left side to right side with "
+                            f'units "{y.units:~}"'
                         )
                     return Constant[float](x + y.to_unit(dimensionless).magnitude)
                 case _:
@@ -101,8 +100,8 @@ def _add_constants(left: Constant, right: Constant) -> Constant:
                 case Quantity() as y:
                     if not y.units.is_compatible_with(dimensionless):
                         raise TypeError(
-                            f"Cannot add dimensionless {left} to {right} with units "
-                            f"{y.units:~}"
+                            f"Cannot add dimensionless left side to right side with "
+                            f'units "{y.units:~}"'
                         )
                     return Constant[float](x + y.to_unit(dimensionless).magnitude)
                 case _:
@@ -112,8 +111,8 @@ def _add_constants(left: Constant, right: Constant) -> Constant:
                 case int(y) | float(y):
                     if not x.units.is_compatible_with(dimensionless):
                         raise TypeError(
-                            f"Cannot add {left} with units {x.units:~} to "
-                            f"dimensionless {right}"
+                            f'Cannot add left side with units "{x.units:~}" and '
+                            f"dimensionless right side"
                         )
                     x_base = x.to_unit(dimensionless)
                     return Constant(
@@ -122,8 +121,8 @@ def _add_constants(left: Constant, right: Constant) -> Constant:
                 case Quantity() as y:
                     if not x.units.is_compatible_with(y.units):
                         raise TypeError(
-                            f"Cannot add {left} with units {x.units:~} to "
-                            f"{right} with units {y.units:~}"
+                            f'Cannot add left side with units "{x.units}" and '
+                            f'right side with units "{y.units}"'
                         )
                     x_base = x.to_base_units()
                     y_base = y.to_base_units()

@@ -2,7 +2,7 @@
 import contextlib
 import difflib
 from collections.abc import Mapping
-from typing import Self, assert_never, assert_type
+from typing import assert_never, assert_type
 
 import attrs
 from caqtus_parsing import AST, BinaryOperator, ParseNode, UnaryOperator, parse
@@ -135,7 +135,7 @@ def compile_binary_operation(
             if isinstance(rhs, Unit):
                 with error_context(expression, binary_op):
                     raise TypeError(f"Cannot add {lhs_string} to unit {rhs:~}.")
-            with error_context(expression, binary_op):
+            with binary_context(expression, binary_op):
                 return lhs + rhs
         case _:
             assert_never(binary_op.operator)
@@ -150,8 +150,17 @@ class UndefinedUnitError(ValueError):
 
 
 class CompilationError(RecoverableException):
-    @classmethod
-    def new(cls, expr: str, node: AST) -> Self:
+    pass
+
+
+@contextlib.contextmanager
+def error_context(
+    expr: str,
+    node: AST,
+):
+    try:
+        yield
+    except Exception as e:
         underlined = (
             expr[: node.span[0]]
             + "\033[4m"
@@ -159,15 +168,33 @@ class CompilationError(RecoverableException):
             + "\033[0m"
             + expr[node.span[1] :]
         )
-        return cls(f'An error occurred while compiling "{underlined}".')
+        raise CompilationError(
+            f'An error occurred while compiling "{underlined}"'
+        ) from e
 
 
 @contextlib.contextmanager
-def error_context(
-    expression: str,
-    ast: AST,
+def binary_context(
+    expr: str,
+    binary_operation: ParseNode.BinaryOperation,
 ):
+
     try:
         yield
     except Exception as e:
-        raise CompilationError.new(expression, ast) from e
+        lhs = binary_operation.lhs
+        rhs = binary_operation.rhs
+        underlined = (
+            expr[: lhs.span[0]]
+            + "\033[4m"
+            + expr[lhs.span[0] : lhs.span[1]]
+            + "\033[24m"
+            + expr[lhs.span[1] : rhs.span[0]]
+            + "\033[4m"
+            + expr[rhs.span[0] : rhs.span[1]]
+            + "\033[24m"
+            + expr[rhs.span[1] :]
+        )
+        raise CompilationError(
+            f"An error occurred while compiling \033[1m{underlined}\033[0m"
+        ) from e
