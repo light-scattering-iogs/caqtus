@@ -4,12 +4,12 @@ from collections.abc import Mapping
 from typing import Self, assert_never, assert_type
 
 import attrs
-from caqtus_parsing import AST, ParseNode, parse
+from caqtus_parsing import AST, ParseNode, parse, UnaryOperator
 
 from caqtus.types.parameter import ParameterSchema
 
 from ...types.recoverable_exceptions import RecoverableException
-from ...types.units import Unit
+from ...types.units import Unit, Quantity
 from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
     CompiledExpression,
@@ -100,13 +100,27 @@ def compile_unary_operation(
     time_dependent: bool,
 ) -> _CompiledExpression | Unit:
     operand = _compile_ast(expression, unary_op.operand, ctx, time_dependent)
-    match operand:
-        case Unit():
-            with error_context(expression, unary_op):
-                raise ValueError(f"Cannot apply {unary_op.operator} to {operand:~}")
-
+    if isinstance(operand, Unit):
+        with error_context(expression, unary_op):
+            raise ValueError(f"Cannot apply {unary_op.operator} to {operand:~}")
+    match unary_op.operator:
+        case UnaryOperator.Plus:
+            match operand:
+                case _:
+                    assert_never(operand)
+        case UnaryOperator.Neg:
+            match operand:
+                case Literal(bool()):
+                    with error_context(expression, unary_op):
+                        raise ValueError("Cannot negate a boolean.")
+                case Literal(float(x) | int(x)):
+                    return Literal(-x)
+                case Literal(Quantity() as quantity):
+                    return Literal(-1.0 * quantity)
+                case _:
+                    assert_never(operand)
         case _:
-            assert_never(operand)
+            assert_never(unary_op.operator)
 
 
 class UndefinedIdentifierError(ValueError):
