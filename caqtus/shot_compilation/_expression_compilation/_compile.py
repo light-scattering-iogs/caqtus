@@ -1,14 +1,15 @@
 import contextlib
 import difflib
+from collections.abc import Mapping
 from typing import Self, assert_never, assert_type
 
+import attrs
 from caqtus_parsing import AST, ParseNode, parse
 
-from caqtus.types.expression import Expression
 from caqtus.types.parameter import ParameterSchema
 
 from ...types.recoverable_exceptions import RecoverableException
-from ...types.units import UNITS, Quantity, Unit, units
+from ...types.units import Quantity, Unit
 from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
     BooleanLiteral,
@@ -16,15 +17,24 @@ from ._compiled_expression import (
     FloatLiteral,
     IntegerLiteral,
     QuantityLiteral,
+    _CompiledExpression,
 )
 
 
+@attrs.frozen
+class CompilationContext:
+    parameter_schema: ParameterSchema
+    units: Mapping[str, Unit]
+
+
 def compile_expression(
-    expression: Expression, parameter_schema: ParameterSchema, time_dependent: bool
+    expression: str,
+    compilation_context: CompilationContext,
+    time_dependent: bool,
 ) -> CompiledExpression:
     ast = parse(str(expression))
 
-    compiled = _compile_ast(expression, ast, parameter_schema, time_dependent)
+    compiled = _compile_ast(expression, ast, compilation_context, time_dependent)
     if isinstance(compiled, CompiledExpression):
         return compiled
     else:
@@ -33,11 +43,11 @@ def compile_expression(
 
 
 def _compile_ast(
-    expression: Expression,
+    expression: str,
     ast: AST,
-    parameter_schema: ParameterSchema,
+    ctx: CompilationContext,
     time_dependent: bool,
-) -> CompiledExpression | Unit:
+) -> _CompiledExpression | Unit:
     match ast:
         case ParseNode.Integer(x):
             return IntegerLiteral(x)
@@ -45,30 +55,29 @@ def _compile_ast(
             return FloatLiteral(x)
         case ParseNode.Quantity(magnitude, unit_name):
             try:
-                unit = units[unit_name]
+                unit = ctx.units[unit_name]
             except KeyError:
-                with compilation_context(expression, ast):
+                with error_context(expression, ast):
                     raise UndefinedUnitError(
                         f"Unit {unit_name} is not defined."
                     ) from None
-            quantity = magnitude * unit
-            assert isinstance(quantity, Quantity)
-            base_quantity = quantity.to_base_units()
-            return QuantityLiteral(base_quantity.magnitude, base_quantity.units)
+            return QuantityLiteral(magnitude, unit)
         case ParseNode.Identifier(name):
-            with compilation_context(expression, ast):
-                return compile_identifier(DottedVariableName(name), parameter_schema)
+            with error_context(expression, ast):
+                return compile_identifier(DottedVariableName(name), ctx)
+        case ParseNode.UnaryOperation() as unary_op:
+            return compile_unary_operation(expression, unary_op, ctx, time_dependent)
         case _:
             assert_never(ast)
 
 
 def compile_identifier(
-    name: DottedVariableName, parameter_schema: ParameterSchema
-) -> CompiledExpression | Unit:
-    if str(name) in UNITS:
-        return Unit(str(name))
-    elif name in parameter_schema.constant_schema:
-        parameter = parameter_schema.constant_schema[name]
+    name: DottedVariableName, ctx: CompilationContext
+) -> _CompiledExpression | Unit:
+    if str(name) in ctx.units:
+        return ctx.units[str(name)]
+    elif name in ctx.parameter_schema.constant_schema:
+        parameter = ctx.parameter_schema.constant_schema[name]
         match parameter:
             case bool():
                 return BooleanLiteral(parameter)
@@ -77,20 +86,34 @@ def compile_identifier(
             case float():
                 return FloatLiteral(parameter)
             case Quantity():
-                return QuantityLiteral(parameter.magnitude, parameter.unit)
+                return QuantityLiteral(parameter.magnitude, parameter.units)
             case _:
                 assert_never(parameter)
-    elif name in parameter_schema.variable_schema:
-        parameter_type = parameter_schema.variable_schema[name]
+    elif name in ctx.parameter_schema.variable_schema:
         raise NotImplementedError
     else:
         matches = difflib.get_close_matches(
-            str(name), [str(n) for n in parameter_schema.names()], n=1
+            str(name), [str(n) for n in ctx.parameter_schema.names()], n=1
         )
         error = UndefinedParameterError(f'Parameter "{name}" is not defined.')
         if matches:
             error.add_note(f'Did you mean "{matches[0]}"?')
         raise error
+
+
+def compile_unary_operation(
+    expression: str,
+    unary_op: ParseNode.UnaryOperation,
+    ctx: CompilationContext,
+    time_dependent: bool,
+) -> _CompiledExpression | Unit:
+    operand = _compile_ast(expression, unary_op.operand, ctx, time_dependent)
+    match operand:
+        case Unit():
+            with error_context(expression, unary_op):
+                raise ValueError(f"Cannot apply {unary_op.operator} to {operand:~}")
+        case _:
+            raise NotImplementedError(f"Cannot apply {unary_op.operator} to {operand}")
 
 
 class UndefinedParameterError(ValueError):
@@ -103,8 +126,7 @@ class UndefinedUnitError(ValueError):
 
 class CompilationError(RecoverableException):
     @classmethod
-    def new(cls, expression: Expression, node: AST) -> Self:
-        expr = str(expression)
+    def new(cls, expr: str, node: AST) -> Self:
         underlined = (
             expr[: node.span[0]]
             + "\033[4m"
@@ -116,8 +138,8 @@ class CompilationError(RecoverableException):
 
 
 @contextlib.contextmanager
-def compilation_context(
-    expression: Expression,
+def error_context(
+    expression: str,
     ast: AST,
 ):
     try:

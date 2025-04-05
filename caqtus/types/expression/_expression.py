@@ -3,7 +3,7 @@ import contextvars
 import re
 from collections.abc import Mapping
 from functools import cached_property
-from typing import Optional, Any
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 import numpy
 import token_utils
@@ -11,9 +11,16 @@ from token_utils import Token
 
 import caqtus.formatter as fmt
 from caqtus.utils import serialization
+
 from ..recoverable_exceptions import EvaluationError
 from ..units import units
 from ..variable_name import DottedVariableName, VariableName
+
+if TYPE_CHECKING:
+    from ...shot_compilation._expression_compilation import (
+        CompilationContext,
+        CompiledExpression,
+    )
 
 EXPRESSION_REGEX = re.compile(".*")
 
@@ -193,6 +200,28 @@ class Expression:
 
     def __setstate__(self, state):
         self.__init__(**state)
+
+    def compile(
+        self, compilation_context: "CompilationContext", time_dependent: Literal[False]
+    ) -> "CompiledExpression":
+        """Compile and verifies the expression.
+
+        Args:
+            compilation_context: Contains information necessary for the compilation.
+            time_dependent: Indicate if the identifier "t" should be allowed in the
+                expression.
+
+        Raises:
+            :py:class:`~caqtus.shot_compilation.CompilationError` if the expression
+            cannot be compiled.
+            The cause of the compilation error provides more information about the
+            specific error.
+        """
+
+        # TODO: import at top of the file once circular imports are fixed
+        from ...shot_compilation._expression_compilation import compile_expression
+
+        return compile_expression(str(self), compilation_context, time_dependent)
 
 
 serialization.register_unstructure_hook(Expression, lambda expr: expr.body)

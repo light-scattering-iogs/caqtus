@@ -1,6 +1,6 @@
 import itertools
 from collections.abc import Mapping
-from typing import assert_never
+from typing import assert_never, Self
 
 import attrs
 import polars
@@ -101,6 +101,12 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
         """Returns the names of the parameters in the schema."""
 
         return set(self._constant_schema) | set(self._variable_schema)
+
+    @classmethod
+    def empty(cls) -> Self:
+        """Returns an empty schema."""
+
+        return cls(_constant_schema={}, _variable_schema={})
 
 
 @attrs.frozen

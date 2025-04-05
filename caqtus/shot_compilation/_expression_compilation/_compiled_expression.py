@@ -4,7 +4,7 @@ from collections.abc import Callable
 import attrs
 
 from ...types.parameter import Parameters
-from ...types.units import BaseUnit, Quantity, Unit, dimensionless
+from ...types.units import Quantity, Unit, dimensionless
 from ._expression_type import (
     Boolean,
     ExpressionType,
@@ -38,6 +38,11 @@ class CompiledExpression(abc.ABC):
     @abc.abstractmethod
     def as_boolean(self) -> Callable[[Parameters], bool]:
         raise NotImplementedError()
+
+
+type _CompiledExpression = (
+    IntegerLiteral | FloatLiteral | BooleanLiteral | QuantityLiteral
+)
 
 
 @attrs.frozen
@@ -112,7 +117,7 @@ class BooleanLiteral(CompiledExpression):
 @attrs.frozen
 class QuantityLiteral(CompiledExpression):
     value: float
-    unit: BaseUnit
+    unit: Unit
 
     def __str__(self):
         return f"{self.value} {self.unit}"
