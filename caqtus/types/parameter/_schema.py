@@ -6,12 +6,12 @@ import attrs
 import polars
 
 from caqtus.types.parameter import Parameter
-from caqtus.types.units import Unit, Quantity
+from caqtus.types.units import Quantity, Unit
 from caqtus.types.variable_name import DottedVariableName
 
 type ConstantSchema = Mapping[DottedVariableName, Parameter]
 type VariableSchema = Mapping[DottedVariableName, ParameterType]
-type ParameterType = (Boolean | Integer | Float | QuantityType)
+type ParameterType = Boolean | Integer | Float | QuantityType
 
 
 class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
@@ -96,6 +96,11 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
             return QuantityType(units=value.units)
         else:
             assert_never(value)
+
+    def names(self) -> set[DottedVariableName]:
+        """Returns the names of the parameters in the schema."""
+
+        return set(self._constant_schema) | set(self._variable_schema)
 
 
 @attrs.frozen
