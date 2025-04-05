@@ -10,7 +10,7 @@ from caqtus_parsing import AST, ParseNode, UnaryOperator, parse
 from caqtus.types.parameter import ParameterSchema
 
 from ...types.recoverable_exceptions import RecoverableException
-from ...types.units import Unit
+from ...types.units import Quantity, Unit
 from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
     CompiledExpression,
@@ -61,12 +61,16 @@ def _compile_ast(
                     raise UndefinedUnitError(
                         f"Unit {unit_name} is not defined."
                     ) from None
-            return Literal(magnitude * unit)
+            return Literal(Quantity(magnitude, unit))
         case ParseNode.Identifier(name):
             with error_context(expression, ast):
                 return compile_identifier(DottedVariableName(name), ctx)
         case ParseNode.UnaryOperation() as unary_op:
             return compile_unary_operation(expression, unary_op, ctx, time_dependent)
+        case ParseNode.BinaryOperation() as binary_op:
+            return compile_binary_operation(
+                expression, binary_op, ctx, time_dependent
+            )
         case _:
             assert_never(ast)
 
@@ -113,6 +117,14 @@ def compile_unary_operation(
                 return -operand
         case _:
             assert_never(unary_op.operator)
+
+def compile_binary_operation(
+    expression: str,
+    binary_op: ParseNode.BinaryOperation,
+    ctx: CompilationContext,
+    time_dependent: bool,
+) -> _CompiledExpression | Unit:
+    raise NotImplementedError()
 
 
 class UndefinedIdentifierError(ValueError):
