@@ -2,7 +2,7 @@
 import contextlib
 import difflib
 from collections.abc import Mapping
-from typing import assert_never, assert_type
+from typing import assert_never, assert_type, Self
 
 import attrs
 from caqtus_parsing import AST, BinaryOperator, ParseNode, UnaryOperator, parse
@@ -10,7 +10,7 @@ from caqtus_parsing import AST, BinaryOperator, ParseNode, UnaryOperator, parse
 from caqtus.types.parameter import ParameterSchema
 
 from ...types.recoverable_exceptions import RecoverableException
-from ...types.units import Quantity, Unit
+from ...types.units import Quantity, Unit, units
 from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
     CompiledExpression,
@@ -23,8 +23,27 @@ from ._compiled_expression import (
 
 @attrs.frozen
 class CompilationContext:
+    """Contains information necessary to compile an expression.
+
+    Attributes:
+        parameter_schema: The types of the parameters in the expression.
+        units: The units available in the expression.
+    """
+
     parameter_schema: ParameterSchema
     units: Mapping[str, Unit]
+
+    @classmethod
+    def from_parameter_schema(
+        cls,
+        parameter_schema: ParameterSchema,
+    ) -> Self:
+        """Creates a context with default units."""
+
+        return cls(
+            parameter_schema=parameter_schema,
+            units=units,
+        )
 
 
 def compile_expression(
@@ -178,7 +197,6 @@ def binary_context(
     expr: str,
     binary_operation: ParseNode.BinaryOperation,
 ):
-
     try:
         yield
     except Exception as e:
