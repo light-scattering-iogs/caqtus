@@ -3,14 +3,13 @@ import pytest
 from caqtus.shot_compilation import CompilationContext, CompilationError
 from caqtus.shot_compilation._expression_compilation import Constant
 from caqtus.shot_compilation._expression_compilation._compiled_expression import (
-    ConstantParameter,
     Negate,
     VariableParameter,
 )
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import ParameterSchema
 from caqtus.types.parameter._schema import Boolean, QuantityType, Integer, Float
-from caqtus.types.units import Unit, units
+from caqtus.types.units import Unit, units, Quantity
 from caqtus.types.variable_name import DottedVariableName
 
 
@@ -56,7 +55,7 @@ def test_negative_quantity_returns_negative_quantity():
 
     compiled = expr.compile(ctx, False)
 
-    assert compiled == Constant(-1.0 * units["MHz"])
+    assert compiled == Constant(Quantity(-1.0, units["MHz"]))
 
 
 def test_cant_negate_boolean_constant():
@@ -79,7 +78,7 @@ def test_negating_a_negation_cancels_out():
         ),
         units=units,
     )
-    assert expr.compile(ctx, False) == ConstantParameter(1.0, "param")
+    assert expr.compile(ctx, False) == Constant(1.0)
 
 
 def test_can_negate_variable_parameter():
@@ -127,14 +126,10 @@ def test_can_apply_pos_to_parameter():
         units=units,
     )
 
-    assert Expression("+constant_int").compile(ctx, False) == ConstantParameter(
-        1, "constant_int"
-    )
-    assert Expression("+constant_float").compile(ctx, False) == ConstantParameter(
-        -2.0, "constant_float"
-    )
-    assert Expression("+constant_quantity").compile(ctx, False) == ConstantParameter(
-        3.0 * units["dB"], "constant_quantity"
+    assert Expression("+constant_int").compile(ctx, False) == Constant(1)
+    assert Expression("+constant_float").compile(ctx, False) == Constant(-2.0)
+    assert Expression("+constant_quantity").compile(ctx, False) == Constant(
+        3.0 * units["dB"]
     )
     assert Expression("+variable_int").compile(ctx, False) == VariableParameter(
         Integer(), "variable_int"

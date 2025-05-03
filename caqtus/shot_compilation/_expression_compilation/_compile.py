@@ -15,7 +15,6 @@ from ...types.variable_name import DottedVariableName
 from ._compiled_expression import (
     CompiledExpression,
     Constant,
-    ConstantParameter,
     VariableParameter,
     _CompiledExpression,
 )
@@ -99,7 +98,7 @@ def compile_identifier(
         return ctx.units[str(name)]
     elif name in ctx.parameter_schema.constant_schema:
         parameter = ctx.parameter_schema.constant_schema[name]
-        return ConstantParameter(parameter, str(name))
+        return Constant(parameter)
     elif name in ctx.parameter_schema.variable_schema:
         parameter_type = ctx.parameter_schema.variable_schema[name]
         return VariableParameter(parameter_type, str(name))

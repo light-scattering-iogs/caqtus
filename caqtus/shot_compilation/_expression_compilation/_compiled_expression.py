@@ -21,7 +21,7 @@ class CompiledExpression(abc.ABC):
         raise NotImplementedError
 
 
-type _CompiledExpression = Constant | ConstantParameter | VariableParameter | Negate
+type _CompiledExpression = Constant | VariableParameter | Negate
 
 T = TypeVar("T", bound=Parameter, default=Parameter, covariant=True)
 
@@ -44,7 +44,7 @@ class Constant(CompiledExpression, Generic[T]):
     def __neg__(self) -> Constant[int | float | Quantity[float, Unit]]:
         match self.value:
             case bool():
-                raise TypeError("Cannot negate boolean literal.")
+                raise TypeError("Cannot negate boolean.")
             case float(x) | int(x):
                 return Constant(-x)
             case Quantity() as quantity:
@@ -55,7 +55,7 @@ class Constant(CompiledExpression, Generic[T]):
     def __pos__(self) -> Constant[int | float | Quantity[float, Unit]]:
         match self.value:
             case bool():
-                raise TypeError("Cannot apply unary plus to boolean literal.")
+                raise TypeError("Cannot apply unary plus to boolean.")
             case float(x) | int(x):
                 return Constant(+x)
             case Quantity() as quantity:
@@ -137,29 +137,6 @@ def _add_constants(left: Constant, right: Constant) -> Constant:
             assert_never(lhs)
 
 
-@attrs.frozen
-class ConstantParameter(CompiledExpression, Generic[T]):
-    value: T
-    name: str
-
-    def __str__(self):
-        return f"{self.name} = {self.value}"
-
-    def __neg__(self) -> _CompiledExpression:
-        match self.value:
-            case bool():
-                raise TypeError(f"Cannot negate boolean parameter {self}.")
-            case _:
-                return Negate(self)
-
-    def __pos__(self) -> _CompiledExpression:
-        match self.value:
-            case bool():
-                raise TypeError(f"Cannot apply unary plus to boolean parameter {self}.")
-            case _:
-                return self
-
-
 PT = TypeVar("PT", bound=ParameterType, default=ParameterType, covariant=True)
 
 
@@ -186,10 +163,7 @@ class VariableParameter(CompiledExpression, Generic[PT]):
 
 @attrs.frozen
 class Negate(CompiledExpression):
-    operand: (
-        ConstantParameter[int | float | Quantity[float, Unit]]
-        | VariableParameter[Integer | Float | QuantityType]
-    )
+    operand: VariableParameter[Integer | Float | QuantityType]
 
     def __neg__(self) -> _CompiledExpression:
         return self.operand
