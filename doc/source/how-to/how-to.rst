@@ -5,6 +5,7 @@ How to
    :maxdepth: 1
 
    install
+   setup_postgresql
    add-device-server
    device-extension
    handle-recoverable-exceptions
