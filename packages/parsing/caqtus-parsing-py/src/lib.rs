@@ -1,3 +1,5 @@
+mod parameter_type;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
@@ -268,6 +270,9 @@ fn parse(py: Python<'_>, string: &str) -> Result<ParseNode, ParseError> {
         .map(|ast| convert(py, ast))
 }
 
+#[pyfunction]
+fn compile(py: Python<'_>, string: &str, parameter_types: )
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse, m)?)?;
@@ -275,6 +280,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ParseError>()?;
     m.add_class::<BinaryOperator>()?;
     m.add_class::<UnaryOperator>()?;
+    m.add_class::<parameter_type::ParameterType>()?;
     Ok(())
 }
 

@@ -1,6 +1,6 @@
 import itertools
 from collections.abc import Mapping
-from typing import assert_never, Self
+from typing import assert_never, Self, final
 
 import attrs
 import polars
@@ -109,6 +109,7 @@ class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
         return cls(_constant_schema={}, _variable_schema={})
 
 
+@final
 @attrs.frozen
 class QuantityType:
     units: Unit
@@ -126,6 +127,7 @@ class QuantityType:
         return magnitude
 
 
+@final
 @attrs.frozen
 class Float:
     @property
@@ -143,6 +145,7 @@ class Float:
         return value
 
 
+@final
 @attrs.frozen
 class Boolean:
     @property
@@ -160,6 +163,7 @@ class Boolean:
         return value
 
 
+@final
 @attrs.frozen
 class Integer:
     @property

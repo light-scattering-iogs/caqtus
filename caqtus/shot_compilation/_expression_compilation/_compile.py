@@ -119,7 +119,7 @@ def compile_unary_operation(
     unary_op: ParseNode.UnaryOperation,
     ctx: CompilationContext,
     time_dependent: bool,
-) -> _CompiledExpression | Unit:
+) -> _CompiledExpression:
     operand = _compile_ast(expression, unary_op.operand, ctx, time_dependent)
     if isinstance(operand, Unit):
         with error_context(expression, unary_op):
