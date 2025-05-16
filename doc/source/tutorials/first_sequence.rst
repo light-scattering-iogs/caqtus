@@ -47,7 +47,9 @@ After this, you should see the sequence in the list of sequences.
 You can open the sequence by double-clicking on it.
 This will open a new window where you can define the sequence.
 The sequence window contains three tabs.
-
+The most important ones are the *Shot* tab that defines how a single realization of the experiment is performed, and
+the *Iteration* tab that defines how several shots are repeated.
+The *Constants* tab is used to define parameters that can be referenced in the *Shot* and *Iteration* tabs.
 
 .. figure:: ../_static/getting_started/first_sequence/open_first_sequence.png
     :alt: Open first sequence
@@ -55,3 +57,6 @@ The sequence window contains three tabs.
     :width: 80%
 
     Open first sequence
+
+When a sequence is created from scratch, it is initially set up to loop over the variable `rep` and to repeat the shot
+10 times.
