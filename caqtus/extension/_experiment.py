@@ -212,9 +212,7 @@ class Experiment:
     def get_session_maker(self) -> StorageManager:
         return self.get_storage_manager()
 
-    def build_storage_manager[
-        T: StorageManager, **P
-    ](
+    def build_storage_manager[T: StorageManager, **P](
         self,
         backend_type: Callable[Concatenate[SerializerProtocol, P], T],
         *args: P.args,
@@ -238,9 +236,7 @@ class Experiment:
 
         return storage_backend_manager
 
-    def _build_storage_manager[
-        T: StorageManager, **P
-    ](
+    def _build_storage_manager[T: StorageManager, **P](
         self,
         backend_type: Callable[Concatenate[SerializerProtocol, P], T],
         *args: P.args,
@@ -404,6 +400,17 @@ class Experiment:
         """
 
         return self.get_storage_manager().session()
+
+    def upgrade_database(self) -> None:
+        """Upgrade the database schema of the experiment to the latest version.
+
+        .. Warning::
+
+            If the database contains important data, it is strongly recommended to
+            back it up before running this function in case something goes wrong.
+        """
+
+        upgrade_database(self)
 
 
 def upgrade_database(experiment: Experiment) -> None:
