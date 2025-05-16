@@ -200,9 +200,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.iteration_editor = StepsIterationEditor(self)
         self.time_lanes_editor = TimeLanesEditor(extension, {}, self)
         self.tabWidget.clear()
-        self.tabWidget.addTab(self.parameters_editor, "&Globals")
-        self.tabWidget.addTab(self.iteration_editor, "&Parameters")
-        self.tabWidget.addTab(self.time_lanes_editor, "Time &lanes")
+        self.tabWidget.addTab(self.parameters_editor, "&Constants")
+        self.tabWidget.addTab(self.iteration_editor, "&Iteration")
+        self.tabWidget.addTab(self.time_lanes_editor, "&Shot")
 
         # undo
         self.undoView.setCleanIcon(
