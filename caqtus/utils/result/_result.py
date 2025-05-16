@@ -72,6 +72,9 @@ class Failure(Generic[E]):
     def __str__(self) -> str:
         return str(self._error)
 
+    def __repr__(self) -> str:
+        return f"Failure({self._error!r})"
+
     def exception[Exc: BaseException](self: Failure[Exc]) -> Exc:
         raise self._error
 
