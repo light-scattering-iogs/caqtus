@@ -8,6 +8,6 @@ It contains the typical steps to follow to get a new experiment up and running.
     :maxdepth: 1
 
     installation
-    
+    first_sequence
     notebooks/data analysis
     new-device
