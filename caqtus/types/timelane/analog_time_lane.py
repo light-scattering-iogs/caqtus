@@ -4,7 +4,7 @@ import attrs
 
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
-from .timelane import TimeLane
+from .timelane import TimeLane, Span
 
 
 class Ramp:
@@ -62,7 +62,11 @@ class AnalogTimeLane(TimeLane[Expression | Ramp]):
         from caqtus.types.expression import Expression
 
         # Creates an analog time lane with known values
-        lane = AnalogTimeLane([Expression("0 MHz")] + [Ramp()] * 2 + [Expression("10 MHz")])
+        lane = AnalogTimeLane(
+            [Expression("0 MHz")]
+            + [Ramp()] * 2
+            + [Expression("10 MHz")]
+        )
 
         # Creates an analog time lane with a placeholder expression
         lane = AnalogTimeLane([Expression("2 * x"), Expression("y")])
@@ -81,7 +85,7 @@ def unstructure_hook(lane: AnalogTimeLane):
 
 def structure_hook(data, _) -> AnalogTimeLane:
     structured = serialization.structure(
-        data["spanned_values"], list[tuple[Expression | Ramp, int]]
+        data["spanned_values"], list[tuple[Expression | Ramp, Span]]
     )
     return AnalogTimeLane.from_spanned_values(structured)
 

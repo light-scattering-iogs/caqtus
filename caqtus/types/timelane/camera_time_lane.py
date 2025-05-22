@@ -2,7 +2,7 @@ import attrs
 
 from caqtus.types.image import ImageLabel
 from caqtus.utils import serialization
-from .timelane import TimeLane
+from .timelane import TimeLane, Span
 
 
 @attrs.define
@@ -30,7 +30,7 @@ def unstructure_hook(lane: CameraTimeLane):
 
 def structure_hook(data, _) -> CameraTimeLane:
     structured = serialization.structure(
-        data["spanned_values"], list[tuple[TakePicture | None, int]]
+        data["spanned_values"], list[tuple[TakePicture | None, Span]]
     )
     return CameraTimeLane.from_spanned_values(structured)
 
