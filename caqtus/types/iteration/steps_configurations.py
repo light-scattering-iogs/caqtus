@@ -411,44 +411,34 @@ class StepsConfiguration(IterationConfiguration):
         )
 
 
-@functools.singledispatch
-def expected_number_shots(step: Step) -> int | Unknown:
-    raise NotImplementedError(f"Cannot determine the number of shots for {step}")
-
-
-@expected_number_shots.register
-def _(step: VariableDeclaration):
-    return 0
-
-
-@expected_number_shots.register
-def _(step: ExecuteShot):
-    return 1
-
-
-@expected_number_shots.register
-def _(step: LinspaceLoop):
-    sub_steps_number = sum(
-        expected_number_shots(sub_step) for sub_step in step.sub_steps
-    )
-    return sub_steps_number * step.num
-
-
-@expected_number_shots.register
-def _(step: ArangeLoop):
-    try:
-        length = len(list(step.loop_values({})))
-    except (EvaluationError, NotAnalogValueError, InvalidDimensionalityError):
-        # The errors above can occur if the steps are still being edited or if the
-        # expressions depend on other variables that are not defined here.
-        # These can be errors on the user side, so we don't want to crash on them, and
-        # we just indicate that we don't know the number of shots.
-        return Unknown()
-
-    sub_steps_number = sum(
-        expected_number_shots(sub_step) for sub_step in step.sub_steps
-    )
-    return sub_steps_number * length
+def expected_number_shots(
+    step: Step,
+) -> int | Unknown:
+    match step:
+        case VariableDeclaration():
+            return 0
+        case ExecuteShot():
+            return 1
+        case LinspaceLoop(num=num, sub_steps=sub_steps):
+            sub_steps_number = sum(
+                expected_number_shots(sub_step) for sub_step in sub_steps
+            )
+            return sub_steps_number * num
+        case ArangeLoop(sub_steps=sub_steps):
+            try:
+                length = len(list(step.loop_values({})))
+            except (EvaluationError, NotAnalogValueError, InvalidDimensionalityError):
+                # The errors above can occur if the steps are still being edited or if
+                # the expressions depend on other variables that are not defined here.
+                # These can be errors on the user side, so we don't want to crash on
+                # them, and we just indicate that we don't know the number of shots.
+                return Unknown()
+            sub_steps_number = sum(
+                expected_number_shots(sub_step) for sub_step in sub_steps
+            )
+            return sub_steps_number * length
+        case _:
+            assert_never(step)
 
 
 def get_parameter_names(step: Step) -> set[DottedVariableName]:
@@ -457,8 +447,9 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             return {variable}
         case ExecuteShot():
             return set()
-        case LinspaceLoop(variable=variable, sub_steps=sub_steps) | ArangeLoop(
-            variable=variable, sub_steps=sub_steps
+        case (
+            LinspaceLoop(variable=variable, sub_steps=sub_steps)
+            | ArangeLoop(variable=variable, sub_steps=sub_steps)
         ):
             return {variable}.union(
                 *[get_parameter_names(sub_step) for sub_step in sub_steps]
@@ -467,10 +458,8 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             assert_never(step)
 
 
-def wrap_error[
-    S: Step
-](
-    function: Callable[[S, StepContext], Generator[StepContext, None, StepContext]]
+def wrap_error[S: Step](
+    function: Callable[[S, StepContext], Generator[StepContext, None, StepContext]],
 ) -> Callable[[S, StepContext], Generator[StepContext, None, StepContext]]:
     """Wrap a function that evaluates a step to raise nicer errors for the user."""
 
