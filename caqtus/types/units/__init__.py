@@ -25,6 +25,7 @@ from ._units import (
     UnitLike,
 )
 from .unit_namespace import units
+from ._converter import configure_units
 
 __all__ = [
     "__version__",
@@ -57,4 +58,5 @@ __all__ = [
     "VOLT",
     "HERTZ",
     "AMPERE",
+    "configure_units",
 ]
