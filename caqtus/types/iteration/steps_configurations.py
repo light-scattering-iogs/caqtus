@@ -447,9 +447,8 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             return {variable}
         case ExecuteShot():
             return set()
-        case (
-            LinspaceLoop(variable=variable, sub_steps=sub_steps)
-            | ArangeLoop(variable=variable, sub_steps=sub_steps)
+        case LinspaceLoop(variable=variable, sub_steps=sub_steps) | ArangeLoop(
+            variable=variable, sub_steps=sub_steps
         ):
             return {variable}.union(
                 *[get_parameter_names(sub_step) for sub_step in sub_steps]
@@ -458,7 +457,9 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             assert_never(step)
 
 
-def wrap_error[S: Step](
+def wrap_error[
+    S: Step
+](
     function: Callable[[S, StepContext], Generator[StepContext, None, StepContext]],
 ) -> Callable[[S, StepContext], Generator[StepContext, None, StepContext]]:
     """Wrap a function that evaluates a step to raise nicer errors for the user."""
