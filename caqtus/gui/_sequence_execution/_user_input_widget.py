@@ -9,10 +9,10 @@ from collections.abc import Mapping
 from typing import assert_never
 
 import attrs
+import cattrs
 from PySide6.QtCore import Qt, QSignalBlocker
 from PySide6.QtWidgets import (
     QWidget,
-    QFormLayout,
     QHBoxLayout,
     QSlider,
     QDoubleSpinBox,
@@ -55,7 +55,6 @@ class DigitalInput:
 
 
 type InputType = AnalogRange | DigitalInput
-
 
 type InputSchema = Mapping[DottedVariableName, InputType]
 """A mapping from variable names to input types, defining the schema for user inputs."""
