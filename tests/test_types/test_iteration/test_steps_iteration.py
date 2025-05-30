@@ -6,17 +6,42 @@ from caqtus.types.iteration import (
     ArangeLoop,
     is_unknown,
     VariableDeclaration,
+    DigitalInput,
 )
 from caqtus.types.parameter import ParameterSchema
 from caqtus.types.parameter._schema import QuantityType, Integer, Float
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.types.iteration import TunableParameterConfig, AnalogInputRange
+from caqtus.types.iteration.steps_configurations import _converter
 
 
 def test_serialization(steps_configuration: StepsConfiguration):
-    assert steps_configuration == StepsConfiguration.load(
-        StepsConfiguration.dump(steps_configuration)
-    )
+    serialized = StepsConfiguration.dump(steps_configuration)
+    expected = {
+        "steps": [
+            {"variable": "a", "value": "1"},
+            {"variable": "c", "value": "0.0"},
+            {
+                "sub_steps": [{"execute": "shot"}],
+                "variable": "b",
+                "start": "0",
+                "stop": "1",
+                "num": 10,
+            },
+            {
+                "sub_steps": [{"execute": "shot"}],
+                "variable": "c",
+                "start": "0",
+                "stop": "1",
+                "step": "0.1",
+            },
+            {"execute": "shot"},
+        ]
+    }
+    assert serialized == expected
+    deserialized = StepsConfiguration.load(serialized)
+    assert deserialized == steps_configuration
 
 
 def test_number():
@@ -132,3 +157,35 @@ def test_parameter_schema_constant_redefinition():
         _constant_schema={},
         _variable_schema={DottedVariableName("a"): Float()},
     )
+
+
+def test_can_serialize_tunable_analog_parameter_config():
+    tunable_param = AnalogInputRange(
+        min_value=Expression("0 dB"),
+        max_value=Expression("1 dB"),
+    )
+
+    serialized = _converter.unstructure(tunable_param, TunableParameterConfig)
+    assert serialized == {
+        "AnalogInputRange": {
+            "min_value": "0 dB",
+            "max_value": "1 dB",
+        }
+    }
+    deserialized = _converter.structure(
+        serialized,
+        TunableParameterConfig,  # pyright: ignore [reportArgumentType]
+    )
+    assert deserialized == tunable_param
+
+
+def test_can_serialize_tunable_digital_parameter_config():
+    tunable_param = DigitalInput()
+
+    serialized = _converter.unstructure(tunable_param, TunableParameterConfig)
+    assert serialized == {"DigitalInput": {}}
+    deserialized = _converter.structure(
+        serialized,
+        TunableParameterConfig,  # pyright: ignore [reportArgumentType]
+    )
+    assert deserialized == tunable_param
