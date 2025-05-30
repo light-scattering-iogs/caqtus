@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Iterable, Callable, Generator
-from collections.abc import Mapping, Iterator
-from typing import TypeAlias, TypeGuard, Any, assert_type, override, assert_never, Self
+from collections.abc import Callable, Generator, Iterable, Iterator, Mapping
+from typing import Any, Self, TypeAlias, TypeGuard, assert_never, assert_type, override
 
 import attrs
 import numpy
@@ -14,22 +13,28 @@ from caqtus.types.parameter import (
     NotAnalogValueError,
     Parameter,
     ParameterSchema,
+    is_parameter,
 )
-from caqtus.types.parameter import is_parameter
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.utils import serialization
-from ._step_context import StepContext
-from .iteration_configuration import IterationConfiguration, Unknown
-from ..parameter._analog_value import is_scalar_analog_value, ScalarAnalogValue
+
+from ..parameter._analog_value import ScalarAnalogValue, is_scalar_analog_value
 from ..recoverable_exceptions import EvaluationError
 from ..units import (
     DimensionalityError,
     InvalidDimensionalityError,
-    dimensionless,
     Quantity,
     Unit,
+    dimensionless,
 )
-from ..variable_name import DottedVariableName
+from ..variable_name import DottedVariableName, configure_variable_name_conversion_hooks
+from ._step_context import StepContext
+from ._tunable_parameter_config import configure_tunable_parameter_conversion_hooks
+from .iteration_configuration import IterationConfiguration, Unknown
+
+_converter = serialization.new_converter()
+configure_tunable_parameter_conversion_hooks(_converter)
+configure_variable_name_conversion_hooks(_converter)
 
 
 def validate_step(instance, attribute, step):
@@ -309,17 +314,15 @@ class ExecuteShot:
         return "do shot"
 
 
+@_converter.register_unstructure_hook
 def unstructure_hook(execute_shot: ExecuteShot):
     return {"execute": "shot"}
 
 
-def structure_hook(data: str, cls: type[ExecuteShot]) -> ExecuteShot:
+@_converter.register_structure_hook
+def structure_hook(data: str, _) -> ExecuteShot:
     return ExecuteShot()
 
-
-serialization.register_unstructure_hook(ExecuteShot, unstructure_hook)
-
-serialization.register_structure_hook(ExecuteShot, structure_hook)
 
 """TypeAlias for the different types of steps."""
 Step: TypeAlias = ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop
@@ -372,11 +375,11 @@ class StepsConfiguration(IterationConfiguration):
 
     @classmethod
     def dump(cls, steps_configuration: StepsConfiguration) -> serialization.JSON:
-        return serialization.unstructure(steps_configuration, StepsConfiguration)
+        return _converter.unstructure(steps_configuration, StepsConfiguration)
 
     @classmethod
     def load(cls, data: serialization.JSON) -> StepsConfiguration:
-        return serialization.structure(data, StepsConfiguration)
+        return _converter.structure(data, StepsConfiguration)
 
     def walk(self, initial_context: StepContext) -> Iterator[StepContext]:
         """Returns the context for every shot encountered while walking the steps."""
@@ -593,7 +596,7 @@ def _(
 ) -> Generator[StepContext, None, StepContext]:
     """Schedule a shot to be run.
 
-    This function schedule to run a shot on the experiment with the parameters
+    This function schedule a shot on the experiment with the parameters
     defined in the context at this point.
 
     Returns:
