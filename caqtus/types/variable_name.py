@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Self, Any
+from typing import Any, Self
 
 import attrs
+import cattrs
 
 from caqtus.utils import serialization
 
@@ -98,6 +99,13 @@ class VariableName(DottedVariableName):
             return self._dotted_name == other
         else:
             return NotImplemented
+
+
+def configure_variable_name_conversion_hooks(converter: cattrs.BaseConverter) -> None:
+    """Set up a converter to handle DottedVariableName"""
+
+    converter.register_unstructure_hook(DottedVariableName, unstructure_hook)
+    converter.register_structure_hook(DottedVariableName, structure_hook)
 
 
 def unstructure_hook(dotted_variable_name: DottedVariableName) -> str:
