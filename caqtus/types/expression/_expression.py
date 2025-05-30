@@ -3,14 +3,16 @@ import contextvars
 import re
 from collections.abc import Mapping
 from functools import cached_property
-from typing import Optional, Any
+from typing import Any, Optional
 
+import cattrs
 import numpy
 import token_utils
 from token_utils import Token
 
 import caqtus.formatter as fmt
 from caqtus.utils import serialization
+
 from ..recoverable_exceptions import EvaluationError
 from ..units import units
 from ..variable_name import DottedVariableName, VariableName
@@ -197,6 +199,13 @@ class Expression:
 
 serialization.register_unstructure_hook(Expression, lambda expr: expr.body)
 serialization.register_structure_hook(Expression, lambda body, _: Expression(body))
+
+
+def configure_expression_conversion_hooks(converter: cattrs.BaseConverter) -> None:
+    """Set up a converter to handle Expression types."""
+
+    converter.register_unstructure_hook(Expression, lambda expr: expr.body)
+    converter.register_structure_hook(Expression, lambda body, _: Expression(body))
 
 
 def add_implicit_multiplication(source: str) -> str:
