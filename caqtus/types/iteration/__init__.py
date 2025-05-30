@@ -8,6 +8,11 @@ from .steps_configurations import (
     ArangeLoop,
     ContainsSubSteps,
 )
+from ._tunable_parameter_config import (
+    TunableParameterConfig,
+    AnalogInputRange,
+    DigitalInput,
+)
 
 __all__ = [
     "IterationConfiguration",
@@ -20,4 +25,7 @@ __all__ = [
     "ContainsSubSteps",
     "Unknown",
     "is_unknown",
+    "TunableParameterConfig",
+    "AnalogInputRange",
+    "DigitalInput",
 ]
