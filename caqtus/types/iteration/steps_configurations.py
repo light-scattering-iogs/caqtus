@@ -28,6 +28,7 @@ from ..units import (
     dimensionless,
 )
 from ..variable_name import DottedVariableName, configure_variable_name_conversion_hooks
+from ._tunable_parameter_config import TunableParameterConfig
 from ._step_context import StepContext
 from ._tunable_parameter_config import configure_tunable_parameter_conversion_hooks
 from .iteration_configuration import IterationConfiguration, Unknown
@@ -346,6 +347,14 @@ class StepsConfiguration(IterationConfiguration):
 
     Attributes:
         steps: The steps of the iteration.
+        tunable_parameters: A list of configurations for the parameters that are tunable
+            by the user during the execution of the sequence.
+
+            Each element of the list is a tuple containing the name of the parameter
+            and its configuration.
+            If two parameter configurations have the same name, or if they overlap with
+            the parameters defined in the steps, an error will be raised when the
+            sequence is executed.
     """
 
     steps: list[Step] = attrs.field(
@@ -354,6 +363,9 @@ class StepsConfiguration(IterationConfiguration):
             member_validator=validate_step,
         ),
         on_setattr=attrs.setters.validate,
+    )
+    tunable_parameters: list[tuple[DottedVariableName, TunableParameterConfig]] = (
+        attrs.field(factory=list)
     )
 
     @classmethod
@@ -371,7 +383,10 @@ class StepsConfiguration(IterationConfiguration):
         return sum(expected_number_shots(step) for step in self.steps)
 
     def get_parameter_names(self) -> set[DottedVariableName]:
-        return set().union(*[get_parameter_names(step) for step in self.steps])
+        step_parameters = set().union(
+            *[get_parameter_names(step) for step in self.steps]
+        )
+        return step_parameters
 
     @classmethod
     def dump(cls, steps_configuration: StepsConfiguration) -> serialization.JSON:
@@ -394,7 +409,7 @@ class StepsConfiguration(IterationConfiguration):
         try:
             first_context = next(context_iterator)
         except StopIteration:
-            # In case there is not steps to walk, we return a schema made only of the
+            # In case there are not steps to walk, we return a schema made only of the
             # initial constant parameters.
             return ParameterSchema(
                 _constant_schema=initial_parameters, _variable_schema={}
