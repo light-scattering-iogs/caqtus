@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Never, TypeVar
 
 from cattrs.converters import Converter
-from cattrs.preconf.json import make_converter as make_json_converter, JsonConverter
+from cattrs.preconf.json import JsonConverter
+from cattrs.preconf.json import make_converter as make_json_converter
 from cattrs.preconf.pyyaml import make_converter as make_yaml_converter
 
 unstruct_collection_overrides = {tuple: tuple}
@@ -87,3 +88,18 @@ def copy_converter() -> Converter:
     """Return a copy of a serialization converter with common hooks registered."""
 
     return converters["json"].copy()
+
+
+def _raise_error(cl: type) -> Never:
+    """Raise an error if a type cannot be handled."""
+    msg = f"Unsupported type: {cl!r}. Register a structure hook for it."
+    raise TypeError(msg) from None
+
+
+def new_converter() -> Converter:
+    """Return a new serialization converter with common hooks registered."""
+
+    return make_json_converter(
+        unstruct_collection_overrides=unstruct_collection_overrides,
+        unstructure_fallback_factory=_raise_error,
+    )

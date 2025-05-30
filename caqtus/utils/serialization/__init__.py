@@ -13,6 +13,7 @@ from .converters import (
     converters,
     copy_converter,
     from_json,
+    new_converter,
     register_structure_hook,
     register_unstructure_hook,
     structure,
@@ -43,4 +44,5 @@ __all__ = [
     "is_valid_json_list",
     "copy_converter",
     "configure_external_union",
+    "new_converter",
 ]
