@@ -326,7 +326,7 @@ def structure_hook(data: str, _) -> ExecuteShot:
 
 
 """TypeAlias for the different types of steps."""
-Step: TypeAlias = ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop
+type Step = ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop
 
 
 def is_step(step) -> TypeGuard[Step]:
