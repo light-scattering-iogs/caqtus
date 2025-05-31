@@ -5,7 +5,8 @@ import attrs
 import cattrs
 
 from caqtus.types.expression import Expression, configure_expression_conversion_hooks
-from caqtus.types.parameter import Parameter, is_parameter
+from caqtus.types.parameter import Parameter, ParameterType, is_parameter
+from caqtus.types.parameter._schema import Boolean, QuantityType
 from caqtus.types.units import Quantity, Unit, dimensionless
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.serialization import configure_external_union
@@ -77,24 +78,20 @@ type InputSchema = Mapping[DottedVariableName, InputType]
 """A mapping from variable names to input types, defining the schema for user inputs."""
 
 
-def evaluate_tunable_parameter_configs(
-    tunable_params: Mapping[DottedVariableName, TunableParameterConfig],
-    initial_parameters: Mapping[DottedVariableName, Parameter],
-) -> InputSchema:
-    """Evaluate a mapping of TunableParameterConfig.
+def tunable_parameter_type(input_type: InputType) -> ParameterType:
+    """Get the type of parameter from an input type.
 
     Args:
-        tunable_params: The mapping of TunableParameterConfig to evaluate.
-        initial_parameters: The value of the constant parameters defined before the
-            iteration starts.
+        input_type: The input type to extract the parameter type from.
     """
 
-    return {
-        variable_name: evaluate_tunable_parameter_config(
-            tunable_param, initial_parameters
-        )
-        for variable_name, tunable_param in tunable_params.items()
-    }
+    match input_type:
+        case AnalogRange(unit=unit):
+            return QuantityType(unit)
+        case DigitalInput():
+            return Boolean()
+        case _:
+            assert_never(input_type)
 
 
 def evaluate_tunable_parameter_config(
