@@ -4,6 +4,6 @@ The code contained in this module cannot be used standalone but instead provides
 functionality for the :module:`caqtus.experiment_control` module.
 """
 
-from ._user_input_widget import UserInputWidget
+from ._user_input_widget import AnalogRange, DigitalInput, UserInputWidget
 
-__all__ = ["UserInputWidget"]
+__all__ = ["UserInputWidget", "AnalogRange", "DigitalInput"]

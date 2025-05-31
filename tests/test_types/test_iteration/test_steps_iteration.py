@@ -1,8 +1,8 @@
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
-    AnalogInputRange,
+    AnalogRangeConfig,
     ArangeLoop,
-    DigitalInput,
+    DigitalInputConfig,
     ExecuteShot,
     LinspaceLoop,
     StepsConfiguration,
@@ -162,14 +162,14 @@ def test_parameter_schema_constant_redefinition():
 
 
 def test_can_serialize_tunable_analog_parameter_config():
-    tunable_param = AnalogInputRange(
+    tunable_param = AnalogRangeConfig(
         min_value=Expression("0 dB"),
         max_value=Expression("1 dB"),
     )
 
     serialized = _converter.unstructure(tunable_param, TunableParameterConfig)
     assert serialized == {
-        "AnalogInputRange": {
+        "AnalogRangeConfig": {
             "min_value": "0 dB",
             "max_value": "1 dB",
         }
@@ -182,10 +182,10 @@ def test_can_serialize_tunable_analog_parameter_config():
 
 
 def test_can_serialize_tunable_digital_parameter_config():
-    tunable_param = DigitalInput()
+    tunable_param = DigitalInputConfig()
 
     serialized = _converter.unstructure(tunable_param, TunableParameterConfig)
-    assert serialized == {"DigitalInput": {}}
+    assert serialized == {"DigitalInputConfig": {}}
     deserialized = _converter.structure(
         serialized,
         TunableParameterConfig,  # pyright: ignore [reportArgumentType]

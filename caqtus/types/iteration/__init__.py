@@ -7,8 +7,8 @@ from ._steps import (
     VariableDeclaration,
 )
 from ._tunable_parameter_config import (
-    AnalogInputRange,
-    DigitalInput,
+    AnalogRangeConfig,
+    DigitalInputConfig,
     TunableParameterConfig,
 )
 from .iteration_configuration import IterationConfiguration, Unknown, is_unknown
@@ -26,6 +26,6 @@ __all__ = [
     "Unknown",
     "is_unknown",
     "TunableParameterConfig",
-    "AnalogInputRange",
-    "DigitalInput",
+    "AnalogRangeConfig",
+    "DigitalInputConfig",
 ]
