@@ -1,8 +1,8 @@
-from caqtus.gui._sequence_execution import UserInputWidget
-from caqtus.gui._sequence_execution._user_input_widget import AnalogRange, DigitalInput
-from caqtus.types.variable_name import DottedVariableName
-from caqtus.types.units import Unit, Quantity
 from pytestqt.qtbot import QtBot
+
+from caqtus.gui._sequence_execution import AnalogRange, DigitalInput, UserInputWidget
+from caqtus.types.units import Quantity, Unit
+from caqtus.types.variable_name import DottedVariableName
 
 
 def test_user_input_widget(qtbot: QtBot):
