@@ -5,59 +5,30 @@ of some parameters.
 """
 
 import abc
-from collections.abc import Mapping
 from typing import assert_never
 
-import attrs
-import cattrs
-from PySide6.QtCore import Qt, QSignalBlocker
+from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtWidgets import (
-    QWidget,
-    QHBoxLayout,
-    QSlider,
-    QDoubleSpinBox,
     QButtonGroup,
-    QRadioButton,
+    QDoubleSpinBox,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
+    QRadioButton,
+    QSlider,
+    QWidget,
 )
 
 from caqtus.gui.qtutil import QABCMeta
+from caqtus.types.iteration._tunable_parameter_config import (
+    AnalogRange,
+    DigitalInput,
+    InputSchema,
+    InputType,
+)
 from caqtus.types.parameter import Parameter
-from caqtus.types.variable_name import DottedVariableName
 from caqtus.types.units import Unit
-
-
-@attrs.frozen
-class AnalogRange:
-    """A class representing an analog range with a minimum and maximum value.
-
-    Attributes:
-        minimum: The minimum value of the analog range.
-
-        maximum: The maximum value of the analog range.
-
-        unit: The unit of the analog range.
-
-        It is not required to be in base units since it is a user-facing unit.
-    """
-
-    minimum: float
-    maximum: float
-    unit: Unit
-
-
-@attrs.frozen
-class DigitalInput:
-    """A marker class representing a digital input."""
-
-    pass
-
-
-type InputType = AnalogRange | DigitalInput
-
-type InputSchema = Mapping[DottedVariableName, InputType]
-"""A mapping from variable names to input types, defining the schema for user inputs."""
+from caqtus.types.variable_name import DottedVariableName
 
 
 class UserInputWidget(QWidget):
@@ -73,12 +44,16 @@ class UserInputWidget(QWidget):
 
 
     Example:
-        >>> from caqtus.gui._sequence_execution import UserInputWidget
+        >>> from caqtus.gui._sequence_execution import (
+            UserInputWidget,
+            AnalogRange,
+            DigitalInput,
+        )
         >>> from caqtus.types.variable_name import DottedVariableName
         >>> from caqtus.types.units import Unit
         >>> input_schema = {
             DottedVariableName("example.variable"): AnalogRange(0.0, 10.0, Unit("V")),
-            DottedVariableName("example.digital_input"): DigitalInput(),
+            DottedVariableName("example.digital_input"): DigitalInputConfig(),
         }
         >>> widget = UserInputWidget(input_schema)
         >>> assert widget.get_current_values() == {
