@@ -22,15 +22,18 @@ from ..variable_name import DottedVariableName
 from ._converter import _converter
 from ._step_context import StepContext
 from ._steps import (
-    Step,
-    validate_step,
-    VariableDeclaration,
+    ArangeLoop,
     ExecuteShot,
     LinspaceLoop,
-    ArangeLoop,
+    Step,
+    VariableDeclaration,
+    validate_step,
 )
 from ._tunable_parameter_config import (
+    InputType,
     TunableParameterConfig,
+    evaluate_tunable_parameter_config,
+    tunable_parameter_type,
 )
 from .iteration_configuration import IterationConfiguration, Unknown
 
@@ -77,10 +80,15 @@ class StepsConfiguration(IterationConfiguration):
         return sum(expected_number_shots(step) for step in self.steps)
 
     def get_parameter_names(self) -> set[DottedVariableName]:
-        step_parameters = set().union(
-            *[get_parameter_names(step) for step in self.steps]
-        )
-        return step_parameters
+        return self.get_step_parameter_names() | self.get_tunable_parameter_names()
+
+    def get_step_parameter_names(self) -> set[DottedVariableName]:
+        """Return the names of the parameters that are defined in the steps."""
+        return set().union(*[get_parameter_names(step) for step in self.steps])
+
+    def get_tunable_parameter_names(self) -> set[DottedVariableName]:
+        """Return the names of the tunable parameters."""
+        return {name for name, _ in self.tunable_parameters}
 
     @classmethod
     def dump(cls, steps_configuration: StepsConfiguration) -> serialization.JSON:
@@ -99,28 +107,77 @@ class StepsConfiguration(IterationConfiguration):
     def get_parameter_schema(
         self, initial_parameters: Mapping[DottedVariableName, Parameter]
     ) -> ParameterSchema:
+        tunable_parameters = evaluate_tunable_parameter_configs(
+            self.tunable_parameters, initial_parameters
+        )
+        tunable_parameter_schema = {
+            name: tunable_parameter_type(config)
+            for name, config in tunable_parameters.items()
+        }
+
         context_iterator = self.walk(StepContext(initial_parameters))
         try:
             first_context = next(context_iterator)
         except StopIteration:
-            # In case there are not steps to walk, we return a schema made only of the
-            # initial constant parameters.
+            # In case there are no steps to walk, we return a schema made only of the
+            # tunable parameters.
             return ParameterSchema(
-                _constant_schema=initial_parameters, _variable_schema={}
+                _constant_schema=initial_parameters,
+                _variable_schema=tunable_parameter_schema,
             )
-        variable_parameters = self.get_parameter_names()
-        constant_parameters = set(initial_parameters) - variable_parameters
+        tunable_parameters = self.get_tunable_parameter_names()
+        step_parameters = self.get_step_parameter_names()
+
+        if intersection := step_parameters & tunable_parameters:
+            raise IntersectionParametersError.from_intersection(intersection)
+
+        constant_parameters = (
+            set(initial_parameters) - tunable_parameters - step_parameters
+        )
         constant_schema = {
-            name: first_context.variables[name] for name in constant_parameters
+            name: initial_parameters[name] for name in constant_parameters
         }
-        initial_values = first_context.variables.to_flat_dict()
-        variable_schema = {
-            name: ParameterSchema.type_from_value(initial_values[name])
-            for name in variable_parameters
+        initial_step_values = first_context.variables.to_flat_dict()
+        step_schema = {
+            name: ParameterSchema.type_from_value(initial_step_values[name])
+            for name in step_parameters
         }
+        variable_schema = step_schema | tunable_parameter_schema
+        assert set(variable_schema) & set(constant_schema) == set()
+
         return ParameterSchema(
             _constant_schema=constant_schema, _variable_schema=variable_schema
         )
+
+
+class IntersectionParametersError(ValueError):
+    @classmethod
+    def from_intersection(cls, intersection: set[DottedVariableName]) -> Self:
+        """Create an error from the intersection of tunable and step parameters."""
+        err = cls(
+            f"Parameters {intersection} are both defined as tunable "
+            "parameters and are being iterated over, which is not allowed."
+        )
+        err.add_note(
+            "To fix this, remove the duplicate definition for these parameters."
+        )
+        return err
+
+
+def evaluate_tunable_parameter_configs(
+    tunable_parameters: list[tuple[DottedVariableName, TunableParameterConfig]],
+    initial_parameters: Mapping[DottedVariableName, Parameter],
+) -> Mapping[DottedVariableName, InputType]:
+    evaluated_inputs = {}
+    for name, config in tunable_parameters:
+        if name in evaluated_inputs:
+            error = ValueError(f"Tunable parameter '{name}' is defined multiple times.")
+            error.add_note("To fix this, remove the duplicate definition.")
+            raise error
+        evaluated_inputs[name] = evaluate_tunable_parameter_config(
+            config, initial_parameters
+        )
+    return evaluated_inputs
 
 
 def expected_number_shots(

@@ -1,3 +1,5 @@
+import pytest
+
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     AnalogRangeConfig,
@@ -10,7 +12,10 @@ from caqtus.types.iteration import (
     VariableDeclaration,
     is_unknown,
 )
-from caqtus.types.iteration.steps_configurations import _converter
+from caqtus.types.iteration.steps_configurations import (
+    IntersectionParametersError,
+    _converter,
+)
 from caqtus.types.parameter import ParameterSchema
 from caqtus.types.parameter._schema import Float, Integer, QuantityType
 from caqtus.types.units import Unit
@@ -159,6 +164,65 @@ def test_parameter_schema_constant_redefinition():
         _constant_schema={},
         _variable_schema={DottedVariableName("a"): Float()},
     )
+
+
+def test_parameter_schema_tunable_parameter():
+    steps = StepsConfiguration(
+        steps=[
+            LinspaceLoop(
+                variable=DottedVariableName("a"),
+                start=Expression("0"),
+                stop=Expression("1"),
+                num=10,
+                sub_steps=[
+                    ExecuteShot(),
+                ],
+            ),
+        ],
+        tunable_parameters=[
+            (
+                DottedVariableName("tunable_param"),
+                AnalogRangeConfig(
+                    min_value=Expression("0 dB"), max_value=Expression("1 dB")
+                ),
+            )
+        ],
+    )
+    assert steps.get_parameter_schema(
+        {DottedVariableName("constant"): 0}
+    ) == ParameterSchema(
+        _constant_schema={DottedVariableName("constant"): 0},
+        _variable_schema={
+            DottedVariableName("a"): Float(),
+            DottedVariableName("tunable_param"): QuantityType(Unit("dB")),
+        },
+    )
+
+
+def test_fails_to_get_parameter_schema_for_overlapping_tunable_and_step_parameter():
+    steps = StepsConfiguration(
+        steps=[
+            LinspaceLoop(
+                variable=DottedVariableName("a"),
+                start=Expression("0"),
+                stop=Expression("1"),
+                num=10,
+                sub_steps=[
+                    ExecuteShot(),
+                ],
+            ),
+        ],
+        tunable_parameters=[
+            (
+                DottedVariableName("a"),
+                AnalogRangeConfig(
+                    min_value=Expression("0 dB"), max_value=Expression("1 dB")
+                ),
+            )
+        ],
+    )
+    with pytest.raises(IntersectionParametersError):
+        steps.get_parameter_schema({})
 
 
 def test_can_serialize_tunable_analog_parameter_config():
