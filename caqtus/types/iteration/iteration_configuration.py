@@ -25,6 +25,8 @@ class IterationConfiguration(abc.ABC):
         If the number of shots cannot be determined ahead of time, this method should
         return unknown.
         In doubt, the method must return unknown and not a possibly wrong guess.
+        If there is an issue with the way the user has defined the iteration, this
+        method should not raise an exception but instead return unknown.
         """
 
         raise NotImplementedError
@@ -36,6 +38,9 @@ class IterationConfiguration(abc.ABC):
         This method must return the name of the parameters whose values are changed
         during the iteration.
         The iteration must set the values of all these parameters before each shot.
+
+        This method should not raise an exception, even if there is an issue with the
+        way the user has defined the iteration.
         """
 
         raise NotImplementedError
@@ -58,6 +63,9 @@ class IterationConfiguration(abc.ABC):
             Implementations of this method should infer the types of the parameters
             correctly as the consumers of this method rely on the correctness of the
             inferred types.
+
+        Raises:
+            If the iteration is not well-defined, this method should raise an exception.
         """
 
         raise NotImplementedError
