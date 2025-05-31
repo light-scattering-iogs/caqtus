@@ -1,19 +1,20 @@
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
-    StepsConfiguration,
-    LinspaceLoop,
-    ExecuteShot,
+    AnalogInputRange,
     ArangeLoop,
-    is_unknown,
-    VariableDeclaration,
     DigitalInput,
+    ExecuteShot,
+    LinspaceLoop,
+    StepsConfiguration,
+    TunableParameterConfig,
+    VariableDeclaration,
+    is_unknown,
 )
+from caqtus.types.iteration.steps_configurations import _converter
 from caqtus.types.parameter import ParameterSchema
-from caqtus.types.parameter._schema import QuantityType, Integer, Float
+from caqtus.types.parameter._schema import Float, Integer, QuantityType
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.types.iteration import TunableParameterConfig, AnalogInputRange
-from caqtus.types.iteration.steps_configurations import _converter
 
 
 def test_serialization(steps_configuration: StepsConfiguration):
@@ -37,7 +38,8 @@ def test_serialization(steps_configuration: StepsConfiguration):
                 "step": "0.1",
             },
             {"execute": "shot"},
-        ]
+        ],
+        "tunable_parameters": [],
     }
     assert serialized == expected
     deserialized = StepsConfiguration.load(serialized)
