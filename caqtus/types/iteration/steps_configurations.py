@@ -36,6 +36,7 @@ from ._tunable_parameter_config import (
     tunable_parameter_type,
 )
 from .iteration_configuration import IterationConfiguration, Unknown
+from ._user_input_steps import AnalogUserInputStep, DigitalUserInputStep
 
 
 @attrs.define
@@ -61,9 +62,6 @@ class StepsConfiguration(IterationConfiguration):
         ),
         on_setattr=attrs.setters.validate,
     )
-    tunable_parameters: list[tuple[DottedVariableName, TunableParameterConfig]] = (
-        attrs.field(factory=list)
-    )
 
     @classmethod
     def empty(cls) -> Self:
@@ -80,15 +78,11 @@ class StepsConfiguration(IterationConfiguration):
         return sum(expected_number_shots(step) for step in self.steps)
 
     def get_parameter_names(self) -> set[DottedVariableName]:
-        return self.get_step_parameter_names() | self.get_tunable_parameter_names()
+        return self.get_step_parameter_names()
 
     def get_step_parameter_names(self) -> set[DottedVariableName]:
         """Return the names of the parameters that are defined in the steps."""
         return set().union(*[get_parameter_names(step) for step in self.steps])
-
-    def get_tunable_parameter_names(self) -> set[DottedVariableName]:
-        """Return the names of the tunable parameters."""
-        return {name for name, _ in self.tunable_parameters}
 
     @classmethod
     def dump(cls, steps_configuration: StepsConfiguration) -> serialization.JSON:
@@ -184,7 +178,7 @@ def expected_number_shots(
     step: Step,
 ) -> int | Unknown:
     match step:
-        case VariableDeclaration():
+        case VariableDeclaration() | AnalogUserInputStep() | DigitalUserInputStep():
             return 0
         case ExecuteShot():
             return 1
@@ -216,8 +210,11 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             return {variable}
         case ExecuteShot():
             return set()
-        case LinspaceLoop(variable=variable, sub_steps=sub_steps) | ArangeLoop(
-            variable=variable, sub_steps=sub_steps
+        case AnalogUserInputStep(parameter) | DigitalUserInputStep(parameter):
+            return {parameter}
+        case (
+            LinspaceLoop(variable=variable, sub_steps=sub_steps)
+            | ArangeLoop(variable=variable, sub_steps=sub_steps)
         ):
             return {variable}.union(
                 *[get_parameter_names(sub_step) for sub_step in sub_steps]
@@ -226,9 +223,7 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             assert_never(step)
 
 
-def wrap_error[
-    S: Step
-](
+def wrap_error[S: Step](
     function: Callable[[S, StepContext], Generator[StepContext, None, StepContext]],
 ) -> Callable[[S, StepContext], Generator[StepContext, None, StepContext]]:
     """Wrap a function that evaluates a step to raise nicer errors for the user."""
