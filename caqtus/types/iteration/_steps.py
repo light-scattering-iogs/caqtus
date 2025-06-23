@@ -21,9 +21,12 @@ from ..units import (
     dimensionless,
 )
 from ..variable_name import DottedVariableName
+from ._user_input_steps import UserInputStep
 
-type Step = ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop
-"""TypeAlias for the different types of steps."""
+type Step = (
+    ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop | UserInputStep
+)
+"""Type alias for the different types of steps."""
 
 
 def validate_step(instance, attribute, step):
