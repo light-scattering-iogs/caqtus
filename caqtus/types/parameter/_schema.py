@@ -11,7 +11,7 @@ from caqtus.types.variable_name import DottedVariableName
 
 type ConstantSchema = Mapping[DottedVariableName, Parameter]
 type VariableSchema = Mapping[DottedVariableName, ParameterType]
-type ParameterType = (Boolean | Integer | Float | QuantityType)
+type ParameterType = Boolean | Integer | Float | QuantityType
 
 
 class ParameterSchema(Mapping[DottedVariableName | str, ParameterType]):
@@ -114,6 +114,9 @@ class QuantityType:
             raise ValueError(f"Expected a float, got {magnitude!r}.")
         return magnitude
 
+    def __str__(self):
+        return f"Quantity<{self.units.dimensionality}>"
+
 
 @attrs.frozen
 class Float:
@@ -148,6 +151,9 @@ class Boolean:
             raise ValueError(f"Expected a bool, got {value!r}.")
         return value
 
+    def __str__(self):
+        return "boolean"
+
 
 @attrs.frozen
 class Integer:
@@ -164,3 +170,6 @@ class Integer:
         if not isinstance(value, int):
             raise ValueError(f"Expected an int, got {value!r}.")
         return value
+
+    def __str__(self):
+        return "integer"
