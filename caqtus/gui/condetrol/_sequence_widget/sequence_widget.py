@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Optional, Literal, assert_never
 
 import attrs
-from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QIcon, QColor, QPalette, QKeySequence, QUndoGroup
+from PySide6.QtCore import Signal, Qt, QPoint, Slot, QTimer
+from PySide6.QtGui import QIcon, QColor, QPalette, QKeySequence, QUndoGroup, QCursor
 from PySide6.QtWidgets import (
     QWidget,
     QToolBar,
@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QHBoxLayout,
     QApplication,
+    QMenu,
+    QToolTip,
 )
 from typing_extensions import assert_type
 
@@ -218,7 +220,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.undoView.setVisible(False)
 
         self.tool_bar = QToolBar(self)
-        self.status_widget = IconLabel(icon_position="left")
+        self.status_widget = SequenceLabel(icon_position="left")
         self.warning_action = self.tool_bar.addAction(
             get_icon("mdi6.alert", color=QColor(205, 22, 17)), "warning"
         )
@@ -329,13 +331,12 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self._exception_dialog.show()
 
     def _set_status_widget(self, path: PureSequencePath, editable: bool) -> None:
-        text = " > ".join(path.parts)
         color = self.palette().text().color()
         if editable:
             icon = get_icon("editable-sequence", color=color)
         else:
             icon = get_icon("read-only-sequence", color=color)
-        self.status_widget.set_text(text)
+        self.status_widget.set_path(path)
         self.status_widget.set_icon(icon)
 
     def _on_start_sequence_requested(self):
@@ -652,7 +653,9 @@ async def _query_sequence_state_async(
             )
 
 
-class IconLabel(QWidget):
+class SequenceLabel(QWidget):
+    """A widget that displays a sequence path and an icon."""
+
     def __init__(
         self,
         parent: Optional[QWidget] = None,
@@ -660,6 +663,10 @@ class IconLabel(QWidget):
     ):
         super().__init__(parent)
         self._label = QLabel()
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._on_context_menu_requested)
+        self._context_menu = QMenu(self)
+        self._context_menu.addAction("Copy path", self._on_copy)
         self._icon = QLabel()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -671,8 +678,19 @@ class IconLabel(QWidget):
             layout.addWidget(self._icon)
         self.setLayout(layout)
 
-    def set_text(self, text: str):
-        self._label.setText(text)
+    @Slot(QPoint)
+    def _on_context_menu_requested(self, pos: QPoint) -> None:
+        self._context_menu.exec(self.mapToGlobal(pos))
+
+    @Slot()
+    def _on_copy(self) -> None:
+        QApplication.clipboard().setText(self._label.text())
+        QToolTip.showText(QCursor.pos(), "Copied to clipboard!", self)
+        QTimer.singleShot(2000, QToolTip.hideText)
+
+
+    def set_path(self, path: PureSequencePath) -> None:
+        self._label.setText(str(path))
 
     def set_icon(self, icon: Optional[QIcon]):
         if icon is None:
