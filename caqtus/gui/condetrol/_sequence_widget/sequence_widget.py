@@ -688,7 +688,6 @@ class SequenceLabel(QWidget):
         QToolTip.showText(QCursor.pos(), "Copied to clipboard!", self)
         QTimer.singleShot(2000, QToolTip.hideText)
 
-
     def set_path(self, path: PureSequencePath) -> None:
         self._label.setText(str(path))
 
