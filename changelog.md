@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Possibility to copy the sequence path by right-clicking on the name in the sequence widget.
+
+## [6.27.0] - 2025-06-24
+
+### Added
+
 - Method `Experiment.upgrade_database` to initialize and upgrade the database schema.
+
+### Changed
+
+- Cancellation error context is no longer suppressed when a device times out.
 
 ## [6.26.1] - 2025-04-02
 

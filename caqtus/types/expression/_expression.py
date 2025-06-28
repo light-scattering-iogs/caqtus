@@ -123,7 +123,7 @@ class Expression:
         return self._evaluate({str(expr): variables[expr] for expr in variables})
 
     @cached_property
-    def upstream_variables(self) -> frozenset[VariableName]:
+    def upstream_variables(self) -> frozenset[DottedVariableName]:
         """Return the name of the other variables the expression depend on."""
 
         variables = set()
