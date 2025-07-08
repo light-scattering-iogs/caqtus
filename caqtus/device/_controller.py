@@ -113,7 +113,9 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
         start_time = self._event_dispatcher.shot_time()
         try:
             with fail_after(delay=shot_timeout, shield=False):
-                await self.run_shot(device, **kwargs)  # pyright: ignore [reportCallIssue]
+                await self.run_shot(
+                    device, **kwargs
+                )  # pyright: ignore [reportCallIssue]
 
             finished_time = self._event_dispatcher.shot_time()
             if not self._signaled_ready.is_set():
@@ -140,31 +142,29 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
     @contextlib.asynccontextmanager
     async def synchronized(self) -> AsyncGenerator[ShotTimer, None]:
         """Synchronize the start and end of a shot between devices.
-        
-        When the context manager is entered, the device waits until all devices on the 
+
+        When the context manager is entered, the device waits until all devices on the
         experiment are ready to start the shot.
-        The context manager then yields a software timer that can be used to measure the 
+        The context manager then yields a software timer that can be used to measure the
         time elapsed during the shot.
         When the context manager is exited, the device waits until all devices have
         finished executing the shot before proceeding.
-        
+
         Example:
             .. code-block:: python
-            
+
             # Prepare the device (program it, set parameters, etc.)
 
             async with device.synchronized() as timer:
                 # Do time-sensitive operations here
-                
+
             # Finalize the shot (analyze data, etc.)
-            
+
         Warning:
             This method must be called exactly once in :meth:`run_shot` for each device.
         """
-        
-        async with self._event_dispatcher.synchronized(
-            self.device_name
-        ) as timer:
+
+        async with self._event_dispatcher.synchronized(self.device_name) as timer:
             yield timer
 
     @deprecated("Use the context manager `DeviceController.synchronized` instead")
