@@ -5,7 +5,7 @@ import contextlib
 import functools
 import logging
 import math
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, AsyncGenerator
 from typing import (
     TypeVar,
     ParamSpec,
@@ -15,6 +15,7 @@ from typing import (
     TypedDict,
     Any,
 )
+from warnings import deprecated
 
 import anyio
 import anyio.to_thread
@@ -112,9 +113,7 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
         start_time = self._event_dispatcher.shot_time()
         try:
             with fail_after(delay=shot_timeout, shield=False):
-                await self.run_shot(
-                    device, **kwargs
-                )  # pyright: ignore[reportCallIssue]
+                await self.run_shot(device, **kwargs)  # pyright: ignore [reportCallIssue]
 
             finished_time = self._event_dispatcher.shot_time()
             if not self._signaled_ready.is_set():
@@ -138,34 +137,49 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
             data_signals=self._data_signals,
         )
 
+    @contextlib.asynccontextmanager
+    async def synchronized(self) -> AsyncGenerator[ShotTimer, None]:
+        """Synchronize the start and end of a shot between devices.
+        
+        When the context manager is entered, the device waits until all devices on the 
+        experiment are ready to start the shot.
+        The context manager then yields a software timer that can be used to measure the 
+        time elapsed during the shot.
+        When the context manager is exited, the device waits until all devices have
+        finished executing the shot before proceeding.
+        
+        Example:
+            .. code-block:: python
+            
+            # Prepare the device (program it, set parameters, etc.)
+
+            async with device.synchronized() as timer:
+                # Do time-sensitive operations here
+                
+            # Finalize the shot (analyze data, etc.)
+            
+        Warning:
+            This method must be called exactly once in :meth:`run_shot` for each device.
+        """
+        
+        async with self._event_dispatcher.synchronized(
+            self.device_name
+        ) as timer:
+            yield timer
+
+    @deprecated("Use the context manager `DeviceController.synchronized` instead")
     @final
     async def wait_all_devices_ready(self) -> ShotTimer:
-        """Wait for all devices to be ready for time-sensitive operations.
-
-        This method must be called once the device has been programmed for the shot and
-        is ready to be triggered or to react to data acquisition signals.
-
-        It must be called exactly once in :meth:`run_shot`.
-
-        The method will wait for all devices to be ready before returning.
-
-        Returns:
-            A timer with its start time set to the time when this function returns.
-        """
-
-        if self._signaled_ready.is_set():
-            raise RuntimeError(
-                f"wait_all_devices_ready must be called exactly once for {self}"
-            )
-        self._signaled_ready.set()
-        self._signaled_ready_time = self._event_dispatcher.shot_time()
-        timer = await self._event_dispatcher.wait_all_devices_ready()
-        self._finished_waiting_ready_time = self._event_dispatcher.shot_time()
-        return timer
+        return await self._event_dispatcher.signal_ready_and_wait(self.device_name)
 
     @final
     def signal_data_acquired(self, label: DataLabel, data: Data) -> None:
         """Signals that data has been acquired from the device.
+
+
+        The data will be available to other devices that wait for it using
+        :meth:`wait_data_acquired`.
+        The data will also be saved at the end of the shot.
 
         Args:
             label: The label of the data.

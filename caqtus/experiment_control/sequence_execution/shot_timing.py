@@ -3,7 +3,7 @@ import anyio.lowlevel
 from caqtus.utils._no_public_constructor import NoPublicConstructor
 
 
-class ShotTimer(metaclass=NoPublicConstructor):
+class ShotTimer:
     """Gives access to pseudo-real time primitives during a shot.
 
     It gives the possibility to react at specific times during a shot.
