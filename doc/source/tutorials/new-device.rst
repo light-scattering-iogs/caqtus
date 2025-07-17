@@ -2,9 +2,46 @@ Writing a new device
 ====================
 
 In this example, we will implement a new device to be integrated in an experiment.
-Along the way, we will see the hierarchy of classes that make up a device extension and how they interact with different parts of the experiment.
+Along the way, we will see the hierarchy of classes that make up a device extension and
+how they interact with different parts of the experiment.
 
-We will here implement some sort of power source that set a voltage at the beginning of the shot and measure a current once the shot has started.
+We will here implement some sort of power source that set a voltage at the beginning of
+the shot and measure a current once the shot has started.
+
+The goal is to write a :class:`~caqtus.extension.DeviceExtension` that can be registered
+on the experiment with its
+:func:`~caqtus.extension.Experiment.register_device_extension` method.
+The extension contains the pieces of logic necessary to edit the device settings and
+to control the device during the experiment.
+The extension is not specific to a single device, but rather to a type of device.
+If we have multiple power sources, we only need to create one extension.
+
+To create it, we can start with a template:
+
+.. code-block:: python
+
+    from caqtus.extension import DeviceExtension
+
+    power_source_extension = DeviceExtension(
+        label="Power Source",  # A human-readable label for the type of device.
+        ... # TODO: Add the rest of the required parameters.
+    )
+
+When looking at the documentation of :class:`~caqtus.extension.DeviceExtension`, we see
+that it requires several other parameters, that we will fill progressively now.
+
+configuration_type
+------------------
+
+The first parameter we need to fill is the `configuration_type`.
+We need to create a class that inherits from
+:class:`~caqtus.device.DeviceConfiguration`.
+
+An instance of this class contains the persistent settings of the device, such as its IP
+address, channels to use, etc.
+
+The simplest way to create this class is to use a dataclass, or here we will use
+the `attrs` library to create a class with predetermined attributes.
 
 Talking to the instrument
 -------------------------
@@ -74,3 +111,7 @@ This way we know that we are connected to the instrument inside the block and th
 
 We then scan the voltage and each time we measure the current.
 At the end, we have a list of currents that we can plot vs voltage.
+
+
+Writing an editor for the device
+--------------------------------

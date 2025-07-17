@@ -1,5 +1,5 @@
-Installation
-============
+Getting started
+===============
 
 Installing caqtus
 -----------------
