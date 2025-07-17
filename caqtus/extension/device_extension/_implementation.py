@@ -14,7 +14,7 @@ from caqtus.utils.serialization import JSON
 
 
 @attrs.frozen(kw_only=True)
-class DeviceExtension(Generic[DeviceConfigT]):
+class DeviceExtension[C: DeviceConfiguration]:
     """Define how to implement a device plugin.
 
     This class is generic in the :class:`DeviceConfiguration` type.
@@ -110,14 +110,12 @@ class DeviceExtension(Generic[DeviceConfigT]):
 
     label: str = attrs.field(converter=str)
 
-    configuration_type: type[DeviceConfigT] = attrs.field()
-    configuration_factory: Callable[[], DeviceConfigT] = attrs.field()
-    configuration_dumper: Callable[[DeviceConfigT], JSON] = attrs.field()
-    configuration_loader: Callable[[JSON], DeviceConfigT] = attrs.field()
+    configuration_type: type[C] = attrs.field()
+    configuration_factory: Callable[[], C] = attrs.field()
+    configuration_dumper: Callable[[C], JSON] = attrs.field()
+    configuration_loader: Callable[[JSON], C] = attrs.field()
 
-    editor_type: Callable[[DeviceConfigT], DeviceConfigurationEditor[DeviceConfigT]] = (
-        attrs.field()
-    )
+    editor_type: Callable[[C], DeviceConfigurationEditor[C]] = attrs.field()
 
     device_type: Callable[..., Device] = attrs.field()
     compiler_type: type[DeviceCompiler] = attrs.field()
