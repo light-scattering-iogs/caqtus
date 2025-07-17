@@ -7,3 +7,5 @@ Tutorials
     installation
     notebooks/data analysis
     new-device
+    new-sequencer
+    new-camera
