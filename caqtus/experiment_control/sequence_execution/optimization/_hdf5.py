@@ -1,4 +1,5 @@
 import io
+import json
 from collections.abc import Mapping, Callable, Iterable
 from typing import assert_never
 
@@ -28,6 +29,14 @@ def create_file(
                 maxshape=(None,),
             )
             dset.attrs["type"] = parameter_tag(parameter_type)
+        for data_label, data_type in data_schema.items():
+            dset = f.create_dataset(
+                f"data/{data_label}",
+                dtype=data_type.to_hdf5_dtype(),
+                shape=(0,),
+                maxshape=(None,),
+            )
+            dset.attrs["type"] = json.dumps(data_type.unstructure())
         f.swmr_mode = True
         f.flush()
 
@@ -37,6 +46,13 @@ def create_file(
                 dset = f[f"parameters/{parameter_name}"]
                 dset.resize((i + 1,))
                 dset[i] = parameter_type.to_polars_value(parameter_value)
+            for data_label, data_value in data.items():
+                data_type = data_schema[data_label]
+                dset = f[f"data/{data_label}"]
+                dset.resize((i + 1,))
+                v = data_type.to_hdf5_value(data_value)
+                print(v)
+                dset[i] = v
             f.flush()
 
 

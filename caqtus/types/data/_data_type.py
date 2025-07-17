@@ -4,6 +4,7 @@ import abc
 from typing import TypeAlias
 
 import attrs
+import h5py
 import numpy as np
 import polars
 
@@ -35,8 +36,64 @@ Only objects that are instances of this type can be saved for a shot.
 Note that it is not possible to have structured data containing arrays.
 """
 
+type DataType = ScalarDataType | ArrayDType
 
-class DataType(abc.ABC):
+type ScalarDataType = UInt64
+
+
+@attrs.define
+class UInt64:
+    @staticmethod
+    def to_hdf5_dtype() -> np.dtype:
+        return np.dtype(np.uint64)
+
+    def unstructure(self) -> str:
+        return "UInt64"
+
+    def to_hdf5_value(self, value: Data) -> np.ndarray:
+        if not isinstance(value, (int, np.integer)):
+            raise ValueError(f"Expected an integer, got {value!r}.")
+        return np.uint64(value)
+
+
+@attrs.define
+class ArrayDType:
+    inner: DataType
+    shape: tuple[int, ...]
+
+    def to_hdf5_dtype(self) -> np.dtype:
+        inner_dtype = self.inner.to_hdf5_dtype()
+        return np.dtype([("", inner_dtype, self.shape)])
+
+    def unstructure(self):
+        return {"Array": {"inner": self.inner.unstructure(), "shape": list(self.shape)}}
+
+    def to_hdf5_value(self, value) -> np.ndarray:
+        if not isinstance(value, np.ndarray):
+            raise ValueError("Expected an array")
+        if value.shape != self.shape:
+            raise ValueError(f"Expected shape {self.shape}, got {value.shape}")
+        # return np.void(value, dtype=self.to_hdf5_dtype())
+        return value.astype(self.inner.to_hdf5_dtype())
+
+
+@attrs.define
+class List:
+    inner: DataType
+
+    def to_hdf5_dtype(self) -> np.dtype:
+        return h5py.vlen_dtype(self.inner.to_hdf5_dtype())
+
+    def unstructure(self) -> str:
+        return {"List": {"inner": self.inner.unstructure()}}
+
+    def to_hdf5_value(self, value: Data) -> np.ndarray:
+        if not isinstance(value, list):
+            raise ValueError(f"Expected a list, got {value!r}.")
+        return value
+
+
+class _DataType(abc.ABC):
     @abc.abstractmethod
     def to_polars_dtype(self) -> polars.DataType:
         raise NotImplementedError
@@ -52,7 +109,7 @@ class DataType(abc.ABC):
 
 
 @attrs.frozen
-class ImageType(DataType):
+class ImageType:
     """A data type for images."""
 
     roi: RectangularROI
