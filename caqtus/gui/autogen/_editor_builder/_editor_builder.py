@@ -46,8 +46,11 @@ class EditorBuilder:
         If the type is not registered, but is an attrs class, an editor will be built
         for it by calling :func:`build_attrs_class_editor`.
 
-        If the type is not registered but is a `typing.Literal`, an editor will be built
-        for it by calling :func:`build_literal_editor`.
+        If the type is not registered but is a :class:`~typing.Literal`, an editor will
+        be built for it by calling :func:`build_literal_editor`.
+
+        If the type is not registered but is an :class:`~enum.Enum`, an editor will be
+        built for it by calling :func:`generate_enum_editor`.
 
         Raises:
             TypeNotRegisteredError: If no editor is registered to handle the given type,

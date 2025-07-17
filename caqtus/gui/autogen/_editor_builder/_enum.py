@@ -17,8 +17,7 @@ def generate_enum_editor[
 
     Returns:
         A factory function that creates an EnumEditor for the given enum type.
-        The editor is a combobox with the string representation of each enum member as
-        its items.
+        The editor is a combobox with the name of each enum member as its items.
     """
 
     return functools.partial(EnumEditor[T], enum_type)
