@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Sequence path label in sequence widget in Condetrol can be selected and copied.
+
 ## [6.28.0] - 2025-07-08
 
 ### Added
 
-- Possibility to copy the sequence path by right-clicking on the name in the sequence widget.
+- Possibility to copy the sequence path by right-clicking on the name in the sequence 
+- widget.
 
 ### Changed
 

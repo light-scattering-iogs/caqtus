@@ -663,10 +663,11 @@ class SequenceLabel(QWidget):
     ):
         super().__init__(parent)
         self._label = QLabel()
+        # We make the label selectable so that the user can copy the sequence path.
+        self._label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._on_context_menu_requested)
-        self._context_menu = QMenu(self)
-        self._context_menu.addAction("Copy path", self._on_copy)
         self._icon = QLabel()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -677,16 +678,6 @@ class SequenceLabel(QWidget):
             layout.addWidget(self._label)
             layout.addWidget(self._icon)
         self.setLayout(layout)
-
-    @Slot(QPoint)
-    def _on_context_menu_requested(self, pos: QPoint) -> None:
-        self._context_menu.exec(self.mapToGlobal(pos))
-
-    @Slot()
-    def _on_copy(self) -> None:
-        QApplication.clipboard().setText(self._label.text())
-        QToolTip.showText(QCursor.pos(), "Copied to clipboard!", self)
-        QTimer.singleShot(2000, QToolTip.hideText)
 
     def set_path(self, path: PureSequencePath) -> None:
         self._label.setText(str(path))
