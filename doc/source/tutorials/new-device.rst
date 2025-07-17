@@ -6,7 +6,7 @@ Along the way, we will see the hierarchy of classes that make up a device extens
 how they interact with different parts of the experiment.
 
 We will here implement some sort of power source that set a voltage at the beginning of
-the shot and measure a current once the shot has started.
+the shot and measure a current once the shot has finished.
 
 The goal is to write a :class:`~caqtus.extension.DeviceExtension` that can be registered
 on the experiment with its
@@ -39,9 +39,45 @@ We need to create a class that inherits from
 
 An instance of this class contains the persistent settings of the device, such as its IP
 address, channels to use, etc.
+The configuration only contains data to be stored, but it does not communicate with the
+device or perform any action.
 
 The simplest way to create this class is to use a dataclass, or here we will use
 the `attrs` library to create a class with predetermined attributes.
+
+.. note::
+
+    It is not mandatory to use `attrs` classes, but it is useful to reduce boilerplate
+    code since a lot of code can be automatically generated for these classes.
+
+.. code-block:: python
+
+    import attrs
+    from caqtus.device import DeviceConfiguration
+    from caqtus.types.expression import Expression
+
+    @attrs.define
+    class PowerSourceConfiguration(DeviceConfiguration):
+        ip_address: str
+        channel: int = 1
+        voltage: Expression
+
+Instances of the :class:`PowerSourceConfiguration` class have three attributes, an IP
+address to know which device to connect to, a channel number to know which channel to
+use and a voltage that can be an expression to be evaluated at runtime while the
+experiment.
+The `Expression` type is used to allow the voltage to be defined as a string
+representing a mathematical expression that the user can input in the GUI (more latter).
+
+In the extension, we can then use this class as the `configuration_type` parameter:
+
+.. code-block:: python
+
+    power_source_extension = DeviceExtension(
+        ...,
+        configuration_type=PowerSourceConfiguration,
+        ...,
+    )
 
 Talking to the instrument
 -------------------------
