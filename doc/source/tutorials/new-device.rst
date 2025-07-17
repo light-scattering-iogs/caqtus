@@ -59,8 +59,9 @@ the `attrs` library to create a class with predetermined attributes.
     @attrs.define
     class PowerSourceConfiguration(DeviceConfiguration):
         ip_address: str
-        channel: int = 1
+        channel: int
         voltage: Expression
+
 
 Instances of the :class:`PowerSourceConfiguration` class have three attributes, an IP
 address to know which device to connect to, a channel number to know which channel to
@@ -69,7 +70,21 @@ experiment.
 The `Expression` type is used to allow the voltage to be defined as a string
 representing a mathematical expression that the user can input in the GUI (more latter).
 
-In the extension, we can then use this class as the `configuration_type` parameter:
+We can for example manually create an instance of this class to represent a single
+device:
+
+.. code-block:: python
+
+    config = PowerSourceConfiguration(
+        ip_address="192.168.137.45",
+        channel=1,
+        voltage=Expression("10 V + offset_voltage"),
+        )
+
+
+
+In the extension, we can then use the class itself as the `configuration_type`
+parameter:
 
 .. code-block:: python
 
@@ -78,6 +93,36 @@ In the extension, we can then use this class as the `configuration_type` paramet
         configuration_type=PowerSourceConfiguration,
         ...,
     )
+
+We also need to provide a function that creates a default configuration when the user
+adds a new device of this type.
+It must be a function that takes no arguments and returns an instance of the
+`configuration_type` class.
+
+.. code-block:: python
+
+    def create_default_configuration() -> PowerSourceConfiguration:
+        return PowerSourceConfiguration(
+            ip_address="xxx.xxx.xxx.xxx",
+            channel=1,
+            voltage=Expression("0 V"),
+        )
+
+and add it to the extension:
+
+.. code-block:: python
+
+    power_source_extension = DeviceExtension(
+        ...,
+        configuration_type=PowerSourceConfiguration,
+        configuration_factory=create_default_configuration,
+        ...
+    )
+
+.. note:
+
+    If the configuration has default values for all its attributes, the class itself can
+    be used as the `configuration_factory` parameter.
 
 Talking to the instrument
 -------------------------
