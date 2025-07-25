@@ -1,4 +1,5 @@
 import traceback
+import warnings
 from logging import Logger
 
 import trio
@@ -18,9 +19,8 @@ class LogBlockingTaskInstrument(Instrument):
         logger: The logger to use for logging the warning.
     """
 
-    def __init__(self, duration: float, logger: Logger):
+    def __init__(self, duration: float):
         self.duration = duration
-        self.logger = logger
         self.step_before_times = dict[Task, float]()
 
     def before_task_step(self, task: Task) -> None:
@@ -35,19 +35,20 @@ class LogBlockingTaskInstrument(Instrument):
                 formatted_stack = "".join(
                     traceback.StackSummary.extract(task.iter_await_frames()).format()
                 )
-                self.logger.warning(
-                    "Task %r blocked the event loop for %.4f seconds.\n"
-                    "This occurred just before this await point\n%s",
-                    task,
-                    elapsed,
-                    formatted_stack,
+                warnings.warn(
+                    f"Task {task!r} blocked the event loop for {elapsed:.4f} seconds.\n"
+                    f"This occurred just before this await point\n{formatted_stack}",
+                    TaskDurationWarning,
                 )
             else:
-                self.logger.warning(
-                    "Task %r blocked the event loop for %.4f seconds.\n"
+                warnings.warn(
+                    f"Task {task!r} blocked the event loop for {elapsed:.4f} seconds.\n"
                     "This occurred after the last await point of the task.",
-                    task,
-                    elapsed,
+                    TaskDurationWarning,
                 )
 
         task.custom_sleep_data = None
+
+
+class TaskDurationWarning(UserWarning):
+    pass

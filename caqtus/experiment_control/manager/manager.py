@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import abc
 import concurrent.futures
-import logging
 import threading
+import warnings
 from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from typing import Optional, assert_type
 
 import anyio
 import anyio.from_thread
+import structlog
 import trio
 import trio.abc
 
@@ -27,9 +28,10 @@ from caqtus.session import (
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils._trio_instrumentation import LogBlockingTaskInstrument
 from caqtus.utils.result import is_failure_type, Success
-from .._logger import logger
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_execution import ShotRetryConfig, run_sequence
+
+logger = structlog.get_logger()
 
 
 class ExperimentManager(abc.ABC):
@@ -351,7 +353,6 @@ class BoundProcedure(Procedure):
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
-
         async def run():
             with anyio.CancelScope() as self._cancel_scope:
                 async with anyio.from_thread.BlockingPortal() as self._portal:
@@ -419,12 +420,12 @@ class ProcedureNotActiveError(RuntimeError):
 def get_instruments() -> list[trio.abc.Instrument]:
     blocking_task_duration_warning = get_blocking_task_duration_warning()
 
-    if not logger.isEnabledFor(logging.WARNING):
+    if blocking_task_duration_warning is None:
         return []
 
     if blocking_task_duration_warning is not None:
         log_blocking_task_instrument = LogBlockingTaskInstrument(
-            duration=blocking_task_duration_warning, logger=logger
+            duration=blocking_task_duration_warning
         )
         return [log_blocking_task_instrument]
     return []
@@ -439,9 +440,8 @@ def get_blocking_task_duration_warning() -> float | None:
     try:
         return float(duration_warning)
     except ValueError:
-        logger.error(
-            "Invalid value for CAQTUS_BLOCKING_TASK_DURATION_WARNING: %s.\n"
-            "Expected a float.",
-            duration_warning,
+        warnings.warn(
+            "Invalid value for CAQTUS_BLOCKING_TASK_DURATION_WARNING: "
+            f"{duration_warning!r}, expected a float\n"
         )
         return None
