@@ -364,8 +364,7 @@ class Experiment:
                 "The experiment manager is not configured to run remotely."
             )
             error.add_note(
-                "Please call `configure_experiment_manager` with a remote "
-                "configuration."
+                "Call `configure_experiment_manager` with a remote configuration."
             )
             raise error
 
