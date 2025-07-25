@@ -12,7 +12,6 @@ from caqtus.device import DeviceName, DeviceController
 from caqtus.device.remote import DeviceProxy
 from caqtus.types.data import DataLabel, Data
 from .shot_timing import ShotTimer
-from .._logger import logger
 
 
 @attrs.define
@@ -53,15 +52,7 @@ class ShotEventDispatcher:
         self._shot_timer: Optional[ShotTimer] = None
 
     async def run_shot(self, shot_timeout: float) -> Mapping[DataLabel, Data]:
-        try:
-            return await self._run_shot(shot_timeout)
-        except:
-            stats = {
-                name: controller._debug_stats()
-                for name, controller in self._controllers.items()
-            }
-            logger.debug("Shot trace: %s", stats)
-            raise
+        return await self._run_shot(shot_timeout)
 
     async def _run_shot(self, shot_timeout: float) -> Mapping[DataLabel, Data]:
         self._start_time = time.monotonic()
