@@ -7,6 +7,7 @@ from typing import Optional
 
 import anyio
 import anyio.to_process
+import structlog.contextvars
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import (
@@ -28,11 +29,12 @@ from caqtus.utils.result._result import is_failure
 from ...types.iteration import StepsConfiguration
 from ...types.iteration._step_context import StepContext
 from ..device_manager_extension import DeviceManagerExtensionProtocol
-from ._logger import logger
 from ._shot_compiler import ShotCompilerFactory, create_shot_compiler
 from ._shot_runner import ShotRunnerFactory, create_shot_runner
 from .sequence_runner import execute_steps
 from .shots_manager import ShotData, ShotManager, ShotRetryConfig, ShotScheduler
+
+logger = structlog.get_logger()
 
 
 async def run_sequence(
@@ -82,29 +84,30 @@ async def run_sequence(
             compile shots.
     """
 
-    sequence_manager = SequenceManager(
-        sequence=sequence,
-        session_maker=session_maker,
-        shot_retry_config=shot_retry_config,
-        global_parameters=global_parameters,
-        device_configurations=device_configurations,
-        device_manager_extension=device_manager_extension,
-        shot_runner_factory=shot_runner_factory,
-        shot_compiler_factory=shot_compiler_factory,
-    )
+    with structlog.contextvars.bound_contextvars(sequence=str(sequence)):
+        sequence_manager = SequenceManager(
+            sequence=sequence,
+            session_maker=session_maker,
+            shot_retry_config=shot_retry_config,
+            global_parameters=global_parameters,
+            device_configurations=device_configurations,
+            device_manager_extension=device_manager_extension,
+            shot_runner_factory=shot_runner_factory,
+            shot_compiler_factory=shot_compiler_factory,
+        )
 
-    if not isinstance(sequence_manager.sequence_iteration, StepsConfiguration):
-        raise NotImplementedError("Only steps iterations is supported for now.")
-    async with sequence_manager.run_sequence() as shot_scheduler:
-        assert sequence_manager.sequence_context is not None
-        initial_context = StepContext(
-            sequence_manager.sequence_context.get_parameter_schema().constant_schema
-        )
-        await execute_steps(
-            sequence_manager.sequence_iteration,
-            initial_context,
-            shot_scheduler,
-        )
+        if not isinstance(sequence_manager.sequence_iteration, StepsConfiguration):
+            raise NotImplementedError("Only steps iterations is supported for now.")
+        async with sequence_manager.run_sequence() as shot_scheduler:
+            assert sequence_manager.sequence_context is not None
+            initial_context = StepContext(
+                sequence_manager.sequence_context.get_parameter_schema().constant_schema
+            )
+            await execute_steps(
+                sequence_manager.sequence_iteration,
+                initial_context,
+                shot_scheduler,
+            )
 
 
 class SequenceManager:
@@ -235,7 +238,7 @@ class SequenceManager:
                 raise
             if recoverable:
                 logger.warning(
-                    "A recoverable error occurred while running the sequence.",
+                    "An error occurred while running the sequence.",
                     exc_info=recoverable,
                 )
 

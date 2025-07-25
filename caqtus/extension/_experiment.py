@@ -336,7 +336,7 @@ class Experiment:
             logger.info("Condetrol ready")
             try:
                 app.run()
-            except:
+            except Exception:
                 logger.exception("Condetrol crashed with error", exc_info=True)
                 raise
 
