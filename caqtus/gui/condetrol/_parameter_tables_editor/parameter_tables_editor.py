@@ -41,13 +41,11 @@ from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from .._icons import get_icon
-from .._logger import logger
 from .._qt_util import AutoResizeLineEdit
 from ...qtutil import HTMLItemDelegate
 
 type AnyModelIndex = QModelIndex | QPersistentModelIndex
 
-logger = logger.getChild("parameters_editor")
 
 PARAMETER_NAME_ROLE = Qt.ItemDataRole.UserRole + 1
 PARAMETER_VALUE_ROLE = Qt.ItemDataRole.UserRole + 2

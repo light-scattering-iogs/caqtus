@@ -1,11 +1,12 @@
 import contextlib
 import ctypes
-import logging.config
 import platform
+import socket
 import warnings
 from collections.abc import Callable
 from typing import Optional, assert_never, Concatenate
 
+import structlog
 from typing_extensions import deprecated
 
 from caqtus.experiment_control.manager import (
@@ -37,6 +38,8 @@ from ..experiment_control.manager import (
 from ..experiment_control.sequence_execution import ShotRetryConfig
 from ..session import ExperimentSession, StorageManager
 from ..session.sql._serializer import SerializerProtocol
+
+logger = structlog.get_logger()
 
 
 class Experiment:
@@ -212,7 +215,9 @@ class Experiment:
     def get_session_maker(self) -> StorageManager:
         return self.get_storage_manager()
 
-    def build_storage_manager[T: StorageManager, **P](
+    def build_storage_manager[
+        T: StorageManager, **P
+    ](
         self,
         backend_type: Callable[Concatenate[SerializerProtocol, P], T],
         *args: P.args,
@@ -236,7 +241,9 @@ class Experiment:
 
         return storage_backend_manager
 
-    def _build_storage_manager[T: StorageManager, **P](
+    def _build_storage_manager[
+        T: StorageManager, **P
+    ](
         self,
         backend_type: Callable[Concatenate[SerializerProtocol, P], T],
         *args: P.args,
@@ -323,11 +330,15 @@ class Experiment:
             extension=self._extension.condetrol_extension,
             connect_to_experiment_manager=self.connect_to_experiment_manager,
         )
-        try:
-            app.run()
-        except:
-            logging.exception("An error occurred.", exc_info=True)
-            raise
+        with structlog.contextvars.bound_contextvars(
+            app="caqtus.condetrol", host=socket.gethostname()
+        ):
+            logger.info("Condetrol ready")
+            try:
+                app.run()
+            except:
+                logger.exception("Condetrol crashed with error", exc_info=True)
+                raise
 
     def launch_experiment_server(self) -> None:
         """Launch the experiment server.
@@ -366,8 +377,13 @@ class Experiment:
             device_manager_extension=self._extension.device_manager_extension,
         )
 
-        with server:
-            print("Ready")
+        with (
+            structlog.contextvars.bound_contextvars(
+                app="caqtus.experiment_server", host=socket.gethostname()
+            ),
+            server,
+        ):
+            logger.info("Experiment server ready")
             server.serve_forever()
 
     @staticmethod
@@ -389,8 +405,15 @@ class Experiment:
             app_id = "caqtus.device_server"
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)  # type: ignore[reportAttributeAccessIssue]
 
-        with Server(config) as server:
-            print("Ready")
+        with (
+            structlog.contextvars.bound_contextvars(
+                app="caqtus.experiment_server",
+                host=socket.gethostname(),
+                device_server_name=name,
+            ),
+            Server(config) as server,
+        ):
+            structlog.get_logger().info("Device server ready")
             server.wait_for_termination()
 
     def storage_session(self) -> contextlib.AbstractContextManager[ExperimentSession]:

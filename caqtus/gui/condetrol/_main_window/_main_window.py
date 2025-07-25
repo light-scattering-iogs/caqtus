@@ -10,6 +10,7 @@ from typing import Never
 import anyio
 import anyio.abc
 import anyio.to_thread
+import structlog
 from PySide6 import QtGui, QtCore, QtWidgets
 from PySide6.QtCore import Qt
 
@@ -22,7 +23,6 @@ from caqtus.types.recoverable_exceptions import (
 )
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .._extension import CondetrolExtensionProtocol
-from .._logger import logger
 from .._parameter_tables_editor import ParameterNamespaceEditor
 from .._path_view import EditablePathHierarchyView
 from .._sequence_widget import SequenceWidget
@@ -37,6 +37,8 @@ from ..device_configuration_editors._configurations_editor import (
 from ..._common.exception_tree import ExceptionDialog
 from ..._common.waiting_widget import run_with_wip_widget
 from ...qtutil import temporary_widget
+
+logger = structlog.get_logger()
 
 
 class CondetrolWindowHandler:
@@ -219,7 +221,7 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         recoverable, non_recoverable = split_recoverable(exception)
         if recoverable:
             logger.warning(
-                "Recoverable exception occurred while running a sequence",
+                "Exception occurred while running a sequence",
                 exc_info=recoverable,
             )
         if non_recoverable:
