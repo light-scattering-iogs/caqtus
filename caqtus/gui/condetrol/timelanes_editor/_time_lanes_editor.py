@@ -4,7 +4,6 @@ from typing import Optional
 from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
 from PySide6.QtGui import QAction, QFont
 from PySide6.QtWidgets import (
-    QAbstractItemView,
     QTableView,
     QMenu,
     QWidget,
@@ -164,11 +163,7 @@ class TimeLanesView(QTableView):
         # around on its own while the user is trying to edit the time lanes.
         self.setAutoScroll(False)
 
-        self.setDragEnabled(True)
-        self.setAcceptDrops(True)
-        self.setDropIndicatorShown(True)
-        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.setDragDropOverwriteMode(False)
+        self.verticalHeader().setSectionsMovable(True)
 
     def setup_connections(self):
         self.horizontalHeader().customContextMenuRequested.connect(
@@ -190,6 +185,8 @@ class TimeLanesView(QTableView):
         self._model.rowsInserted.connect(self.update_delegates)
         self._model.rowsRemoved.connect(self.update_delegates)
         self._model.modelReset.connect(self.update_delegates)
+
+        self.verticalHeader().sectionMoved.connect(self._on_lane_section_moved)
 
     def on_time_lanes_changed(self):
         self.update_spans()
@@ -353,6 +350,22 @@ class TimeLanesView(QTableView):
             start = group[0][1]
             stop = group[-1][1]
             self._model.expand_step(step, row - 2, start, stop)
+
+    def _on_lane_section_moved(
+        self, logical_index: int, old_visual: int, new_visual: int
+    ) -> None:
+        # Rows 0 and 1 are the step name/duration rows — block their movement
+        if logical_index < 2:
+            self.verticalHeader().blockSignals(True)
+            self.verticalHeader().moveSection(new_visual, old_visual)
+            self.verticalHeader().blockSignals(False)
+            return
+        from_lane = logical_index - 2
+        # new_visual is where the header section landed; clamp so it stays in lane area
+        to_lane = max(0, new_visual - 2)
+        self.verticalHeader().blockSignals(True)
+        self._model._move_lane(from_lane, to_lane)
+        self.verticalHeader().blockSignals(False)
 
     def simplify_timelanes(self):
         self._model.simplify()

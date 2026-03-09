@@ -682,12 +682,34 @@ class TimeLanesModel(QAbstractTableModel):
         n = len(self._lane_models)
         if not (0 <= from_index < n and 0 <= to_index <= n):
             return
+        if from_index == to_index or from_index == to_index - 1:
+            return
+        self.undo_stack.push(self._MoveLaneCommand(self, from_index, to_index))
+
+    def _apply_lane_move(self, from_index: int, to_index: int) -> None:
         self.beginResetModel()
         lane = self._lane_models.pop(from_index)
         if to_index > from_index:
             to_index -= 1
         self._lane_models.insert(to_index, lane)
         self.endResetModel()
+
+    @attrs.define(slots=False)
+    class _MoveLaneCommand(QUndoCommand):
+        model: "TimeLanesModel"
+        from_index: int
+        to_index: int
+
+        def __attrs_post_init__(self):
+            super().__init__("move lane")
+
+        def redo(self):
+            self.model._apply_lane_move(self.from_index, self.to_index)
+
+        def undo(self):
+            c = self.to_index - 1 if self.to_index > self.from_index else self.to_index
+            d = self.from_index + 1 if self.from_index >= c else self.from_index
+            self.model._apply_lane_move(c, d)
 
     def simplify(self) -> bool:
         if self._read_only:
