@@ -78,6 +78,12 @@ class TimeLanesEditor(QWidget):
     def get_time_lanes(self):
         return self.view.get_time_lanes()
 
+    def has_uncommitted_edits(self) -> bool:
+        return self.view._model.has_uncommitted_edits()
+
+    def commit_edits(self) -> None:
+        self.view._model.commit_edits()
+
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
 
