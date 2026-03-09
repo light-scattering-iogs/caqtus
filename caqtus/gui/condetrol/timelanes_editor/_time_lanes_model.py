@@ -11,6 +11,8 @@ from PySide6.QtCore import (
     Qt,
     QSize,
     QPersistentModelIndex,
+    QMimeData,
+    QByteArray,
 )
 from PySide6.QtGui import QAction, QUndoStack, QUndoCommand
 from PySide6.QtWidgets import QMenu
@@ -25,6 +27,7 @@ from ._time_step_model import (
 from .extension import CondetrolLaneExtensionProtocol
 
 _DEFAULT_MODEL_INDEX = QModelIndex()
+_LANE_MIME_TYPE = "application/x-caqtus-timelane-row"
 
 
 class TimeLanesModel(QAbstractTableModel):
@@ -347,9 +350,12 @@ class TimeLanesModel(QAbstractTableModel):
             return Qt.ItemFlag.NoItemFlags
         mapped_index = self._map_to_source(index)
         flags = mapped_index.model().flags(mapped_index)
+        if index.row() >= 2:
+            flags |= Qt.ItemFlag.ItemIsDragEnabled | Qt.ItemFlag.ItemIsDropEnabled
         if self._read_only:
             flags &= ~Qt.ItemFlag.ItemIsEditable
             flags &= ~Qt.ItemFlag.ItemIsDropEnabled
+            flags &= ~Qt.ItemFlag.ItemIsDragEnabled
         return flags
 
     def headerData(
@@ -633,6 +639,55 @@ class TimeLanesModel(QAbstractTableModel):
             return self._step_durations_model.index(index.column(), 0)
         else:
             return self._lane_models[index.row() - 2].index(index.column(), 0)
+
+    def supportedDropActions(self) -> Qt.DropAction:
+        return Qt.DropAction.MoveAction
+
+    def mimeTypes(self) -> list[str]:
+        return [_LANE_MIME_TYPE]
+
+    def mimeData(self, indexes) -> Optional[QMimeData]:
+        rows = {index.row() for index in indexes if index.row() >= 2}
+        if not rows:
+            return None
+        source_row = min(rows)
+        mime_data = QMimeData()
+        mime_data.setData(_LANE_MIME_TYPE, QByteArray(str(source_row).encode()))
+        return mime_data
+
+    def dropMimeData(self, data, action, row, column, parent) -> bool:
+        if action == Qt.DropAction.IgnoreAction:
+            return True
+        if not data.hasFormat(_LANE_MIME_TYPE):
+            return False
+        source_row = int(bytes(data.data(_LANE_MIME_TYPE)).decode())
+        if source_row < 2:
+            return False
+        if row == -1:
+            if parent.isValid():
+                target_row = parent.row()
+            else:
+                return False
+        else:
+            target_row = row
+        target_row = max(2, min(target_row, self.rowCount()))
+        source_lane = source_row - 2
+        target_lane = target_row - 2
+        if target_lane == source_lane or target_lane == source_lane + 1:
+            return False
+        self._move_lane(source_lane, target_lane)
+        return True
+
+    def _move_lane(self, from_index: int, to_index: int) -> None:
+        n = len(self._lane_models)
+        if not (0 <= from_index < n and 0 <= to_index <= n):
+            return
+        self.beginResetModel()
+        lane = self._lane_models.pop(from_index)
+        if to_index > from_index:
+            to_index -= 1
+        self._lane_models.insert(to_index, lane)
+        self.endResetModel()
 
     def simplify(self) -> bool:
         if self._read_only:

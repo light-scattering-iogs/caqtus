@@ -21,7 +21,7 @@ from caqtus.types.timelane import TimeLanes, TimeLane
 from ._delegate import TimeLaneDelegate
 from .add_lane_dialog import AddLaneDialog
 from .extension import CondetrolLaneExtensionProtocol
-from .model import TimeLanesModel
+from ._time_lanes_model import TimeLanesModel
 
 
 class TimeLanesEditor(QWidget):
@@ -70,6 +70,10 @@ class TimeLanesEditor(QWidget):
 
         font = QFont("JetBrains Mono")
         self.setFont(font)
+
+    @property
+    def undo_stack(self):
+        return self.view._model.undo_stack
 
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
@@ -287,7 +291,7 @@ class TimeLanesView(QTableView):
             remove_lane_action = QAction("Remove")
             menu.addAction(remove_lane_action)
             remove_lane_action.triggered.connect(
-                lambda: self._model.removeRow(index, QModelIndex())
+                lambda: self._model.remove_lane(index - 2)
             )
             for action in self._model.get_lane_header_context_actions(index - 2):
                 if isinstance(action, QAction):
