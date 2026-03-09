@@ -4,6 +4,7 @@ from typing import Optional
 from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
 from PySide6.QtGui import QAction, QFont
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QTableView,
     QMenu,
     QWidget,
@@ -149,6 +150,12 @@ class TimeLanesView(QTableView):
         # We disable the auto-scrolling because it is annoying when the view jumps
         # around on its own while the user is trying to edit the time lanes.
         self.setAutoScroll(False)
+
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.setDragDropOverwriteMode(False)
 
     def setup_connections(self):
         self.horizontalHeader().customContextMenuRequested.connect(
