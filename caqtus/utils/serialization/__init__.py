@@ -1,5 +1,13 @@
 from cattrs.gen import override
 
+from ._json import (
+    JSON,
+    is_valid_json,
+    is_valid_json_dict,
+    is_valid_json_list,
+    JsonDict,
+    JsonList,
+)
 from .converters import (
     unstructure,
     converters,
@@ -10,8 +18,7 @@ from .converters import (
     from_json,
     copy_converter,
 )
-from .customize import customize, AttributeOverride
-from .json import JSON
+from .customize import customize
 from .strategies import include_subclasses, include_type, configure_tagged_union
 
 __all__ = [
@@ -23,11 +30,15 @@ __all__ = [
     "to_json",
     "from_json",
     "customize",
-    "AttributeOverride",
     "override",
     "include_subclasses",
     "configure_tagged_union",
     "include_type",
     "JSON",
+    "JsonDict",
+    "JsonList",
+    "is_valid_json",
+    "is_valid_json_dict",
+    "is_valid_json_list",
     "copy_converter",
 ]

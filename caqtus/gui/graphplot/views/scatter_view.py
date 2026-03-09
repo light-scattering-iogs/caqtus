@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Optional
 
+import anyio.to_thread
 import attrs
 import numpy as np
 import polars
@@ -23,7 +23,9 @@ class ScatterView(DataView, Ui_ScatterView):
 
         self.plot_widget = pyqtgraph.PlotWidget(self, background="white")
         self.plot_widget.enableAutoRange()
-        self.plot_item = self.plot_widget.getPlotItem()
+        plot_item = self.plot_widget.getPlotItem()
+        assert plot_item is not None
+        self.plot_item = plot_item
         self.scatter_plot = pyqtgraph.ScatterPlotItem()
         self.plot_item.addItem(self.scatter_plot)
 
@@ -65,7 +67,7 @@ class ScatterView(DataView, Ui_ScatterView):
         if data.is_empty():
             self.clear()
             return
-        to_plot = await asyncio.to_thread(
+        to_plot = await anyio.to_thread.run_sync(
             self.update_plot, self.x_column, self.y_column, data
         )
         self.scatter_plot.setData(to_plot.x_values, to_plot.y_values)
@@ -91,8 +93,8 @@ class ScatterView(DataView, Ui_ScatterView):
         plot_info = PlotInfo(
             x_values=np.array(x_magnitude),
             y_values=np.array(y_magnitude),
-            x_range=(float(x_magnitude.min()), float(x_magnitude.max())),
-            y_range=(float(y_magnitude.min()), float(y_magnitude.max())),
+            x_range=(float(x_magnitude.min()), float(x_magnitude.max())),  # type: ignore[reportArgumentType]
+            y_range=(float(y_magnitude.min()), float(y_magnitude.max())),  # type: ignore[reportArgumentType]
             x_label=x_label,
             y_label=y_label,
         )

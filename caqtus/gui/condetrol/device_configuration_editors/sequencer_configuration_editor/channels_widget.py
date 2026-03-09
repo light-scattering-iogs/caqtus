@@ -14,16 +14,14 @@ from caqtus.device.sequencer import ChannelConfiguration
 from .channel_output_editor import ChannelOutputEditor
 
 
-class SequencerChannelWidget(QWidget):
+class SequencerChannelWidget[ChannelT: ChannelConfiguration](QWidget):
     """A widget that allow to edit the channel configurations of a sequencer.
 
     Attributes:
         channel_table: A table widget that shows the list of channels of the sequencer.
     """
 
-    def __init__(
-        self, channels: Sequence[ChannelConfiguration], parent: Optional[QWidget] = None
-    ):
+    def __init__(self, channels: Sequence[ChannelT], parent: Optional[QWidget] = None):
         super().__init__(parent)
 
         # We use a table widget and not a list widget because we want to have headers
@@ -33,7 +31,7 @@ class SequencerChannelWidget(QWidget):
         self.group_box = QGroupBox(self)
         self.channel_output_editor: Optional[ChannelOutputEditor] = None
         self._populate_group_box()
-        self.channels = list(channels)
+        self.channels = tuple(channels)
 
         layout = QHBoxLayout(self)
         self.setLayout(layout)
@@ -82,7 +80,9 @@ class SequencerChannelWidget(QWidget):
             if self.channel_output_editor is not None:
                 previous_editor = self.channel_output_editor
             self.channel_output_editor = ChannelOutputEditor(channel.output, self)
-            self.group_box.layout().addWidget(self.channel_output_editor)
+            layout = self.group_box.layout()
+            assert layout is not None
+            layout.addWidget(self.channel_output_editor)
             if previous_editor:
                 previous_editor.deleteLater()
         else:
@@ -91,7 +91,7 @@ class SequencerChannelWidget(QWidget):
     def channel_label(self, row: int) -> str:
         return str(row)
 
-    def get_channel_configurations(self) -> list[ChannelConfiguration]:
+    def get_channel_configurations(self) -> tuple[ChannelT, ...]:
         current_item = self.channel_table.currentItem()
         if current_item is not None:
             assert self.channel_output_editor is not None
@@ -99,5 +99,7 @@ class SequencerChannelWidget(QWidget):
             row = current_item.row()
             self.channels[row].output = output
         for row, channel in enumerate(self.channels):
-            channel.description = self.channel_table.item(row, 0).text()
+            item = self.channel_table.item(row, 0)
+            assert item is not None
+            channel.description = item.text()
         return copy.deepcopy(self.channels)

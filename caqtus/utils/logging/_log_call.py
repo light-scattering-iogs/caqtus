@@ -28,20 +28,20 @@ def log_call(
             if log_args:
                 logger.log(
                     level,
-                    f"Calling %s with args %r and kwargs %r.",
+                    "Calling %s with args %r and kwargs %r.",
                     func.__name__,
                     args,
                     kwargs,
                 )
             else:
-                logger.log(level, f"Calling %s.", func.__name__)
+                logger.log(level, "Calling %s.", func.__name__)
             result = func(*args, **kwargs)
             if log_result:
                 logger.log(
-                    level, f"Finished calling %s, returning %s.", func.__name__, result
+                    level, "Finished calling %s, returning %s.", func.__name__, result
                 )
             else:
-                logger.log(level, f"Finished calling %s.", func.__name__)
+                logger.log(level, "Finished calling %s.", func.__name__)
             return result
 
         return wrapper

@@ -1,13 +1,12 @@
-"""This module implement the various components for sequencer devices.
-Sequencers are devices that output values at regular time intervals.
-
-Sequencers have a predetermined set of channels.
-"""
+"""Define devices that outputs a sequence of values."""
 
 from . import channel_commands
+from . import compilation
+from . import trigger
 from ._controller import SequencerController
+from ._converter import converter
 from ._proxy import SequencerProxy
-from .compilation import SequencerCompiler
+from .compilation._compiler import SequencerCompiler
 from .configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -15,29 +14,20 @@ from .configuration import (
     AnalogChannelConfiguration,
 )
 from .runtime import Sequencer
-from .trigger import (
-    Trigger,
-    SoftwareTrigger,
-    ExternalTriggerStart,
-    ExternalClock,
-    ExternalClockOnChange,
-    TriggerEdge,
-)
+from .timing import TimeStep
 
 __all__ = [
-    "SequencerConfiguration",
     "Sequencer",
-    "Trigger",
-    "SoftwareTrigger",
-    "ExternalClock",
-    "ExternalTriggerStart",
-    "ExternalClockOnChange",
-    "TriggerEdge",
+    "SequencerConfiguration",
     "ChannelConfiguration",
     "DigitalChannelConfiguration",
     "AnalogChannelConfiguration",
-    "SequencerCompiler",
     "SequencerProxy",
     "SequencerController",
     "channel_commands",
+    "converter",
+    "TimeStep",
+    "trigger",
+    "compilation",
+    "SequencerCompiler",
 ]

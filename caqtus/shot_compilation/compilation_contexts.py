@@ -1,20 +1,31 @@
-from collections.abc import Mapping, Iterable
-from typing import Any, TypeVar, TYPE_CHECKING
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Self, TypeVar, assert_never
 
 import attrs
-import tblib.pickling_support
+from typing_extensions import deprecated
 
-from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.session.shot import TimeLanes, TimeLane
+from caqtus.device import DeviceConfiguration, DeviceName
+from caqtus.types.timelane import TimeLane, TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from .lane_compilers.timing import get_step_bounds
+
 from ..formatter import fmt
 from ..types.expression import Expression
-from ..types.parameter import is_quantity, magnitude_in_unit
-from ..types.parameter.analog_value import NotQuantityError
-from ..types.recoverable_exceptions import InvalidValueError, EvaluationError
-from ..types.units import DimensionalityError
-from ..types.units.units import InvalidDimensionalityError
+from ..types.iteration import IterationConfiguration
+from ..types.parameter import (
+    NotQuantityError,
+    ParameterNamespace,
+    Parameters,
+    ParameterSchema,
+)
+from ..types.recoverable_exceptions import EvaluationError, InvalidValueError
+from ..types.units import (
+    SECOND,
+    DimensionalityError,
+    InvalidDimensionalityError,
+    is_scalar_quantity,
+)
+from ..utils.result import Failure, Success
+from .timing import Time, get_step_bounds, to_time
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import DeviceCompiler
@@ -22,11 +33,12 @@ if TYPE_CHECKING:
 LaneType = TypeVar("LaneType", bound=TimeLane)
 
 
-@attrs.define(slots=False)
+@attrs.frozen
 class SequenceContext:
     """Contains information about a sequence being compiled."""
 
     _device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    _parameter_schema: ParameterSchema
     _time_lanes: TimeLanes
 
     def get_device_configuration(self, device_name: DeviceName) -> DeviceConfiguration:
@@ -43,6 +55,20 @@ class SequenceContext:
 
         return self._device_configurations
 
+    def get_parameter_schema(self) -> ParameterSchema:
+        """Returns the schema for the parameters of the sequence."""
+
+        return self._parameter_schema
+
+    def get_lane_by_name(self, name: str) -> Success[TimeLane] | Failure[KeyError]:
+        """Returns the time lane with the given name."""
+
+        try:
+            return Success(self._time_lanes.lanes[name])
+        except KeyError:
+            return Failure(KeyError(name))
+
+    @deprecated("Use get_lane_by_name instead", stacklevel=2)
     def get_lane(self, name: str) -> TimeLane:
         """Returns the time lane with the given name.
 
@@ -67,17 +93,36 @@ class SequenceContext:
 
         return tuple(self._time_lanes.step_names)
 
+    @classmethod
+    def _new(
+        cls,
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
+        iterations: IterationConfiguration,
+        constants: ParameterNamespace,
+        time_lanes: TimeLanes,
+    ) -> Self:
+        return cls(
+            device_configurations,
+            iterations.get_parameter_schema(constants.evaluate()),
+            time_lanes,
+        )
+
+    def _with_devices(
+        self, device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    ) -> Self:
+        return attrs.evolve(self, device_configurations=device_configurations)
+
 
 @attrs.define
 class ShotContext:
     """Contains information about a shot being compiled."""
 
-    _sequence_context: SequenceContext
-    _variables: Mapping[DottedVariableName, Any]
-    _device_compilers: Mapping[DeviceName, "DeviceCompiler"]
+    _sequence_context: SequenceContext = attrs.field()
+    _variables: Mapping[DottedVariableName, Any] = attrs.field()
+    _device_compilers: Mapping[DeviceName, "DeviceCompiler"] = attrs.field()
 
-    _step_durations: tuple[float, ...] = attrs.field(init=False)
-    _step_bounds: tuple[float, ...] = attrs.field(init=False)
+    _step_durations: tuple[Time, ...] = attrs.field(init=False)
+    _step_bounds: tuple[Time, ...] = attrs.field(init=False)
     _was_lane_used: dict[str, bool] = attrs.field(init=False)
     _computed_shot_parameters: dict[DeviceName, Mapping[str, Any]] = attrs.field(
         init=False
@@ -107,9 +152,23 @@ class ShotContext:
             KeyError: If no lane with the given name is present for the shot.
         """
 
-        lane = self._sequence_context.get_lane(name)
+        match result := self._sequence_context.get_lane_by_name(name):
+            case Success(lane):
+                self.mark_lane_used(name)
+                return lane
+            case Failure(_):
+                raise KeyError(name)
+            case _:
+                assert_never(result)
+
+    def mark_lane_used(self, name: str) -> None:
+        """Signal that a lane was consumed during the shot.
+
+        Raises:
+            KeyError: If no lane with the given name is present for the shot.
+        """
+
         self._was_lane_used[name] = True
-        return lane
 
     def get_lanes_with_type(self, lane_type: type[LaneType]) -> Mapping[str, LaneType]:
         """Returns the lanes used during the shot with the given type."""
@@ -122,25 +181,43 @@ class ShotContext:
 
         return self._sequence_context.get_step_names()
 
-    def get_step_durations(self) -> tuple[float, ...]:
+    def get_step_durations(self) -> Sequence[Time]:
         """Returns the durations of each step in seconds."""
 
         return self._step_durations
 
-    def get_step_bounds(self) -> tuple[float, ...]:
-        """Returns the bounds of each step in seconds."""
+    def get_step_start_times(self) -> Sequence[Time]:
+        """Returns the times at which each step starts.
+
+        Returns:
+            A sequence representing the start times of each step in seconds.
+
+            For steps with durations [d_0, d_1, ..., d_(n-1)], the returned values are
+            [0, d_0, d_0 + d_1, ..., d_0 + ... + d_(n-1)].
+
+            The returned sequence has one more element than the number of steps.
+            The last element is the total duration of the shot.
+        """
 
         return self._step_bounds
 
-    def get_shot_duration(self) -> float:
+    @deprecated("Use get_step_start_times instead")
+    def get_step_bounds(self) -> Sequence[Time]:
+        return self.get_step_start_times()
+
+    def get_shot_duration(self) -> Time:
         """Returns the total duration of the shot in seconds."""
 
         return self._step_bounds[-1]
 
-    def get_variables(self) -> Mapping[DottedVariableName, Any]:
-        """Returns the variables for the shot."""
+    def get_parameters(self) -> Parameters:
+        """Returns the parameters that define the shot."""
 
         return self._variables
+
+    @deprecated("Use get_parameters instead", stacklevel=2)
+    def get_variables(self) -> Mapping[DottedVariableName, Any]:
+        return self.get_parameters()
 
     def get_device_config(self, device_name: DeviceName) -> DeviceConfiguration:
         """Returns the configuration for the given device.
@@ -150,6 +227,15 @@ class ShotContext:
         """
 
         return self._sequence_context.get_device_configuration(device_name)
+
+    def get_device_compiler(self, device_name: DeviceName) -> "DeviceCompiler":
+        """Returns the device compiler for the given device name.
+
+        Raises:
+            KeyError: If the requested device is not in use for the current shot.
+        """
+
+        return self._device_compilers[device_name]
 
     def get_shot_parameters(self, device_name: DeviceName) -> Mapping[str, Any]:
         """Returns the parameters computed for the given device."""
@@ -174,7 +260,6 @@ class ShotContext:
         return {name for name, used in self._was_lane_used.items() if not used}
 
 
-@tblib.pickling_support.install
 class DeviceCompilationError(Exception):
     """Raised when compilation for a device fails."""
 
@@ -185,10 +270,12 @@ def evaluate_step_durations(
     step_names: Iterable[str],
     step_durations: Iterable[Expression],
     variables: Mapping[DottedVariableName, Any],
-) -> list[float]:
+) -> list[Time]:
     result = []
 
-    for step, (name, duration) in enumerate(zip(step_names, step_durations)):
+    for step, (name, duration) in enumerate(
+        zip(step_names, step_durations, strict=True)
+    ):
         try:
             evaluated = duration.evaluate(variables)
         except EvaluationError as e:
@@ -200,23 +287,22 @@ def evaluate_step_durations(
                 )
             ) from e
 
-        if not is_quantity(evaluated):
+        if not is_scalar_quantity(evaluated):
             raise NotQuantityError(
                 fmt(
                     "{:expression} for duration of {:step} does not evaluate "
-                    "to a quantity",
+                    "to a scalar quantity",
                     duration,
                     (step, name),
                 )
             )
 
         try:
-            seconds = magnitude_in_unit(evaluated, "s")
+            seconds = evaluated.to_unit(SECOND).magnitude
         except DimensionalityError as error:
             raise InvalidDimensionalityError(
                 fmt(
-                    "Couldn't convert {:expression} for duration of {:step} to "
-                    "seconds",
+                    "Couldn't convert {:expression} for duration of {:step} to seconds",
                     duration,
                     (step, name),
                 )
@@ -229,5 +315,5 @@ def evaluate_step_durations(
                     (step, name),
                 )
             )
-        result.append(float(seconds))
+        result.append(to_time(seconds))
     return result

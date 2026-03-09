@@ -8,8 +8,17 @@ import attrs
 from caqtus.utils import serialization
 
 
-@attrs.define
+@attrs.define(repr=False, eq=False, init=False)
 class DottedVariableName:
+    """Represents the name of a parameter.
+
+    Instances of this class represents the name of a parameter.
+    They must be valid python identifiers, possibly separated by dots to represent
+    a hierarchy of names.
+
+    For example, the names "a", "foo.bar", and "a.b.c" are all valid names.
+    """
+
     _dotted_name: str
     _individual_names: tuple[VariableName, ...] = attrs.field(init=False, repr=False)
 
@@ -20,14 +29,20 @@ class DottedVariableName:
 
     @property
     def dotted_name(self) -> str:
+        """The string representation of the name."""
+
         return self._dotted_name
 
     @property
     def individual_names(self) -> tuple[VariableName, ...]:
+        """The individual separated by dots that make up the identifier."""
+
         return self._individual_names
 
     @classmethod
     def from_individual_names(cls, names: Iterable[VariableName]) -> Self:
+        """Create a new instance from an iterable of individual names."""
+
         return cls(".".join(str(name) for name in names))
 
     def __str__(self) -> str:
@@ -42,6 +57,8 @@ class DottedVariableName:
     def __eq__(self, other):
         if isinstance(other, DottedVariableName):
             return self._dotted_name == other._dotted_name
+        elif isinstance(other, str):
+            return self._dotted_name == other
         else:
             return NotImplemented
 
@@ -55,8 +72,10 @@ def dotted_variable_name_converter(name: Any) -> DottedVariableName:
         raise InvalidVariableNameError(f"Invalid variable name: {name}")
 
 
-@attrs.define
+@attrs.define(eq=False, repr=False, init=False)
 class VariableName(DottedVariableName):
+    """Represents a single variable name."""
+
     def __init__(self, name: str):
         if not name.isidentifier():
             raise InvalidVariableNameError(f"Invalid variable name: {name}")
@@ -75,6 +94,8 @@ class VariableName(DottedVariableName):
     def __eq__(self, other):
         if isinstance(other, VariableName):
             return self._dotted_name == other._dotted_name
+        elif isinstance(other, str):
+            return self._dotted_name == other
         else:
             return NotImplemented
 

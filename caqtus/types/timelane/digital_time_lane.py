@@ -4,7 +4,7 @@ import attrs
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 
-from .timelane import TimeLane
+from .timelane import TimeLane, Span
 
 
 @attrs.define(init=False, eq=False, repr=False)
@@ -66,7 +66,7 @@ def unstructure_hook(lane: DigitalTimeLane):
 
 def structure_hook(data, _) -> DigitalTimeLane:
     structured = serialization.structure(
-        data["spanned_values"], list[tuple[bool | Expression, int]]
+        data["spanned_values"], list[tuple[bool | Expression, Span]]
     )
     return DigitalTimeLane.from_spanned_values(structured)
 

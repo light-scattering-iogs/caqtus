@@ -1,4 +1,3 @@
-import abc
 from collections.abc import Mapping, Set
 
 from PySide6.QtWidgets import QStyledItemDelegate

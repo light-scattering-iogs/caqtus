@@ -1,17 +1,14 @@
 import abc
 import bisect
 import itertools
-from collections.abc import MutableSequence, Iterable, Sequence
-from typing import TypeVar, Generic, Self, NewType
+from collections.abc import MutableSequence, Iterable, Sequence, Iterator
+from typing import TypeVar, Self, NewType, overload, Never
 
 import attrs
+from typing_extensions import deprecated
 
 from caqtus.types.expression import Expression
 from caqtus.utils.asserts import assert_length_changed
-
-#: The type of the values in the time lane.
-T = TypeVar("T")
-
 
 #: Represents the index of a single step in a time lane.
 Step = NewType("Step", int)
@@ -24,7 +21,7 @@ Span = NewType("Span", int)
 
 
 @attrs.define(init=False, eq=False, repr=False)
-class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
+class TimeLane[T](MutableSequence[T], abc.ABC):
     """Represents a sequence of values covering some steps in time.
 
     A time lane is a sequence of values that are associated with some time steps.
@@ -48,8 +45,6 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
     @_spanned_values.validator  # type: ignore
     def validate_spanned_values(self, _, value):
-        if not value:
-            raise ValueError("Spanned values must not be empty")
         if not all(span >= 1 for _, span in value):
             raise ValueError("Span must be at least 1")
 
@@ -75,7 +70,7 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
         values_list = list(values)
         spanned_values = []
-        for value, group in itertools.groupby(values_list, key=id):
+        for _, group in itertools.groupby(values_list, key=id):
             g = list(group)
             spanned_values.append((g[0], Span(len(g))))
         self._spanned_values = spanned_values
@@ -88,15 +83,36 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         obj._bounds = compute_bounds(span for _, span in obj._spanned_values)
         return obj
 
+    def spanned_values(self) -> Sequence[tuple[T, Span]]:
+        """Returns the spanned values of the lane.
+
+        For each block in the lane, returns a tuple of two elements: the value of the
+        block and the number of steps spanned by the block.
+
+        Examples:
+            >>> from caqtus.types.timelane import DigitalTimeLane
+            >>> lane = DigitalTimeLane([True, True, False, True])
+            >>> lane.spanned_values()
+            [(True, 2), (False, 1), (True, 1)]
+        """
+
+        return tuple(self._spanned_values)
+
+    @property
+    def number_blocks(self) -> int:
+        """Returns the number of blocks in the lane."""
+
+        return len(self._spanned_values)
+
     def get_bounds(self, step: Step) -> tuple[Step, Step]:
         """Returns the bounds of the block containing the given step."""
 
         step = self._normalize_step(step)
         if not (0 <= step < len(self)):
             raise IndexError(f"Index out of bounds: {step}")
-        return self._get_block_bounds(find_containing_block(self._bounds, step))
+        return self.get_block_bounds(find_containing_block(self._bounds, step))
 
-    def values(self) -> Iterable[T]:
+    def block_values(self) -> Iterator[T]:
         """Returns an iterator over the block values.
 
         The length of the iterator is the number of blocks in the lane, not the number
@@ -105,14 +121,43 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
         return (value for value, _ in self._spanned_values)
 
-    def bounds(self) -> Iterable[tuple[Step, Step]]:
-        """Returns an iterator over the bounds of the blocks.
+    @deprecated("use block_values instead")
+    def values(self) -> Iterator[T]:
+        return self.block_values()
 
-        The length of the iterator is the number of blocks in the lane, not the number
-        of steps.
+    def block_bounds(self) -> Iterator[tuple[Step, Step]]:
+        """Iterates over the bounds of the blocks.
+
+        Returns:
+            An iterator over the bounds of the blocks.
+
+            Its elements are tuples of two elements: the step (inclusive) at which the
+            block starts and the step (exclusive) at which the block ends.
+
+            The length of the iterator is the number of blocks in the lane.
         """
 
-        return zip(self._bounds[:-1], self._bounds[1:])
+        return zip(self._bounds[:-1], self._bounds[1:], strict=True)
+
+    def get_block_bounds(self, block: Block) -> tuple[Step, Step]:
+        """Returns the bounds of the given block.
+
+        Returns:
+            A tuple of two elements: the step (inclusive) at which the block starts and
+            the step (exclusive) at which the block ends.
+
+        Raises:
+            IndexError: If the block index is out of bounds.
+        """
+
+        if not (0 <= block < self.number_blocks):
+            raise IndexError(f"Block index out of bounds: {block}")
+
+        return self._bounds[block], self._bounds[block + 1]
+
+    @deprecated("use block_bounds instead")
+    def bounds(self) -> Iterator[tuple[Step, Step]]:
+        return self.block_bounds()
 
     def _get_containing_block(self, index: Step) -> Block:
         return find_containing_block(self._bounds, index)
@@ -120,26 +165,31 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     def _get_block_span(self, block: Block) -> Span:
         return self._spanned_values[block][1]
 
-    def _get_block_value(self, block: Block) -> T:
-        return self._spanned_values[block][0]
+    def get_block_value(self, block: Block) -> T:
+        """Returns the value of the given block."""
 
-    def _get_block_bounds(self, block: Block) -> tuple[Step, Step]:
-        return self._bounds[block], self._bounds[block + 1]
+        return self._spanned_values[block][0]
 
     def __len__(self):
         return self._bounds[-1]
 
-    def __getitem__(self, item) -> T:
+    @overload
+    def __getitem__(self, item: int) -> T: ...
+
+    @overload
+    def __getitem__(self, item: slice) -> Never: ...
+
+    def __getitem__(self, item):
         if isinstance(item, int):
-            return self.get_value_at_step(Step(item))
+            return self._get_value_at_step(Step(item))
         else:
             raise TypeError(f"Invalid type for item: {type(item)}")
 
-    def get_value_at_step(self, step: Step) -> T:
+    def _get_value_at_step(self, step: Step) -> T:
         step = self._normalize_step(step)
         if not (0 <= step < len(self)):
             raise IndexError(f"Step out of bounds: {step}")
-        return self._get_block_value(find_containing_block(self._bounds, step))
+        return self.get_block_value(find_containing_block(self._bounds, step))
 
     def __setitem__(self, key, value):
         if isinstance(key, int):
@@ -154,10 +204,10 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if not (0 <= step < len(self)):
             raise IndexError(f"Step out of bounds: {step}")
         block = find_containing_block(self._bounds, step)
-        start, stop = self._get_block_bounds(block)
+        start, stop = self.get_block_bounds(block)
         before_length = Span(step - start)
         after_length = Span(stop - step - 1)
-        previous_value = self._get_block_value(block)
+        previous_value = self.get_block_value(block)
         insert_index = block
         if before_length > 0:
             self._spanned_values.insert(insert_index, (previous_value, before_length))
@@ -180,14 +230,14 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if slice_.step is not None:
             raise ValueError(f"Slice step must be None: {slice_}")
         before_block = find_containing_block(self._bounds, start)
-        before_length = Span(start - self._get_block_bounds(before_block)[0])
-        before_value = self._get_block_value(before_block)
+        before_length = Span(start - self.get_block_bounds(before_block)[0])
+        before_value = self.get_block_value(before_block)
         if stop == len(self):
             after_block = Block(len(self._spanned_values) - 1)
         else:
             after_block = find_containing_block(self._bounds, stop)
-        after_length = Span(self._get_block_bounds(after_block)[1] - stop)
-        after_value = self._get_block_value(after_block)
+        after_length = Span(self.get_block_bounds(after_block)[1] - stop)
+        after_value = self.get_block_value(after_block)
         del self._spanned_values[before_block : after_block + 1]
         insert_index = before_block
         if before_length > 0:
@@ -210,7 +260,6 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         else:
             raise TypeError(f"Invalid type for item: {type(key)}")
 
-    @assert_length_changed(-1)
     def delete_step(self, step: Step) -> None:
         """Delete a single step from the lane.
 
@@ -227,14 +276,15 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
             del self._spanned_values[block]
         else:
             self._spanned_values[block] = (
-                self._get_block_value(block),
+                self.get_block_value(block),
                 Span(self._get_block_span(block) - 1),
             )
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
         assert len(self) == previous_length - 1
 
     @assert_length_changed(+1)
-    def insert(self, step: Step, value: T) -> None:
+    def insert(self, index: int, value: T) -> None:
+        step = Step(index)
         step = self._normalize_step(step)
         if step == len(self):
             self._spanned_values.append((value, Span(1)))
@@ -243,10 +293,10 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if not (0 <= step < len(self)):
             raise IndexError(f"Step out of bounds: {step}")
         block = find_containing_block(self._bounds, step)
-        start, stop = self._get_block_bounds(block)
+        start, stop = self.get_block_bounds(block)
         before_length = Span(step - start)
         after_length = Span(stop - step)
-        previous_value = self._get_block_value(block)
+        previous_value = self.get_block_value(block)
         insert_index = block
         if before_length > 0:
             self._spanned_values.insert(insert_index, (previous_value, before_length))
@@ -279,7 +329,7 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         elif isinstance(other, Sequence):
             if len(self) != len(other):
                 return False
-            return all(a == b for a, b in zip(self, other))
+            return all(a == b for a, b in zip(self, other, strict=True))
         else:
             return NotImplemented
 
@@ -327,22 +377,33 @@ class TimeLanes:
         on_setattr=attrs.setters.validate,
     )
 
-    @step_durations.validator  # type: ignore
-    def validate_step_durations(self, _, value):
-        if not all(isinstance(v, Expression) for v in value):
-            raise ValueError("All step durations must be instances of Expression")
+    @classmethod
+    def empty(cls) -> Self:
+        return cls([], [], {})
 
     @step_names.validator  # type: ignore
     def validate_step_names(self, _, value):
         if not all(isinstance(v, str) for v in value):
             raise ValueError("All step names must be instances of str")
 
+    @step_durations.validator  # type: ignore
+    def validate_step_durations(self, _, value):
+        if len(value) != len(self.step_names):
+            raise ValueError(
+                "The number of step durations must match the number of step names"
+            )
+        if not all(isinstance(v, Expression) for v in value):
+            raise ValueError("All step durations must be instances of Expression")
+
     @lanes.validator  # type: ignore
     def validate_lanes(self, _, value):
         if not all(isinstance(v, TimeLane) for v in value.values()):
             raise ValueError("All lanes must be instances of TimeLane")
-        if not all(len(lane) == self.number_steps for lane in value.values()):
-            raise ValueError("All lanes must have the same length")
+        for name, lane in value.items():
+            if len(lane) != self.number_steps:
+                raise ValueError(
+                    f"Lane '{name}' does not have the same length as the time steps"
+                )
 
     @property
     def number_steps(self) -> int:
@@ -372,8 +433,7 @@ class TimeLanes:
             raise TypeError(f"Invalid type for value: {type(lane)}")
         if not isinstance(name, str):
             raise TypeError(f"Invalid type for key: {type(name)}")
-        length = len(lane)
-        if not all(length == len(l) for l in self.lanes.values()):
+        if len(lane) != self.number_steps:
             raise ValueError("All lanes must have the same length")
 
         self.lanes[name] = lane

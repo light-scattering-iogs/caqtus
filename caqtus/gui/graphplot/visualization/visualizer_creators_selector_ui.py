@@ -13,22 +13,35 @@ class Ui_VisualizerCreatorSelector(object):
     def setupUi(self, VisualizerCreatorSelector):
         VisualizerCreatorSelector.setObjectName("VisualizerCreatorSelector")
         VisualizerCreatorSelector.resize(400, 300)
-        VisualizerCreatorSelector.setLayoutDirection(QtCore.Qt.LayoutDirection.LeftToRight)
+        VisualizerCreatorSelector.setLayoutDirection(
+            QtCore.Qt.LayoutDirection.LeftToRight
+        )
         self.verticalLayout = QtWidgets.QVBoxLayout(VisualizerCreatorSelector)
         self.verticalLayout.setObjectName("verticalLayout")
         self.formLayout = QtWidgets.QFormLayout()
         self.formLayout.setObjectName("formLayout")
         self.dataLoaderLabel = QtWidgets.QLabel(parent=VisualizerCreatorSelector)
         self.dataLoaderLabel.setObjectName("dataLoaderLabel")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.dataLoaderLabel)
-        self._visualizer_combo_box = QtWidgets.QComboBox(parent=VisualizerCreatorSelector)
+        self.formLayout.setWidget(
+            0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.dataLoaderLabel
+        )
+        self._visualizer_combo_box = QtWidgets.QComboBox(
+            parent=VisualizerCreatorSelector
+        )
         self._visualizer_combo_box.setObjectName("_visualizer_combo_box")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self._visualizer_combo_box)
+        self.formLayout.setWidget(
+            0, QtWidgets.QFormLayout.ItemRole.FieldRole, self._visualizer_combo_box
+        )
         self.verticalLayout.addLayout(self.formLayout)
         self._settings_group = QtWidgets.QGroupBox(parent=VisualizerCreatorSelector)
         self._settings_group.setObjectName("_settings_group")
         self.verticalLayout.addWidget(self._settings_group)
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        spacerItem = QtWidgets.QSpacerItem(
+            20,
+            40,
+            QtWidgets.QSizePolicy.Policy.Minimum,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
         self.verticalLayout.addItem(spacerItem)
         self._apply_button = QtWidgets.QPushButton(parent=VisualizerCreatorSelector)
         self._apply_button.setObjectName("_apply_button")
@@ -39,7 +52,13 @@ class Ui_VisualizerCreatorSelector(object):
 
     def retranslateUi(self, VisualizerCreatorSelector):
         _translate = QtCore.QCoreApplication.translate
-        VisualizerCreatorSelector.setWindowTitle(_translate("VisualizerCreatorSelector", "Form"))
-        self.dataLoaderLabel.setText(_translate("VisualizerCreatorSelector", "DataView"))
-        self._settings_group.setTitle(_translate("VisualizerCreatorSelector", "Settings"))
+        VisualizerCreatorSelector.setWindowTitle(
+            _translate("VisualizerCreatorSelector", "Form")
+        )
+        self.dataLoaderLabel.setText(
+            _translate("VisualizerCreatorSelector", "DataView")
+        )
+        self._settings_group.setTitle(
+            _translate("VisualizerCreatorSelector", "Settings")
+        )
         self._apply_button.setText(_translate("VisualizerCreatorSelector", "Apply"))

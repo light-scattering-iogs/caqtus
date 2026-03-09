@@ -71,4 +71,3 @@ class DurationTimerLog(DurationTimer):
             self._logger.log(
                 self._level, f"Finished: {self._message} in {self.duration_in_ms} ms"
             )
-

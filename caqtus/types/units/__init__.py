@@ -1,11 +1,11 @@
 __version__ = "0.1.0"
 
-from .unit_namespace import units
-from .units import (
+from . import base
+from ._unit_list import SECOND, NANOSECOND, DECIBEL, MEGAHERTZ, VOLT, HERTZ, AMPERE
+from ._units import (
     ureg,
     unit_registry,
     Quantity,
-    Unit,
     UndefinedUnitError,
     DimensionalityError,
     dimensionless,
@@ -16,14 +16,24 @@ from .units import (
     CURRENT_UNITS,
     VOLTAGE_UNITS,
     UNITS,
+    InvalidDimensionalityError,
+    is_quantity,
+    is_scalar_quantity,
+    Magnitude,
+    Unit,
+    BaseUnit,
+    UnitLike,
 )
+from .unit_namespace import units
 
 __all__ = [
     "__version__",
     "ureg",
     "unit_registry",
     "Quantity",
+    "Magnitude",
     "Unit",
+    "BaseUnit",
     "UndefinedUnitError",
     "DimensionalityError",
     "dimensionless",
@@ -35,4 +45,16 @@ __all__ = [
     "VOLTAGE_UNITS",
     "UNITS",
     "units",
+    "UnitLike",
+    "InvalidDimensionalityError",
+    "base",
+    "is_quantity",
+    "is_scalar_quantity",
+    "SECOND",
+    "NANOSECOND",
+    "DECIBEL",
+    "MEGAHERTZ",
+    "VOLT",
+    "HERTZ",
+    "AMPERE",
 ]

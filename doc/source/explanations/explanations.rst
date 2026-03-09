@@ -2,6 +2,8 @@ Explanations
 ============
 
 .. toctree::
+    :maxdepth: 1
 
-    architecture
+    internals/internals
     external resources
+    glossary

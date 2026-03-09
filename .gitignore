@@ -9,3 +9,6 @@ __pycache__
 build/
 _build/
 *.log
+dist/
+doc/source/_autosummary/
+pytest.ini

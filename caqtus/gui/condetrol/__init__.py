@@ -1,8 +1,5 @@
-from .condetrol import Condetrol, default_connect_to_experiment_manager
-from .main_window import CondetrolMainWindow
+"""Contains the main GUI from which user can edit and launch sequences."""
 
-__all__ = [
-    "Condetrol",
-    "CondetrolMainWindow",
-    "default_connect_to_experiment_manager",
-]
+from . import device_configuration_editors, timelanes_editor
+
+__all__ = ["device_configuration_editors", "timelanes_editor"]

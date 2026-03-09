@@ -5,9 +5,9 @@ How to
    :maxdepth: 1
 
    install
-   how-to-use-sql-server
-   how-to-add-new-device
-   ui
-   add lane
+   setup_postgresql
+   add-device-server
    device-extension
-
+   handle-recoverable-exceptions
+   cleanup-in-enter
+   upgrade-database

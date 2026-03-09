@@ -1,8 +1,7 @@
 from collections.abc import Mapping
 
-from .units import UNITS, ureg, Unit
-from ..variable_name import VariableName
+from ._units import UNITS, Unit, ureg
 
-units: Mapping[VariableName, Unit] = {
-    VariableName(unit): getattr(ureg, unit) for unit in UNITS
-}
+# TODO: Some tests fail when trying to replace `getattr(ureg, unit)` with `Unit(unit)`.
+#  To check.
+units: Mapping[str, Unit] = {unit: getattr(ureg, unit) for unit in UNITS}

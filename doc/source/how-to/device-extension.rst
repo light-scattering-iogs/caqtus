@@ -1,5 +1,12 @@
-How to write a device extension
-===============================
+How to implement a new device
+=============================
+
+This guide will show you how to write a new device extension for Caqtus.
+
+
+
+
+
 
 To create a device extension that can be used with your experiment, you need to create an instance of :py:class:`caqtus.extension.DeviceExtension` and fill in the required arguments.
 

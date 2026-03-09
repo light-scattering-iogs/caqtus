@@ -1,3 +1,4 @@
+from ._serializer import LaneLoader, LaneDumper
 from .analog_time_lane import AnalogTimeLane, Ramp
 from .camera_time_lane import CameraTimeLane, TakePicture
 from .digital_time_lane import DigitalTimeLane
@@ -15,4 +16,6 @@ __all__ = [
     "Block",
     "Step",
     "Span",
+    "LaneLoader",
+    "LaneDumper",
 ]

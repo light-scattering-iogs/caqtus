@@ -1,42 +1,67 @@
+import contextlib
 import ctypes
 import logging.config
 import platform
 import warnings
-from typing import Optional, assert_never
+from collections.abc import Callable
+from typing import Optional, assert_never, Concatenate
 
-import tblib.pickling_support
+from typing_extensions import deprecated
 
 from caqtus.experiment_control.manager import (
     LocalExperimentManager,
     RemoteExperimentManagerClient,
     RemoteExperimentManagerServer,
 )
-from caqtus.gui.condetrol import Condetrol
-from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
+
+# noinspection PyProtectedMember
+from caqtus.gui.condetrol._condetrol import Condetrol
+from caqtus.session.sql import (
+    PostgreSQLConfig,
+    PostgreSQLStorageManager,
+    SQLiteConfig,
+    SQLiteStorageManager,
+    SQLStorageManager,
+)
 from ._caqtus_extension import CaqtusExtension
 from .device_extension import DeviceExtension
 from .time_lane_extension import TimeLaneExtension
 from ..device.configuration import DeviceServerName
 from ..device.remote import Server, RPCConfiguration
-from ..experiment_control import ExperimentManager, ShotRetryConfig
+from ..experiment_control import ExperimentManager
 from ..experiment_control.manager import (
     ExperimentManagerConnection,
     LocalExperimentManagerConfiguration,
     RemoteExperimentManagerConfiguration,
 )
-from ..session import ExperimentSessionMaker
+from ..experiment_control.sequence_execution import ShotRetryConfig
+from ..session import ExperimentSession, StorageManager
+from ..session.sql._serializer import SerializerProtocol
 
 
 class Experiment:
-    """Dispatches configuration and extensions to the appropriate components.
+    """Configure parameters and register extensions for a specific experiment.
 
     There should be only a single instance of this class in the entire application.
     It is used to configure the experiment and knows how to launch the different
-    components of the application with the dependency extracted from the configuration.
+    components of the application after it has been configured.
+
+    Args:
+        storage_config: The configuration of the storage backend to be used to store the
+            data of the experiment.
     """
 
-    def __init__(self) -> None:
-        self._session_maker_config: Optional[PostgreSQLConfig] = None
+    def __init__(
+        self, storage_config: PostgreSQLConfig | SQLiteConfig | None = None
+    ) -> None:
+        if storage_config is None:
+            warnings.warn(
+                "A storage configuration should be passed when initializing the "
+                "experiment.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self._storage_config: PostgreSQLConfig | SQLiteConfig | None = storage_config
         self._extension = CaqtusExtension()
         self._experiment_manager: Optional[LocalExperimentManager] = None
         self._experiment_manager_location: ExperimentManagerConnection = (
@@ -44,7 +69,32 @@ class Experiment:
         )
         self._shot_retry_config: Optional[ShotRetryConfig] = None
 
-    def configure_storage(self, backend_config: PostgreSQLConfig) -> None:
+    def setup_default_extensions(self) -> None:
+        """Register some commonly used extensions to this experiment.
+
+        This method registers the following extensions:
+
+        * digital time lanes
+        * analog time lanes
+        * camera time lanes
+        """
+
+        from caqtus.extension.time_lane_extension import (
+            digital_time_lane_extension,
+            analog_time_lane_extension,
+            camera_time_lane_extension,
+        )
+
+        self.register_time_lane_extension(digital_time_lane_extension)
+        self.register_time_lane_extension(analog_time_lane_extension)
+        self.register_time_lane_extension(camera_time_lane_extension)
+
+    @deprecated(
+        "Pass the configuration directly to the Experiment() constructor instead."
+    )
+    def configure_storage(
+        self, storage_config: PostgreSQLConfig | SQLiteConfig
+    ) -> None:
         """Configure the storage backend to be used by the application.
 
         After this method is called, the application will read and write data and
@@ -57,9 +107,9 @@ class Experiment:
             configuration.
         """
 
-        if self._session_maker_config is not None:
-            warnings.warn("Storage configuration is being overwritten.")
-        self._session_maker_config = backend_config
+        if self._storage_config is not None:
+            warnings.warn("Storage configuration is being overwritten.", stacklevel=2)
+        self._storage_config = storage_config
 
     def configure_shot_retry(
         self, shot_retry_config: Optional[ShotRetryConfig]
@@ -149,26 +199,77 @@ class Experiment:
 
         self._extension.register_device_server_config(name, config)
 
-    def get_session_maker(self) -> ExperimentSessionMaker:
-        """Get the session maker to be used by the application.
+    def get_storage_manager(self) -> StorageManager:
+        """Get the storage manager to be used by the application.
 
-        The session maker is responsible for interacting with the storage of the
+        The storage manager is responsible for interacting with the storage of the
         experiment.
-
-        The method :meth:`configure_storage` must be called before this method.
         """
 
-        if self._session_maker_config is None:
+        return self._get_storage_manager(check_schema=True)
+
+    @deprecated("Use get_storage_manager instead.")
+    def get_session_maker(self) -> StorageManager:
+        return self.get_storage_manager()
+
+    def build_storage_manager[T: StorageManager, **P](
+        self,
+        backend_type: Callable[Concatenate[SerializerProtocol, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        """Create and set up a storage manager with the current registered extensions.
+
+        Args:
+            backend_type: Defines how the data will be stored.
+            *args: The arguments to pass to the storage backend constructor.
+            **kwargs: The keyword arguments to pass to the storage backend constructor.
+        """
+
+        storage_backend_manager = self._build_storage_manager(
+            backend_type,
+            *args,
+            **kwargs,
+        )
+        if isinstance(storage_backend_manager, SQLStorageManager):
+            storage_backend_manager.check()
+
+        return storage_backend_manager
+
+    def _build_storage_manager[T: StorageManager, **P](
+        self,
+        backend_type: Callable[Concatenate[SerializerProtocol, P], T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        return self._extension.create_session_maker(
+            backend_type,
+            *args,
+            **kwargs,
+        )
+
+    def _get_storage_manager(self, check_schema: bool = True) -> StorageManager:
+        if self._storage_config is None:
             error = RuntimeError("Storage configuration has not been set.")
             error.add_note(
-                "Please call `configure_storage` with the appropriate configuration."
+                "Pass the storage configuration to the Experiment() constructor."
             )
             raise error
-        session_maker = self._extension.create_session_maker(
-            PostgreSQLExperimentSessionMaker,
-            config=self._session_maker_config,
-        )
-        return session_maker
+        if isinstance(self._storage_config, SQLiteConfig):
+            storage_manager = self._build_storage_manager(
+                SQLiteStorageManager,
+                config=self._storage_config,
+            )
+        elif isinstance(self._storage_config, PostgreSQLConfig):
+            storage_manager = self._build_storage_manager(
+                PostgreSQLStorageManager,
+                config=self._storage_config,
+            )
+        else:
+            assert_never(self._storage_config)
+        if check_schema:
+            storage_manager.check()
+        return storage_manager
 
     def connect_to_experiment_manager(self) -> ExperimentManager:
         """Connect to the experiment manager."""
@@ -197,7 +298,7 @@ class Experiment:
 
         if self._experiment_manager is None:
             self._experiment_manager = LocalExperimentManager(
-                session_maker=self.get_session_maker(),
+                session_maker=self.get_storage_manager(),
                 device_manager_extension=self._extension.device_manager_extension,
                 shot_retry_config=self._shot_retry_config,
             )
@@ -211,20 +312,16 @@ class Experiment:
         configurations.
         """
 
-        tblib.pickling_support.install()
-
-        setup_condetrol_logs()
-
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
             app_id = "caqtus.condetrol"
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)  # type: ignore[reportAttributeAccessIssue]
 
         app = Condetrol(
-            self.get_session_maker(),
-            connect_to_experiment_manager=self.connect_to_experiment_manager,
+            self.get_storage_manager(),
             extension=self._extension.condetrol_extension,
+            connect_to_experiment_manager=self.connect_to_experiment_manager,
         )
         try:
             app.run()
@@ -237,15 +334,17 @@ class Experiment:
 
         The experiment server is used to run procedures on the experiment manager from a
         remote process.
-        """
 
-        tblib.pickling_support.install()
+        If the environment variable `CAQTUS_BLOCKING_TASK_DURATION_WARNING` is set to
+        a float duration in seconds, a warning will be logged if a task doesn't yield to
+        the event loop for that duration during the execution of a sequence.
+        """
 
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
             app_id = "caqtus.experiment_server"
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)  # type: ignore[reportAttributeAccessIssue]
 
         if not isinstance(
             self._experiment_manager_location, RemoteExperimentManagerConfiguration
@@ -260,7 +359,7 @@ class Experiment:
             raise error
 
         server = RemoteExperimentManagerServer(
-            session_maker=self.get_session_maker(),
+            session_maker=self.get_storage_manager(),
             address=("localhost", self._experiment_manager_location.port),
             authkey=bytes(self._experiment_manager_location.authkey, "utf-8"),
             shot_retry_config=self._shot_retry_config,
@@ -272,55 +371,82 @@ class Experiment:
             server.serve_forever()
 
     @staticmethod
-    def launch_device_server(config: RPCConfiguration) -> None:
+    def launch_device_server(
+        config: RPCConfiguration, name: str = "device_server"
+    ) -> None:
         """Launch a device server in the current process.
 
         This method will block until the server is stopped.
-        """
 
-        tblib.pickling_support.install()
+        Args:
+            config: The configuration of the server.
+            name: The name of the server. It is used to create the log file.
+        """
 
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
             app_id = "caqtus.device_server"
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)  # type: ignore[reportAttributeAccessIssue]
 
         with Server(config) as server:
             print("Ready")
             server.wait_for_termination()
 
+    def storage_session(self) -> contextlib.AbstractContextManager[ExperimentSession]:
+        """Return a context manager that provides a session to the storage backend.
 
-def setup_condetrol_logs():
-    log_config = {
-        "version": 1,
-        "formatters": {
-            "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
-        },
-        "handlers": {
-            "default": {
-                "level": "INFO",
-                "formatter": "standard",
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stdout",
-            },
-            "warnings": {
-                "level": "WARNING",
-                "formatter": "standard",
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stderr",
-            },
-            "errors": {
-                "level": "ERROR",
-                "formatter": "standard",
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": "condetrol.log",
-                "maxBytes": 1_000_000,
-            },
-        },
-        "loggers": {
-            "": {"level": "INFO", "handlers": ["default", "warnings", "errors"]},
-        },
-    }
+        A session can be used to access the data stored in the experiment.
+        """
 
-    logging.config.dictConfig(log_config)
+        return self.get_storage_manager().session()
+
+    def upgrade_database(self) -> None:
+        """Upgrade the database schema of the experiment to the latest version.
+
+        .. Warning::
+
+            If the database contains important data, it is strongly recommended to
+            back it up before running this function in case something goes wrong.
+        """
+
+        upgrade_database(self)
+
+
+def upgrade_database(experiment: Experiment) -> None:
+    """Upgrade the database schema of the experiment to the latest version.
+
+    .. Warning::
+
+        It is strongly recommended to back up the database before running this
+        function in case something goes wrong.
+
+    Args:
+        experiment: The experiment to upgrade the database for.
+            It must have been configured with a PostgreSQL storage backend.
+    """
+
+    storage_manager = experiment._get_storage_manager(check_schema=False)
+    if not isinstance(storage_manager, SQLStorageManager):
+        error = RuntimeError("The storage manager is not a SQL storage manager.")
+        error.add_note(
+            "The upgrade_database method is only available for SQL storage managers."
+        )
+        raise error
+    storage_manager.upgrade()
+
+
+def stamp_database(experiment: Experiment) -> None:
+    """Mark old databases schema with the original revision.
+
+    This should only be called on databases that were created before version 6.3.0.
+    """
+
+    from alembic.command import stamp
+
+    storage_manager = experiment._get_storage_manager(check_schema=False)
+    if not isinstance(storage_manager, PostgreSQLStorageManager):
+        raise RuntimeError("The storage manager is not a PostgreSQL storage manager.")
+    config = storage_manager._get_alembic_config()
+
+    stamp(config, "038164d73465")

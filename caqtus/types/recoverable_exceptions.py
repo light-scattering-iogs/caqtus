@@ -15,10 +15,6 @@ Only make exceptions recoverable if you expect them to happen in normal operatio
 
 from __future__ import annotations
 
-from typing import Optional
-
-import tblib.pickling_support
-
 
 def is_recoverable(error: BaseException) -> bool:
     """Check if an error is recoverable.
@@ -48,7 +44,11 @@ def is_recoverable(error: BaseException) -> bool:
 
 def split_recoverable(
     exception: BaseException,
-) -> tuple[Optional[BaseException], Optional[BaseException]]:
+) -> (
+    tuple[BaseException, BaseException]
+    | tuple[None, BaseException]
+    | tuple[BaseException, None]
+):
     """Split an exception into recoverable and non-recoverable parts.
 
     This function is mainly meant to split exception groups.
@@ -63,7 +63,7 @@ def split_recoverable(
     """
 
     if isinstance(exception, BaseExceptionGroup):
-        return exception.split(is_recoverable)
+        return exception.split(is_recoverable)  # type: ignore[reportReturnType]
     else:
         if is_recoverable(exception):
             return exception, None
@@ -71,8 +71,7 @@ def split_recoverable(
             return None, exception
 
 
-@tblib.pickling_support.install
-class RecoverableException(Exception):
+class RecoverableException(Exception):  # noqa: N818
     """An error that can be recovered from.
 
     This is an error that happen when the user does something wrong, and it is possible
@@ -85,7 +84,6 @@ class RecoverableException(Exception):
     pass
 
 
-@tblib.pickling_support.install
 class InvalidTypeError(TypeError, RecoverableException):
     """Raised when a value is not of the expected type.
 
@@ -96,7 +94,6 @@ class InvalidTypeError(TypeError, RecoverableException):
     pass
 
 
-@tblib.pickling_support.install
 class InvalidValueError(ValueError, RecoverableException):
     """Raised when a value is invalid.
 
@@ -107,7 +104,6 @@ class InvalidValueError(ValueError, RecoverableException):
     pass
 
 
-@tblib.pickling_support.install
 class ConnectionFailedError(ConnectionError, RecoverableException):
     """Raised when a connection to an external resource fails.
 
@@ -119,21 +115,13 @@ class ConnectionFailedError(ConnectionError, RecoverableException):
     pass
 
 
-@tblib.pickling_support.install
 class ShotAttemptsExceededError(RecoverableException, ExceptionGroup):
     """Raised when the number of shot attempts exceeds the maximum allowed."""
 
-    pass
+    def derive(self, excs):
+        return ShotAttemptsExceededError(self.message, excs)
 
 
-@tblib.pickling_support.install
-class SequenceInterruptedException(RecoverableException):
-    """Raised when a sequence is interrupted by the user before it finishes."""
-
-    pass
-
-
-@tblib.pickling_support.install
 class EvaluationError(RecoverableException):
     """Raised when an error occurs during the evaluation of an expression.
 
@@ -143,3 +131,7 @@ class EvaluationError(RecoverableException):
     """
 
     pass
+
+
+class NotDefinedUnitError(RecoverableException):
+    """Raised when the user tries to use a unit that is not defined."""

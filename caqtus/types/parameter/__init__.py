@@ -1,24 +1,25 @@
-from .analog_value import (
+from ._analog_value import (
     AnalogValue,
     NotAnalogValueError,
     is_analog_value,
     is_quantity,
-    add_unit,
-    get_unit,
-    magnitude_in_unit,
+    NotQuantityError,
 )
-from .parameter import Parameter, is_parameter
-from .parameter_namespace import ParameterNamespace
+from ._parameter import Parameter, is_parameter, Parameters, converter
+from ._parameter_namespace import ParameterNamespace
+from ._schema import ParameterSchema, ParameterType
 
 __all__ = [
     "AnalogValue",
     "NotAnalogValueError",
-    "add_unit",
     "is_analog_value",
     "Parameter",
     "is_parameter",
+    "Parameters",
     "ParameterNamespace",
     "is_quantity",
-    "get_unit",
-    "magnitude_in_unit",
+    "NotQuantityError",
+    "ParameterSchema",
+    "ParameterType",
+    "converter",
 ]

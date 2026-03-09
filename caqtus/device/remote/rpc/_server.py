@@ -3,7 +3,6 @@ import functools
 import itertools
 import logging
 import os
-import pickle
 import warnings
 from collections.abc import Callable
 from enum import Enum, auto
@@ -13,21 +12,19 @@ import anyio
 import anyio.abc
 import anyio.to_thread
 import attrs
-import tblib.pickling_support
 from anyio.streams.buffered import BufferedByteReceiveStream
 
-from ._configuration import (
-    RPCConfiguration,
-)
+from caqtus.utils._tblib import ExceptionPickler
+from ._configuration import RPCConfiguration
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
-from .proxy import Proxy
+from .._proxy import Proxy
 
 logger = logging.getLogger(__name__)
 
 
 @attrs.define
 class ObjectReference:
-    obj: object
+    obj: Any
     number_proxies: int
 
 
@@ -38,6 +35,7 @@ class ReturnValue(Enum):
 
 @attrs.define
 class CallRequest:
+    id_: int
     function: Callable[..., Any]
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
@@ -46,16 +44,22 @@ class CallRequest:
 
 @attrs.define
 class DeleteProxyRequest:
+    id_: int
     proxy: Proxy
+
+
+Request = CallRequest | DeleteProxyRequest
 
 
 @attrs.define
 class CallResponseFailure:
+    id_: int
     error: Exception
 
 
 @attrs.define
 class CallResponseSuccess:
+    id_: int
     result: Any
 
 
@@ -69,20 +73,33 @@ T = TypeVar("T")
 
 
 class RPCServer:
-    def __init__(self, port: int):
+    def __init__(
+        self,
+        port: int,
+    ):
+        """
+
+        Args:
+            port: The port to listen on.
+        """
+
         self._port = port
-        self._objects: dict[int, ObjectReference] = {}
+        self._pickler = ExceptionPickler()
+
+    def _dump(self, obj: Any) -> bytes:
+        return self._pickler.dumps(obj)
+
+    def _load(self, bytes_data: bytes) -> Any:
+        return self._pickler.loads(bytes_data)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self._objects:
-            warnings.warn(
-                f"Not all objects were properly deleted: {self._objects}.\n"
-                f"If you acquired any proxies, make sure to close them."
-            )
-            self._objects.clear()
+        pass
+
+    def run(self) -> Never:  # pyright: ignore[reportReturnType]
+        anyio.run(self.run_async, backend="trio")
 
     async def run_async(self) -> Never:
         listener = await anyio.create_tcp_listener(local_port=self._port)
@@ -90,11 +107,26 @@ class RPCServer:
             await listener.serve(self.handle)
 
     async def handle(self, client: anyio.abc.ByteStream) -> None:
+        handler = Handler(self._dump, self._load)
+        await handler.handle(client)
+
+    @property
+    def port(self) -> int:
+        return self._port
+
+
+class Handler:
+    def __init__(self, dumper: Callable[[Any], bytes], loader: Callable[[bytes], Any]):
+        self._objects: dict[int, ObjectReference] = {}
+        self._dump = dumper
+        self._load = loader
+
+    async def handle(self, client: anyio.abc.ByteStream) -> None:
         async with client:
             receive_stream = BufferedByteReceiveStream(client)
             for _ in itertools.count():
                 request_bytes = await receive_with_size_prefix(receive_stream)
-                request = pickle.loads(request_bytes)
+                request = self._load(request_bytes)
                 if isinstance(request, CallRequest):
                     await self.handle_call_request(client, request)
                 elif isinstance(request, DeleteProxyRequest):
@@ -103,6 +135,14 @@ class RPCServer:
                     break
                 else:
                     raise ValueError(f"Unknown request type: {request}")
+
+    def check_all_proxies_closed(self) -> None:
+        if self._objects:
+            warnings.warn(
+                f"Not all objects were properly deleted: {self._objects}.\n"
+                f"If you acquired any proxies, make sure to close them.",
+                stacklevel=2,
+            )
 
     async def handle_call_request(self, client, request: CallRequest) -> None:
         try:
@@ -121,20 +161,16 @@ class RPCServer:
             elif request.return_value == ReturnValue.PROXY:
                 result = self.create_proxy(value)
             else:
-                assert False, f"Unknown return value: {request.return_value}"
-            result = CallResponseSuccess(result=result)
-        except _StopIteration as e:
+                raise AssertionError(f"Unknown return value: {request.return_value}")
+        except _StopIteration:
             # Don't log this exception, as it can occur during normal operation if we're
             # calling __next__ on an iterator.
-            result = self._construct_error_response(request.function, StopIteration())
+            await self.send_failure_response(client, request, StopIteration())
         except Exception as e:
-            logger.exception(
-                f"Error during call with request {request!r}", exc_info=True
-            )
-            result = self._construct_error_response(request.function, e)
-
-        pickled_result = pickle.dumps(result)
-        await send_with_size_prefix(client, pickled_result)
+            logger.exception(f"Error during request call {request!r}")
+            await self.send_failure_response(client, request, e)
+        else:
+            await self.send_success_response(client, request, result)
 
     def handle_delete_proxy_request(self, request: DeleteProxyRequest) -> None:
         proxy = request.proxy
@@ -147,12 +183,22 @@ class RPCServer:
         if self._objects[proxy._obj_id].number_proxies <= 0:
             del self._objects[proxy._obj_id]
 
-    @staticmethod
-    def _construct_error_response(fun, e: Exception) -> CallResponseFailure:
+    async def send_failure_response(
+        self, client: anyio.abc.ByteStream, request: CallRequest, e: Exception
+    ) -> None:
         try:
-            raise RemoteCallError(f"Error during call to {fun}") from e
+            raise RemoteCallError(f"Error during call to {request.function}") from e
         except RemoteCallError as error:
-            return CallResponseFailure(error=error)
+            response = CallResponseFailure(error=error, id_=request.id_)
+        pickled_response = self._dump(response)
+        await send_with_size_prefix(client, pickled_response)
+
+    async def send_success_response(
+        self, client: anyio.abc.ByteStream, request: CallRequest, result: Any
+    ) -> None:
+        response = CallResponseSuccess(result=result, id_=request.id_)
+        pickled_response = self._dump(response)
+        await send_with_size_prefix(client, pickled_response)
 
     def create_proxy(self, obj: T) -> Proxy[T]:
         obj_id = id(obj)
@@ -182,9 +228,6 @@ class RPCServer:
         else:
             return obj
 
-    def run(self) -> Never:
-        anyio.run(self.run_async, backend="trio")
-
 
 class Server:
     def __init__(self, config: RPCConfiguration) -> None:
@@ -202,21 +245,18 @@ class Server:
         logger.info("Server stopped")
 
 
-@tblib.pickling_support.install
 class RemoteError(Exception):
     """Base class for errors that occur on the server side."""
 
     pass
 
 
-@tblib.pickling_support.install
 class RemoteCallError(RemoteError):
     """Error that occurs when calling a remote function."""
 
     pass
 
 
-@tblib.pickling_support.install
 class InvalidProxyError(RemoteError):
     pass
 

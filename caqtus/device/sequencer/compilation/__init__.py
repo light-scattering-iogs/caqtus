@@ -1,6 +1,15 @@
-from caqtus.device.sequencer.channel_commands._channel_sources._adaptative_clock import (
-    get_adaptive_clock,
-)
-from ._compiler import SequencerCompiler
+"""Define classes and functions to evaluate output for a sequencer."""
 
-__all__ = ["evaluate_device_trigger", "get_adaptive_clock", "SequencerCompiler"]
+from ._compiler import (
+    InstructionCompilationParameters,
+    compile_parallel_instructions,
+)
+from ..channel_commands._channel_sources._trigger_compiler import (
+    TriggerableDeviceCompiler,
+)
+
+__all__ = [
+    "TriggerableDeviceCompiler",
+    "InstructionCompilationParameters",
+    "compile_parallel_instructions",
+]

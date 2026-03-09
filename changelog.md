@@ -5,6 +5,589 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.29.0] - 2025-07-22
+
+### Changed
+
+- Sequence path label in sequence widget in Condetrol can be selected and copied.
+
+## [6.28.0] - 2025-07-08
+
+### Added
+
+- Possibility to copy the sequence path by right-clicking on the name in the sequence 
+- widget.
+
+### Changed
+
+- EnumEditor are now widgets and use enum value.
+
+## [6.27.0] - 2025-06-24
+
+### Added
+
+- Method `Experiment.upgrade_database` to initialize and upgrade the database schema.
+
+### Changed
+
+- Cancellation error context is no longer suppressed when a device times out.
+
+## [6.26.1] - 2025-04-02
+
+### Fixed
+
+- Bug causing lane to not be used during a shot
+- Bug preventing from loading configuration of logic gates for sequencer channels
+
+## [6.26.0] - 2025-04-02
+
+### Added
+
+- Method `Sequence.get_data_schema` to get the schema of the data produced by a sequence
+- Better error message when failing to load a device configuration
+- How-to for registering a new device server
+- Logic gates can be applied to the channels of a sequencer
+
+### Fixed
+
+- Bug preventing to launch sequences
+
+## [6.25.2] - 2025-03-16
+
+### Fixed
+
+- Performance issues in `Sequence.scan`
+
+## [6.25.1] - 2025-03-15
+
+### Fixed
+
+- Issue with latest polars release
+
+## [6.25.0] - 2025-03-15
+
+### Added
+
+- Cameras will automatically infer their data schema
+
+## [6.24.0] - 2025-03-15
+
+### Added
+
+- Method `Sequence.scan` to lazily load data into a polars DataFrame
+
+### Deprecated
+
+- Method `Sequence.load_shots_data` in favor of `Sequence.scan`
+
+## [6.23.2] - 2025-03-01
+
+### Fixed
+
+- Issue that caused the experiment to not be able to respond in time to events that
+  occurred during a shot.
+
+## [6.23.1] - 2025-03-01
+
+### Fixed
+
+- Display more accurate location when auditing a blocking task during sequence
+  execution.
+
+## [6.23.0] - 2025-03-01
+
+### Added
+
+- Debug environment variable `CAQTUS_BLOCKING_TASK_DURATION_WARNING` to display a
+  warning when a task blocks the event loop for too long during sequence execution.
+
+## [6.22.4] - 2025-02-17
+
+### Fixed
+
+- Bug causing sequence to be launched with the wrong configuration
+
+## [6.22.3] - 2025-02-02
+
+### Fixed
+
+- Crash when deleting a sequence that was being edited
+
+## [6.22.2] - 2025-02-02
+
+### Fixed
+
+- Crash when deleting sequence steps with nested loops
+
+## [6.22.1] - 2025-02-02
+
+### Fixed
+
+- Don't display undo stack in sequence editor
+
+## [6.22.0] - 2025-02-02
+
+### Added
+
+- Possibility to undo/redo edits to sequence iteration and time lanes in Condetrol
+
+## [6.21.1] - 2025-01-08
+
+### Fixed
+
+- Bug causing sequence compilation to timeout
+- Bug when calling deprecated method `build_device_config_editor`
+
+## [6.21.0] - 2025-01-08
+
+### Added
+
+- Automatic generation of editor for device fields with type `enum.Enum`
+
+## [6.20.0] - 2025-01-01
+
+### Added
+
+- Possibility to override order for attributes of automatically generated device
+  configuration editor
+
+## [6.19.0] - 2025-01-01
+
+### Added
+
+- Method `Sequence.get_parameter_schema` to get statically defined information about the
+  parameters of a sequence
+- Support for `typing.Literal` when automatically building device configuration editor
+
+### Changed
+
+- Stop overwriting logging configuration when launching an application
+
+## [6.18.1] - 2024-12-18
+
+### Changed
+
+- Text for digital lane expressions is now centered
+- Subprocesses for shot compilation are launched during sequence preparation
+- Upgraded numpy minimum version to 2.0
+
+### Added
+
+- Documentation for digital expressions
+
+### Fixed
+
+- Inaccuracy in timing for `ShotTimer.wait_until`
+
+## [6.18.0] - 2024-12-01
+
+### Added
+
+- Possibility to generate square waveforms on digital sequencers
+
+## [6.17.0] - 2024-11-17
+
+### Added
+
+- Possibility to override more information when generating an editor for a device
+  configuration
+
+## [6.16.2] - 2024-11-17
+
+### Fixed
+
+- Exceptions occurring during shot compilation were not always fully displayed
+- Builtins values not correctly defined in expressions
+
+## [6.16.1] - 2024-11-16
+
+- Fix issues when pickling exceptions
+
+## [6.16.0] - 2024-11-16
+
+### Added
+
+- Documentation for module `caqtus.gui.condetrol.timelanes_editor`.
+
+### Fixed
+
+- Bug where a sequence would sometimes crash when being interrupted.
+
+## [6.15.0] - 2024-10-29
+
+### Added
+
+- Support for `caqtus.types.expression.Expression` when generating an editor for a
+  device configuration
+- Possibility to override some attribute editors when generating an editor for an attrs
+  class
+
+### Fixed
+
+- Give better error message when no remote server is set for a device
+
+## [6.14.0] - 2024-10-27
+
+### Added
+
+- Possibility to override the builtins values used when evaluating expressions.
+- Module `caqtus.gui.autogen` to help generate UI for a device configuration.
+
+### Changed
+
+- Simplify handling of units during sequence compilation
+
+## [6.13.0] - 2024-10-17
+
+### Added
+
+- Module `caqtus.session.copy` to copy sequences and data between two storage backends.
+
+### Fixed
+
+- Timeout bug
+
+## [6.12.0] - 2024-10-15
+
+### Added
+
+- Support for `copyreg.pickle` in rpc device protocol to allow pickling objects for
+  which a custom reduce method can't be easily implemented.
+
+## [6.11.0] - 2024-10-13
+
+### Added
+
+- `spanned_values` method to `TimeLane`g
+- Type variable `caqtus.shot_compilation.timed_instructions.InstrType` for
+  timed instruction data type
+-
+    - Module `caqtus.utils.result`
+
+### Fixed
+
+- Wrong returned value for `TimeLane.get_block_bounds()` when using out-of-bounds block
+  index
+
+## [6.10.0] - 2024-09-24
+
+### Changed
+
+- Rename `SequencerInstruction` to `TimedInstruction` and move it to
+  `caqtus.shot_compilation.timed_instructions` package
+- Export `compile_analog_lane` and `compile_digital_lane` in
+  `caqtus.shot_compilation.lane_compilation`
+
+### Deprecated
+
+- Package `caqtus.device.sequencer.instructions`
+
+## [6.9.0] - 2024-09-22
+
+### Changed
+
+- Renamed `caqtus.utils.contextlib` to `caqtus.utils.context_managers`
+- Clearing a sequence in Condetrol will pop a message box during the operation, with the
+  possibility to cancel the operation
+- Saving shot data is now asynchronous and does not block shot execution
+
+### Deprecated
+
+- `ShotContext.get_variables` in favor of `ShotContext.get_parameters`
+
+## [6.8.1] - 2024-09-13
+
+### Fixed
+
+- Snapshot crashing when trying to display an image
+
+## [6.8.0] - 2024-09-11
+
+### Added
+
+- A tutorial on how to load and analyze data from a sequence
+
+### Changed
+
+- Polars expressions for quantity and stats now preserve the name of the columns
+
+## [6.7.1] - 2024-09-11
+
+### Fixed
+
+- Bug making it impossible to add a new device configuration
+- Background not being subtracted in image view in SnapShot
+
+## [6.7.0] - 2024-09-09
+
+### Added
+
+- Possibility to rename and move sequence paths in Condetrol
+
+### Fixed
+
+- Reduced latency when creating or deleting a sequence path in Condetrol
+
+## [6.6.1] - 2024-09-07
+
+### Fixed
+
+- Bug preventing to run a sequence
+
+### Removed
+
+- Dependency on pydantic
+
+## [6.6.0] - 2024-09-07
+
+### Changed
+
+- Time is now expressed as a decimal number during shot compilation
+
+## [6.5.0] - 2024-09-03
+
+### Changed
+
+- Lines for the steps in the sequence editor are now always overlayed on top of the
+  sequence lanes
+
+### Fixed
+
+- Add step button staying enabled when sequence is not editable
+
+## [6.4.0] - 2024-08-31
+
+### Added
+
+- Button to add step in sequence editor
+
+### Fixed
+
+- Display of error message when could not evaluate an expression
+- Crash when arange loop has incompatible units
+
+## [6.3.2] - 2024-08-26
+
+### Fixed
+
+- Exceptions while running sequences no longer crash condetrol
+
+## [6.3.3] - 2024-08-26
+
+### Fixed
+
+- Bug causing sequence interruption to be ignored
+
+## [6.3.0] - 2024-08-26
+
+### Added
+
+- `caqtus.session.Sequence` will suggest a path if the specified path does not exist
+- Possibility to start a sequence with the *F5* key
+- Function `caqtus.experiment.upgrade_database` to initialize and upgrade the database
+  schema
+
+### Changed
+
+- User errors are now saved in the sequence and can be displayed at any time in the
+  sequence editor
+
+## [6.2.1] - 2024-08-23
+
+### Fixed
+
+- Bug were cancelled exceptions were not correctly handled if an error occurs while
+  controlling a device
+
+## [6.2.0] - 2024-08-22
+
+### Changed
+
+- Give better error context when an issue occurs while controlling a device in a shot
+
+### Fixed
+
+- Crash when analog ramp has a duration of zero seconds
+
+## [6.1.0] - 2024-08-21
+
+### Added
+
+- Better error message when a device times out
+
+### Fixed
+
+- Bug causing crash on exception
+
+### [6.0.1] - 2024-08-20
+
+### Fixed
+
+- Bug causing sequence hanging sometimes after an error occurred
+
+## [6.0.0] - 2024-08-20
+
+### Changed
+
+- Sequencers can now interrupt their sequence if an error occurs after the sequence has
+  been started.
+- Device proxy know use an async converter object to call underlying device methods
+  instead of a rpc client.
+
+## [5.5.0] - 2024-08-20
+
+### Added
+
+- Widget to select trigger for a sequencer
+
+### Fixed
+
+- Import for deprecated module `caqtus.utils.roi`
+
+## [5.4.0] - 2024-08-20
+
+### Added
+
+- Function to evaluate parallel sequencer instructions
+
+### Deprecated
+
+- Module `caqtus.utils.roi` in favor of `caqtus.types.image.roi`
+
+## [5.3.0] - 2024-08-18
+
+### Changed
+
+- Many undocumented packages are now private
+
+### Added
+
+- Help menu in Condetrol
+- Better error messages when a camera times out
+- Better error messages when failing to compute the output of a sequencer
+
+### Documentation
+
+- Added API reference for public classes and functions
+- Added condetrol manual
+
+## [5.2.1] - 2024-08-14
+
+### Fixed
+
+- Bug causing sequencer configuration editor to not display correct time step
+
+## [5.2.0] - 2024-08-14
+
+### Added
+
+- Possibility to wait for specific times during a shot while controlling a device
+
+### Fixed
+
+- Bug where it was not possible to set the correct region of interest in the camera
+  configuration editor
+- Bug causing sequencer configuration editor to not display correct time step
+
+### Changed
+
+- Several non documented packages are now private
+
+## [5.1.0] - 2024-08-11
+
+### Changed
+
+- The time step for a sequencer can now be a decimal value and is no longer required to
+  be an integer number of nanoseconds.
+
+## [5.0.2] - 2024-08-10
+
+### Fixed
+
+- Piecewise linear calibration for analog sequencer displays the correct curve when
+  using non-linear units
+
+## [5.0.1] - 2024-08-10
+
+### Fixed
+
+- Incompatibility with numpy 1.26
+- Bug with camera compiler not signaling used lane
+
+## [5.0.0] - 2024-08-10
+
+### Added
+
+- Documentation for sequencer instructions
+- Utility functions to visualize instructions for a sequencer
+- Actions to copy/paste from clipboards sequence iterations and time lanes
+
+### Changed
+
+- **Breaking:** Ramps in logarithmic units are now linear in the base space and not in
+  the log space.
+- **Breaking:** Trigger compilation is now delegated to the compiler of the device to be
+  triggered.
+- Upgraded to numpy 2.0
+- Upgraded to polars 1.3
+
+### Deprecated
+
+- Some methods of timelanes
+
+## [4.16.0] - 2024-07-22
+
+### Changed
+
+- Camera configuration editor is now consistent with other device configuration editors
+
+### Fixed
+
+- Bug which caused device configurations to not always be saved in the device
+  configuration dialog
+
+## [4.15.0] - 2024-07-10
+
+### Added
+
+- Possibility to put complex transformations for device output
+
+## [4.13.4] - 2024-07-09
+
+### Fixed
+
+- Crash when expressing sequence loops with incompatible units
+
+## [4.13.0] - 2024-07-06
+
+### Added
+
+- Better event loop for SnapShot application
+
+## [4.12.0] - 2024-07-06
+
+### Added
+
+- Better error handling and logging for experiment server and device server
+
+## [4.11.0] - 2024-07-03
+
+### Added
+
+- Howto documentation for raising recoverable errors
+- Documentation for camera device
+
+### Changed
+
+- Simplify camera device interface
+
+## [4.10.3] - 2024-07-03
+
+### Fixed
+
+- Bug which crashed the application if the cell in a lane does not evaluate to the
+  correct type
+
 ## [4.10.2] - 2024-07-03
 
 ### Fixed
@@ -78,7 +661,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - HOWTO for creating device extension
 - Function to get a copy of caqtus serialization converter
-- Export `FormDeviceConfigurationEditor` in `caqtus.gui.condetrol.device_configuration_editors`
+- Export `FormDeviceConfigurationEditor`
+  in `caqtus.gui.condetrol.device_configuration_editors`
 
 ### Changed
 

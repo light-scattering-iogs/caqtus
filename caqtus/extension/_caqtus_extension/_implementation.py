@@ -7,10 +7,10 @@ from caqtus.device.configuration import DeviceServerName
 from caqtus.device.configuration.serializer import DeviceConfigJSONSerializer
 from caqtus.device.remote import RPCConfiguration
 from caqtus.experiment_control.device_manager_extension import DeviceManagerExtension
-from caqtus.gui.condetrol.extension import CondetrolExtension
+from caqtus.gui.condetrol._extension import CondetrolExtension
 from caqtus.session import ExperimentSessionMaker
 from caqtus.session.sql._serializer import SerializerProtocol, Serializer
-from caqtus.types.timelane.serializer import TimeLaneSerializer
+from caqtus.types.timelane._serializer import TimeLaneSerializer
 from ._protocol import CaqtusExtensionProtocol
 from ..device_extension import DeviceExtension
 from ..time_lane_extension import TimeLaneExtension
@@ -21,14 +21,35 @@ T = TypeVar("T", bound=ExperimentSessionMaker)
 
 @attrs.frozen
 class CaqtusExtension(CaqtusExtensionProtocol):
-    condetrol_extension: CondetrolExtension = attrs.field(factory=CondetrolExtension)
-    device_configurations_serializer: DeviceConfigJSONSerializer = attrs.field(
+    _condetrol_extension: CondetrolExtension = attrs.field(factory=CondetrolExtension)
+    _device_configurations_serializer: DeviceConfigJSONSerializer = attrs.field(
         factory=DeviceConfigJSONSerializer
     )
-    time_lane_serializer: TimeLaneSerializer = attrs.field(factory=TimeLaneSerializer)
-    device_manager_extension: DeviceManagerExtension = attrs.field(
+    _time_lane_serializer: TimeLaneSerializer = attrs.field(factory=TimeLaneSerializer)
+    _device_manager_extension: DeviceManagerExtension = attrs.field(
         factory=DeviceManagerExtension
     )
+
+    @property
+    def condetrol_extension(self) -> CondetrolExtension:
+        return self._condetrol_extension
+
+    @property
+    def device_configurations_serializer(self) -> DeviceConfigJSONSerializer:
+        return self._device_configurations_serializer
+
+    @property
+    def time_lane_serializer(self) -> TimeLaneSerializer:
+        return self._time_lane_serializer
+
+    @property
+    def device_manager_extension(self) -> DeviceManagerExtension:
+        return self._device_manager_extension
+
+    def __attrs_post_init__(self):
+        self.condetrol_extension.lane_extension.set_lane_serializer(
+            self.time_lane_serializer
+        )
 
     def register_device_extension(self, device_extension: DeviceExtension) -> None:
         self.condetrol_extension.device_extension.register_device_configuration_editor(
@@ -85,7 +106,7 @@ class CaqtusExtension(CaqtusExtensionProtocol):
         self,
         session_maker_type: Callable[Concatenate[SerializerProtocol, P], T],
         *args: P.args,
-        **kwargs: P.kwargs
+        **kwargs: P.kwargs,
     ) -> T:
         serializer = Serializer.default()
         serializer.device_configuration_serializer = (

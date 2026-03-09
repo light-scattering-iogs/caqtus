@@ -4,7 +4,7 @@ import abc
 from collections.abc import Mapping
 from typing import Protocol, Any, runtime_checkable
 
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from .compilation_contexts import SequenceContext, ShotContext
 
 
@@ -23,6 +23,10 @@ class DeviceCompiler(Protocol):
 
     The for each shot, the method :meth:`compile_shot_parameters` is called to pass to
     the device controller for this shot.
+
+    If it is necessary to generate a trigger for the device under consideration, the
+    device compiler should inherit from
+    :class:`caqtus.device.sequencer.compilation.TriggerableDeviceCompiler`.
     """
 
     @abc.abstractmethod
@@ -40,10 +44,10 @@ class DeviceCompiler(Protocol):
             DeviceNotUsedException: If the device is not used in the current sequence.
         """
 
-        ...
+        pass
 
     @abc.abstractmethod
-    def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
+    def compile_initialization_parameters(self) -> Mapping[str, Any]:
         """Compile the parameters to pass to the device constructor."""
 
         return {}
@@ -61,7 +65,7 @@ class DeviceCompiler(Protocol):
         return {}
 
 
-class DeviceNotUsedException(Exception):
+class DeviceNotUsedException(Exception):  # noqa: N818
     """Raised when a device is not used in a sequence."""
 
     pass

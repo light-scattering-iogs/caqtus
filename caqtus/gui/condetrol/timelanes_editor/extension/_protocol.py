@@ -1,8 +1,9 @@
-from typing import Protocol, Optional, Any, TypeVar
+from typing import Protocol, Optional, TypeVar
 
-from caqtus.session.shot import TimeLane
-from .. import TimeLaneDelegate
-from ..model import TimeLaneModel
+from caqtus.types.timelane import TimeLanes, TimeLane
+from caqtus.utils import serialization
+from .._delegate import TimeLaneDelegate
+from .._time_lane_model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)
 
@@ -28,7 +29,7 @@ class CondetrolLaneExtensionProtocol(Protocol):
 
         ...
 
-    def get_lane_model(self, lane: L, name: str) -> TimeLaneModel[L, Any]:
+    def get_lane_model(self, lane: L, name: str) -> TimeLaneModel[L]:
         """Return the model for the given lane.
 
         This method is called when a lane needs to be displayed.
@@ -39,7 +40,7 @@ class CondetrolLaneExtensionProtocol(Protocol):
 
     def get_lane_delegate(
         self,
-        lane: L,
+        lane: TimeLane,
         lane_name: str,
     ) -> Optional[TimeLaneDelegate]:
         """Return a delegate for the given lane.
@@ -48,5 +49,15 @@ class CondetrolLaneExtensionProtocol(Protocol):
         The returned delegate will be used to paint the lane cells in the view and to
         provide editing capabilities.
         """
+
+        ...
+
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JsonDict:
+        """Convert the time lanes to a serializable format."""
+
+        ...
+
+    def structure_time_lanes(self, content: serialization.JsonDict) -> TimeLanes:
+        """Convert the serializable format to time lanes."""
 
         ...

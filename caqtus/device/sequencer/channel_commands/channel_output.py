@@ -18,37 +18,45 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Mapping
-from typing import Optional, Any
+from typing import Any
 
 import attrs
+import numpy as np
 
-from caqtus.device.sequencer.instructions import SequencerInstruction
 from caqtus.shot_compilation import ShotContext
-from caqtus.types.units import Unit
+from caqtus.shot_compilation.lane_compilation import DimensionedSeries
 from caqtus.types.variable_name import DottedVariableName
+from ..timing import TimeStep
 
 
 @attrs.define
 class ChannelOutput(abc.ABC):
+    """Defines what should be outputted by a channel.
+
+    Subclasses of this class should have specific attributes that define how to
+    evaluate the series of values to output on the channel.
+
+    These attributes can contain other :class:`ChannelOutput` instances, which allows
+    to recursively combine transformations.
+    """
+
     @abc.abstractmethod
-    def evaluate(
+    def evaluate[
+        T: (np.number, np.bool_)
+    ](
         self,
-        required_time_step: int,
-        required_unit: Optional[Unit],
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ) -> DimensionedSeries[T]:
         """Evaluate the output of a channel with the required parameters.
 
         Args:
-            required_time_step: The time step of the sequencer that will use the
-            output, in ns.
-            required_unit: The unit in which the output should be expressed when
-            evaluated.
+            required_time_step: The time step in which to evaluate the output, in ns.
             prepend: The number of time steps to add at the beginning of the output.
             append: The number of time steps to add at the end of the output.
-            shot_context: The context of the shot in which the output is evaluated.
+            shot_context: Contains information about the current to evaluate the output.
         """
 
         raise NotImplementedError
@@ -56,7 +64,7 @@ class ChannelOutput(abc.ABC):
     @abc.abstractmethod
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         raise NotImplementedError

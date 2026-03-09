@@ -4,11 +4,16 @@ from collections.abc import Mapping
 from typing import Any, Never
 
 import anyio
+import anyio.lowlevel
 import anyio.to_process
 import pytest
 
 from caqtus.device import DeviceName
-from caqtus.experiment_control.sequence_runner.shots_manager import (
+from caqtus.experiment_control.sequence_execution._shot_primitives import (
+    DeviceParameters,
+    ShotParameters,
+)
+from caqtus.experiment_control.sequence_execution.shots_manager import (
     ShotRunnerProtocol,
     ShotCompilerProtocol,
     ShotManager,
@@ -16,7 +21,7 @@ from caqtus.experiment_control.sequence_runner.shots_manager import (
     ShotScheduler,
     ShotData,
 )
-from caqtus.shot_compilation import VariableNamespace
+from caqtus.types._parameter_namespace import VariableNamespace
 from caqtus.types.data import DataLabel, Data
 from caqtus.utils.logging import caqtus_logger
 
@@ -27,15 +32,21 @@ caqtus_logger.setLevel(logging.DEBUG)
 
 class ShotRunnerMock(ShotRunnerProtocol):
     async def run_shot(
-        self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
+        self, shot_parameters: DeviceParameters
     ) -> Mapping[DataLabel, Data]:
         return {DataLabel("data"): 0}
 
 
 class ShotCompilerMock(ShotCompilerProtocol):
-    def compile_shot(
-        self, shot_parameters: VariableNamespace
+    def compile_initialization_parameters(
+        self,
+    ) -> Mapping[DeviceName, Mapping[str, Any]]:
+        return {DeviceName("device"): {"param": 0}}
+
+    async def compile_shot(
+        self, shot_parameters: ShotParameters
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
+        await anyio.lowlevel.checkpoint()
         return {DeviceName("device"): {"param": 0}}, 1.0
 
 

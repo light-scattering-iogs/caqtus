@@ -1,14 +1,18 @@
 import contextlib
 import operator
-import pickle
-from collections.abc import Callable, AsyncGenerator, Iterator, AsyncIterator
-from typing import Any, TypeVar, TypeAlias, Literal, LiteralString
+from collections.abc import Callable, Iterator
+from typing import TypeAlias, Literal
+from typing import (
+    TypeVar,
+    LiteralString,
+    Any,
+)
 
 import anyio
 import attrs
-import eliot
 from anyio.streams.buffered import BufferedByteReceiveStream
 
+from caqtus.utils._tblib import ExceptionPickler
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from ._server import (
     CallRequest,
@@ -19,12 +23,32 @@ from ._server import (
     DeleteProxyRequest,
     TerminateRequest,
     RemoteError,
+    RemoteCallError,
 )
-from .proxy import Proxy
+from .._async_converter import AsyncConverter
+from .._proxy import Proxy
 
 T = TypeVar("T")
 
 ReturnedType: TypeAlias = Literal["copy", "proxy"]
+
+
+@contextlib.contextmanager
+def unwrap_remote_error_cm():
+    try:
+        yield
+    except RemoteCallError as remote:
+        if original := remote.__cause__:
+            # Here we need to break the circle of exceptions.
+            # Indeed, original.__context__ is now remote, and remote.__cause__ is
+            # original.
+            # If not handled, this could cause recursion issues when anything tries
+            # to handle the exception down the line.
+            # Maybe fine to no do this if we never try to pickle the exception latter?
+            remote.__cause__ = None
+            raise original from original.__cause__
+        else:
+            raise
 
 
 @attrs.frozen
@@ -38,16 +62,35 @@ class MethodCaller:
         return f"call method {self.method}"
 
 
-class RPCClient:
-    def __init__(self, host: str, port: int):
+class RPCClient(AsyncConverter):
+    """
+
+    Args:
+        host: The host to connect to.
+        port: The port to connect to.
+    """
+
+    def __init__(
+        self,
+        host: str,
+        port: int,
+    ):
         self._host = host
         self._port = port
 
         self._exit_stack = contextlib.AsyncExitStack()
 
+        self._request_id = 0
+        self._pickler = ExceptionPickler()
+
+    def _dump(self, obj: Any) -> bytes:
+        return self._pickler.dumps(obj)
+
+    def _load(self, bytes_data: bytes) -> Any:
+        return self._pickler.loads(bytes_data)
+
     async def __aenter__(self):
         await self._exit_stack.__aenter__()
-        self._exit_stack.enter_context(eliot.start_action(action_type="rpc client"))
         self._stream = await anyio.connect_tcp(self._host, self._port)
         self._receive_stream = BufferedByteReceiveStream(self._stream)
         await self._exit_stack.enter_async_context(self._stream)
@@ -55,38 +98,46 @@ class RPCClient:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
+        with anyio.CancelScope(shield=True):
+            await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
 
-    async def call(
+    async def call(self, fun: Callable[..., T], *args, **kwargs) -> T:
+        with unwrap_remote_error_cm():
+            return await self._call(fun, *args, **kwargs)
+
+    async def _call(
         self,
         fun: Callable[..., T],
         *args: Any,
         **kwargs: Any,
     ) -> T:
-        # We cancel this scope to be sure that the request always come to completion.
-        # The issue is if we make a request and an external exceptions cancel waiting for the answer, then we would not
-        # read the answer, and it would remain in the buffer.
+        request = self._build_request(fun, args, kwargs, "copy")
+        pickled = self._dump(request)
+        await send_with_size_prefix(self._stream, pickled)
+
+        # We shield the reception from cancellation, otherwise if a cancellation
+        # occurs between the send and the receive, the received answer will stay
+        # in the buffer as the next answer to read.
         with anyio.CancelScope(shield=True):
-            with eliot.start_action(action_type="call", function=str(fun)):
-                with eliot.start_action(action_type="send"):
-                    request = self._build_request(fun, args, kwargs, "copy")
-                    pickled = pickle.dumps(request)
-                    await send_with_size_prefix(self._stream, pickled)
-                with eliot.start_action(action_type="receive"):
-                    bytes_response = await receive_with_size_prefix(
-                        self._receive_stream
-                    )
-                    response = pickle.loads(bytes_response)
-                    return self._build_result(response)
+            bytes_response = await receive_with_size_prefix(self._receive_stream)
+        response = self._load(bytes_response)
+        _ensure_response_match_request(response, request)
+        return self._build_result(response)
 
     async def call_method(
+        self, obj: Any, method: LiteralString, *args: Any, **kwargs: Any
+    ) -> Any:
+        with unwrap_remote_error_cm():
+            return await self._call_method(obj, method, *args, **kwargs)
+
+    async def _call_method(
         self,
         obj: Any,
         method: LiteralString,
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        return await self.call(
+        return await self._call(
             MethodCaller(method=method),
             obj,
             *args,
@@ -95,7 +146,7 @@ class RPCClient:
 
     async def terminate(self):
         request = TerminateRequest()
-        pickled_request = pickle.dumps(request)
+        pickled_request = self._dump(request)
         await send_with_size_prefix(self._stream, pickled_request)
 
     @contextlib.asynccontextmanager
@@ -105,7 +156,7 @@ class RPCClient:
         method: LiteralString,
         *args: Any,
         **kwargs: Any,
-    ) -> Any:
+    ):
         caller = operator.methodcaller(method, *args, **kwargs)
         async with self.call_proxy_result(caller, obj) as result:
             yield result
@@ -115,63 +166,97 @@ class RPCClient:
         return await self.call(caller, obj)
 
     @contextlib.asynccontextmanager
-    async def call_proxy_result(
-        self, fun: Callable[..., T], *args: Any, **kwargs: Any
-    ) -> AsyncGenerator[Proxy[T], None]:
+    async def call_proxy_result(self, fun: Callable[..., T], *args: Any, **kwargs: Any):
         request = self._build_request(fun, args, kwargs, "proxy")
-        pickled_request = pickle.dumps(request)
-        with anyio.CancelScope(shield=True):
-            await send_with_size_prefix(self._stream, pickled_request)
-            pickled_response = await receive_with_size_prefix(self._receive_stream)
-            response = pickle.loads(pickled_response)
+        pickled_request = self._dump(request)
 
+        await send_with_size_prefix(self._stream, pickled_request)
+        with anyio.CancelScope(shield=True):
+            pickled_response = await receive_with_size_prefix(self._receive_stream)
+        response = self._load(pickled_response)
+        _ensure_response_match_request(response, request)
+
+        with unwrap_remote_error_cm():
             proxy = self._build_result(response)
-            assert isinstance(proxy, Proxy)
-            try:
-                yield proxy
-            finally:
-                await self._close_proxy(proxy)
+        assert isinstance(proxy, Proxy)
+        try:
+            yield proxy
+        finally:
+            await self._close_proxy(proxy)
+
+    @contextlib.asynccontextmanager
+    async def _call_proxy_result(
+        self, fun: Callable[..., T], *args: Any, **kwargs: Any
+    ):
+        request = self._build_request(fun, args, kwargs, "proxy")
+        pickled_request = self._dump(request)
+
+        await send_with_size_prefix(self._stream, pickled_request)
+        with anyio.CancelScope(shield=True):
+            pickled_response = await receive_with_size_prefix(self._receive_stream)
+        response = self._load(pickled_response)
+        _ensure_response_match_request(response, request)
+
+        proxy = self._build_result(response)
+        assert isinstance(proxy, Proxy)
+        try:
+            yield proxy
+        finally:
+            await self._close_proxy(proxy)
 
     @contextlib.asynccontextmanager
     async def async_context_manager(
         self, cm_proxy: Proxy[contextlib.AbstractContextManager[T]]
-    ) -> AsyncGenerator[Proxy[T], None]:
-        with anyio.CancelScope(shield=True):
-            stack = contextlib.AsyncExitStack()
+    ):
+        async with self.call_method_proxy_result(cm_proxy, "__enter__") as result_proxy:
+            exception = None
             try:
-                result_proxy = await stack.enter_async_context(
-                    self.call_method_proxy_result(cm_proxy, "__enter__")
-                )
-            except Exception:
-                raise
-            else:
-                try:
-                    async with stack:
-                        yield result_proxy
-                finally:
-                    await self.call_method(cm_proxy, "__exit__", None, None, None)
+                yield result_proxy
+            except BaseException as e:
+                exception = e
+        if exception is None:
+            exc_type = exc_value = exc_tb = None
+        else:
+            exc_type = type(exception)
+            exc_value = exception
+            exc_tb = exception.__traceback__
 
-    async def async_iterator(self, proxy: Proxy[Iterator[T]]) -> AsyncIterator[T]:
+        with anyio.CancelScope(shield=True):
+            ignore_exception = await self.call_method(
+                cm_proxy, "__exit__", exc_type, exc_value, exc_tb
+            )
+        if exception is not None and not ignore_exception:
+            raise exception
+
+    async def async_iterator(self, proxy: Proxy[Iterator[T]]):
         while True:
             try:
-                value = await self.call_method(proxy, "__next__")
-                yield value
+                value = await self._call_method(proxy, "__next__")
             except RemoteError as error:
                 if isinstance(error.__cause__, StopIteration):
                     break
                 else:
-                    raise
+                    with unwrap_remote_error_cm():
+                        raise
+            else:
+                yield value
 
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
-        request = DeleteProxyRequest(proxy)
-        pickled_request = pickle.dumps(request)
-        await send_with_size_prefix(self._stream, pickled_request)
+        request = DeleteProxyRequest(id_=self._request_id, proxy=proxy)
+        self._request_id += 1
+        pickled_request = self._dump(request)
+        with anyio.CancelScope(shield=True):
+            await send_with_size_prefix(self._stream, pickled_request)
 
-    @staticmethod
     def _build_request(
-        fun: Callable[..., T], args: Any, kwargs: Any, returned_value: ReturnedType
+        self,
+        fun: Callable[..., T],
+        args: Any,
+        kwargs: Any,
+        returned_value: ReturnedType,
     ) -> CallRequest:
-        return CallRequest(
+        request = CallRequest(
+            id_=self._request_id,
             function=fun,
             args=args,
             kwargs=kwargs,
@@ -181,6 +266,8 @@ class RPCClient:
                 else ReturnValue.PROXY
             ),
         )
+        self._request_id += 1
+        return request
 
     @staticmethod
     def _build_result(response: CallResponse) -> Any:
@@ -189,3 +276,12 @@ class RPCClient:
                 return result
             case CallResponseFailure(error=error):
                 raise error
+
+
+def _ensure_response_match_request(response, request: CallRequest):
+    if not isinstance(response, CallResponse):
+        raise ValueError(f"Unexpected response: {response}")
+    if not response.id_ == request.id_:
+        raise ValueError(
+            f"Unexpected response id: {response.id_} instead of {request.id_}"
+        )

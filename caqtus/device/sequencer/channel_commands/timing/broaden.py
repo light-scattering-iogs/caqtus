@@ -1,27 +1,27 @@
 from __future__ import annotations
 
 import functools
-from typing import Optional, Mapping, Any
+from typing import Mapping, Any, SupportsFloat
 
 import attrs
-import cattrs
 import numpy as np
 
+import caqtus.formatter as fmt
 from caqtus.shot_compilation import ShotContext
-from caqtus.shot_compilation.timing import duration_to_ticks
-from caqtus.types.expression import Expression
-from caqtus.types.units import Unit, Quantity
-from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization
-from .._structure_hook import structure_channel_output
-from ..channel_output import ChannelOutput
-from ...instructions import (
-    SequencerInstruction,
+from caqtus.shot_compilation.lane_compilation import DimensionedSeries
+from caqtus.shot_compilation.timed_instructions import (
+    TimedInstruction,
     Pattern,
     Concatenated,
     concatenate,
     Repeated,
 )
+from caqtus.types.expression import Expression
+from caqtus.types.recoverable_exceptions import InvalidTypeError, InvalidValueError
+from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
+from caqtus.types.variable_name import DottedVariableName
+from ..channel_output import ChannelOutput
+from ...timing import TimeStep, ns
 
 
 @attrs.define
@@ -50,60 +50,48 @@ class BroadenLeft(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
-        required_unit: Optional[Unit],
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ):
         instruction = self.input_.evaluate(
-            required_time_step, required_unit, prepend, append, shot_context
+            required_time_step, prepend, append, shot_context
         )
-        if not instruction.dtype == np.bool_:
-            raise TypeError(
-                f"Can't broaden {self.input_} because it is not a digital instruction"
-            )
-        width = self.width.evaluate(shot_context.get_variables())
+        if instruction.values.dtype != np.bool_:
+            raise InvalidTypeError("Can't broaden non boolean instruction")
+        width = self.width.evaluate(shot_context.get_parameters())
         if not isinstance(width, Quantity):
-            raise TypeError(
-                f"Can't broaden {self.input_} by {width} because it is not "
-                f"a quantity"
+            raise InvalidTypeError(
+                f"Width {fmt.expression(self.width)} does not evaluate to a quantity, "
+                f"got {fmt.type_(type(width))}"
             )
         if not width.is_compatible_with(Unit("s")):
-            raise TypeError(
-                f"Can't broaden {self.input_} by {width} because it is not "
-                f"a time quantity"
+            raise InvalidDimensionalityError(
+                f"Width {fmt.expression(self.width)} does not have units of time, got "
+                f"{fmt.unit(width.units)}"
             )
         seconds = width.to(Unit("s")).magnitude
         if seconds < 0:
-            raise ValueError(
-                f"Can't broaden {self.input_} by {width} because it is negative"
+            raise InvalidValueError(
+                f"Width {fmt.expression(self.width)} evaluates to a negative value"
             )
         ticks = duration_to_ticks(seconds, required_time_step)
 
-        broadened, bleed = _broaden_left(instruction, ticks)
+        broadened, bleed = _broaden_left(instruction.values, ticks)
 
-        return broadened
+        return DimensionedSeries(broadened, instruction.units)
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         return self.input_.evaluate_max_advance_and_delay(time_step, variables)
 
 
-broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(
-    BroadenLeft,
-    serialization.converters["json"],
-    input_=cattrs.override(struct_hook=structure_channel_output),
-)
-
-serialization.register_structure_hook(BroadenLeft, broaden_left_structure_hook)
-
-
 @functools.singledispatch
-def _broaden_left(instruction, width: int) -> tuple[SequencerInstruction[bool], int]:
+def _broaden_left(instruction, width: int) -> tuple[TimedInstruction[np.bool_], int]:
     """Broaden the instruction to the left by n steps.
 
     Returns:
@@ -172,3 +160,19 @@ def _expand_repeated_left(repeated: Repeated, width: int):
     else:
         instr = (kept + overwritten) * (repeated.repetitions - 1) + expanded
         return instr, bleed
+
+
+def duration_to_ticks(duration: SupportsFloat, time_step: TimeStep) -> int:
+    """Returns the nearest number of ticks for a given duration and time step.
+
+    Args:
+        duration: The duration in seconds.
+        time_step: The time step in nanoseconds.
+    """
+
+    dt = time_step * ns
+
+    rounded = round(float(duration) / float(dt))
+    if not isinstance(rounded, int):
+        raise TypeError(f"Expected integer number of ticks, got {rounded}")
+    return rounded

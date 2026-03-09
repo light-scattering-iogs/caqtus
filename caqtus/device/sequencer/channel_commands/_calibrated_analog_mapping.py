@@ -2,21 +2,29 @@ from __future__ import annotations
 
 import abc
 import functools
-from collections.abc import Iterable
+import math
+from collections.abc import Iterable, Sequence
 from typing import Optional, Mapping, Any
 
 import attrs
-import cattrs
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext
-from caqtus.types.parameter import add_unit, magnitude_in_unit
-from caqtus.types.units import Unit
+from caqtus.shot_compilation.lane_compilation import DimensionedSeries
+from caqtus.shot_compilation.timed_instructions import (
+    TimedInstruction,
+    Pattern,
+    Concatenated,
+    concatenate,
+    Repeated,
+    Ramp,
+    create_ramp,
+)
+from caqtus.types.units import Unit, InvalidDimensionalityError, Quantity, dimensionless
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization
-from ._structure_hook import structure_channel_output
+from caqtus.utils.itertools import pairwise
 from .channel_output import ChannelOutput
-from ..instructions import SequencerInstruction
+from ..timing import TimeStep
 
 
 class TimeIndependentMapping(ChannelOutput, abc.ABC):
@@ -38,14 +46,14 @@ class TimeIndependentMapping(ChannelOutput, abc.ABC):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         advances_and_delays = [
             input_.evaluate_max_advance_and_delay(time_step, variables)
             for input_ in self.inputs()
         ]
-        advances, delays = zip(*advances_and_delays)
+        advances, delays = zip(*advances_and_delays, strict=True)
         return max(advances), max(delays)
 
 
@@ -100,37 +108,6 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
     def output_values(self) -> tuple[float, ...]:
         return tuple(x[1] for x in self.measured_data_points)
 
-    def interpolate(self, input_: np.ndarray) -> np.ndarray:
-        """Interpolates the input to obtain the output.
-
-        Args:
-            input_: The input values to interpolate.
-            It is assumed to be expressed in input_units.
-
-        Returns:
-            The interpolated output values, expressed in output_units.
-            The values are linearly interpolated between the measured data points.
-            If the input is outside the range of the measured data points, the output
-            will be clipped to the range of the measured data points.
-        """
-
-        input_values = np.array(self.input_values)
-        output_values = np.array(self.output_values)
-        interp = np.interp(
-            x=input_,
-            xp=input_values,
-            fp=output_values,
-        )
-        # Warning !!!
-        # We want to make absolutely sure that the output is within the range of data
-        # points that are measured, to avoid values that could be dangerous for the
-        # hardware.
-        # To ensure this, we clip the output to the range of the measured data points.
-        min_ = np.min(output_values)
-        max_ = np.max(output_values)
-        clipped = np.clip(interp, min_, max_)
-        return clipped
-
     def inputs(self) -> tuple[ChannelOutput]:
         return (self.input_,)
 
@@ -162,49 +139,228 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
         new_data_points.insert(index, (input_, output))
         self.measured_data_points = tuple(new_data_points)
 
-    def __str__(self):
-        return f"{self.input_} [{self.input_units}] -> [{self.output_units}]"
-
     def evaluate(
         self,
-        required_time_step: int,
-        required_unit: Optional[Unit],
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ) -> DimensionedSeries[np.float64]:
         input_values = self.input_.evaluate(
             required_time_step,
-            self.input_units,
             prepend,
             append,
             shot_context,
         )
-        output_values = input_values.apply(self.interpolate)
-        if required_unit != self.output_units:
-            output_values = output_values.apply(
-                functools.partial(
-                    _convert_units,
-                    input_unit=self.output_units,
-                    output_unit=required_unit,
-                )
+
+        return apply_piecewise_linear_calibration(
+            input_values,
+            self.measured_data_points,
+            Unit(self.input_units) if self.input_units is not None else dimensionless,
+            Unit(self.output_units) if self.output_units is not None else dimensionless,
+        )
+
+
+def apply_piecewise_linear_calibration(
+    values: DimensionedSeries[np.floating],
+    calibration_points: Sequence[tuple[float, float]],
+    input_point_units: Unit,
+    output_point_units: Unit,
+) -> DimensionedSeries[np.float64]:
+    """Apply a piecewise linear calibration to a sequencer instruction.
+
+    Args:
+        values: The instruction to apply the calibration to.
+        calibration_points: A sequence of (input, output) tuples that define the
+            points to interpolate between.
+            The input must be expressed in input_point_units.
+            The output must be expressed in output_point_units.
+            The points will be sorted by input value before applying the interpolation.
+        input_point_units: The units of the input points of the calibration.
+        output_point_units: The units of the output points of the calibration.
+
+    Returns:
+        A new series of values where each point is obtained by linearly interpolating
+        between calibration points.
+        This new series of values is expressed in base units corresponding to
+        output_point_units.
+
+    Raises:
+        InvalidDimensionalityError: If the units of the input points of the calibration
+            are not compatible with the units of the values to map.
+    """
+
+    input_points = Quantity(
+        [x for x, _ in calibration_points], input_point_units
+    ).to_base_units()
+    output_points = Quantity(
+        [y for _, y in calibration_points], output_point_units
+    ).to_base_units()
+
+    if input_points.units != values.units:
+        raise InvalidDimensionalityError(
+            f"Can't apply calibration with units {input_points.units} to "
+            f"instruction with units {values.units}"
+        )
+
+    calibration = DimensionlessCalibration(
+        list(zip(input_points.magnitude, output_points.magnitude, strict=True))
+    )
+    return DimensionedSeries(
+        calibration.apply(values.values.as_type(np.dtype(np.float64))),
+        output_points.units,
+    )
+
+
+class DimensionlessCalibration:
+    def __init__(self, calibration_points: Sequence[tuple[float, float]]):
+        if len(calibration_points) < 2:
+            raise ValueError("Calibration must have at least 2 data points")
+        input_points = [x for x, _ in calibration_points]
+        output_points = [y for _, y in calibration_points]
+        sorted_points = sorted(
+            zip(input_points, output_points, strict=True), key=lambda x: x[0]
+        )
+        sorted_input_points = [x for x, _ in sorted_points]
+        sorted_output_points = [y for _, y in sorted_points]
+        # We add new flat segments before and after the calibration points to ensure
+        # that the calibration is defined for all input values.
+        self._input_points = np.array([-np.inf] + sorted_input_points + [+np.inf])
+        assert np.all(np.diff(self._input_points) >= 0)
+        self._output_points = np.array(
+            [sorted_output_points[0]]
+            + sorted_output_points
+            + [sorted_output_points[-1]]
+        )
+
+    @property
+    def input_points(self):
+        return self._input_points[1:-1]
+
+    @property
+    def output_points(self):
+        return self._output_points[1:-1]
+
+    def __repr__(self):
+        points = ", ".join(
+            f"({x}, {y})"
+            for x, y in zip(self.input_points, self.output_points, strict=True)
+        )
+        return f"Calibration({points})"
+
+    def apply(
+        self, instruction: TimedInstruction[np.float64]
+    ) -> TimedInstruction[np.float64]:
+        # We raise errors in pathological cases when the calibration is not
+        # well-defined.
+        with np.errstate(
+            # Avoids ambiguous situation with 2 points at the same x coordinate, because
+            # we don't know what to output for a vertical line.
+            divide="raise",
+            # Avoid situations with 2 x points very close that cause and infinite slope.
+            over="raise",
+            # Avoids situations with 2 x points are equal and 2 y points are equal,
+            # which cause a 0/0 division.
+            invalid="raise",
+        ):
+            np.diff(self._output_points) / np.diff(
+                self._input_points
+            )  # pyright: ignore[reportUnusedExpression]
+        return self._apply_without_checks(instruction)
+
+    @functools.singledispatchmethod
+    def _apply_without_checks(
+        self, instruction: TimedInstruction[np.float64]
+    ) -> TimedInstruction[np.float64]:
+        raise NotImplementedError(
+            f"Don't know how to apply calibration to instruction of type "
+            f"{type(instruction)}"
+        )
+
+    @_apply_without_checks.register
+    def _apply_calibration_pattern(self, pattern: Pattern) -> Pattern[np.float64]:
+        result = self._apply_explicit(pattern.array)
+        return Pattern.create_without_copy(result)
+
+    def _apply_explicit(self, value):
+        result = np.interp(
+            x=value,
+            xp=self._input_points,
+            fp=self._output_points,
+        )
+        return result
+
+    @_apply_without_checks.register
+    def _apply_calibration_concatenation(
+        self, concatenation: Concatenated
+    ) -> TimedInstruction[np.float64]:
+        return concatenate(
+            *(
+                self._apply_without_checks(instruction)
+                for instruction in concatenation.instructions
             )
-        return output_values
+        )
+
+    @_apply_without_checks.register
+    def _apply_calibration_repetition(
+        self, repetition: Repeated
+    ) -> TimedInstruction[np.float64]:
+        return repetition.repetitions * self._apply_without_checks(
+            repetition.instruction
+        )
+
+    @_apply_without_checks.register
+    def _apply_calibration_ramp(self, r: Ramp) -> TimedInstruction[np.float64]:
+        # Ramp maps t -> x(t) = a + (b - a) * t / length
+        # Calibration maps x -> y in a piecewise linear way
+        # We want to map t -> y(t)
+        length = len(r)
+        a = r.start
+        b = r.stop
+
+        if a == b:
+            return Pattern([self._apply_explicit(a)]) * length
+
+        def map_x_segment_to_t(x_0, x_1) -> tuple[float, float]:
+            if b > a:
+                return length * (x_0 - a) / (b - a), length * (x_1 - a) / (b - a)
+            else:
+                return length * (x_1 - a) / (b - a), length * (x_0 - a) / (b - a)
+
+        # Find the segments in time over which the output y(t) is linear.
+        time_segments = []
+        for x0, x1 in pairwise(self._input_points):
+            time_segments.append(map_x_segment_to_t(x0, x1))
+
+        if b < a:
+            time_segments.reverse()
+
+        sections = []
+        for lower, higher in time_segments:
+            lower = min(max(lower, 0), length)
+            higher = min(max(higher, 0), length)
+            i_min = math.ceil(lower)
+            i_max = math.ceil(higher)
+            sections.append((i_min, i_max))
+
+        sub_ramps = []
+        for i_min, i_max in sections:
+            if i_max == i_min:
+                continue
+            in_0 = evaluate_ramp(r, i_min)
+            y_0 = self._apply_explicit(in_0)
+            if i_max == i_min + 1:
+                sub_ramps.append(Pattern([y_0]))
+            else:
+                in_1 = evaluate_ramp(r, i_max - 1)
+                y_1 = self._apply_explicit(in_1)
+                length = i_max - i_min
+                sub_ramp = create_ramp(
+                    y_0, y_0 + length * (y_1 - y_0) / (length - 1), i_max - i_min
+                )
+                sub_ramps.append(sub_ramp)
+        return concatenate(*sub_ramps)
 
 
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
-structure_hook = cattrs.gen.make_dict_structure_fn(
-    CalibratedAnalogMapping,
-    serialization.converters["json"],
-    input_=cattrs.override(struct_hook=structure_channel_output),
-)
-
-serialization.register_structure_hook(CalibratedAnalogMapping, structure_hook)
-
-
-def _convert_units(
-    array: np.ndarray, input_unit: Optional[str], output_unit: Optional[str]
-) -> np.ndarray:
-    if input_unit == output_unit:
-        return array
-    return magnitude_in_unit(add_unit(array, input_unit), output_unit)  # type: ignore
+def evaluate_ramp(r: Ramp, t) -> float:
+    return r.start + (r.stop - r.start) * t / len(r)

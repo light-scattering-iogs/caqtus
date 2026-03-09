@@ -1,4 +1,5 @@
-from caqtus.gui.condetrol.timelanes_editor import TimeLaneModel, AnalogTimeLaneModel
+from caqtus.gui.condetrol.timelanes_editor import TimeLaneModel
+from caqtus.gui.condetrol.timelanes_editor.analog_lane_editor import AnalogTimeLaneModel
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import AnalogTimeLane
 from caqtus.utils import serialization
@@ -10,13 +11,13 @@ def create_analog_lane(number_steps: int) -> AnalogTimeLane:
     return AnalogTimeLane([Expression("...")] * number_steps)
 
 
-def create_lane_model(lane, name: str) -> TimeLaneModel:
-    model = AnalogTimeLaneModel(name)
+def create_lane_model(lane, lane_name: str) -> TimeLaneModel:
+    model = AnalogTimeLaneModel(lane_name)
     model.set_lane(lane)
     return model
 
 
-def create_lane_delegate(lane, name: str) -> None:
+def create_lane_delegate(lane, lane_name: str) -> None:
     return None
 
 

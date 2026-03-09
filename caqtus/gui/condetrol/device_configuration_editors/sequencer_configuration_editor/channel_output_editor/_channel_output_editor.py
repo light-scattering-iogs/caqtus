@@ -1,21 +1,32 @@
 import functools
 from typing import Optional
 
-from NodeGraphQt import NodeGraph, BaseNode, NodesPaletteWidget
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6 import QtCore
+from PySide6.QtCore import QRect
+from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from caqtus.device.sequencer.channel_commands import (
+    CalibratedAnalogMapping,
     ChannelOutput,
     Constant,
     DeviceTrigger,
     LaneValues,
-    CalibratedAnalogMapping,
+)
+from caqtus.device.sequencer.channel_commands.logic import (
+    AndGate,
+    NotGate,
+    OrGate,
+    XorGate,
 )
 from caqtus.device.sequencer.channel_commands.timing import Advance, BroadenLeft
+from caqtus.gui._common.NodeGraphQt import BaseNode, NodeGraph, NodesPaletteWidget
+
 from ._analog_mapping_node import CalibratedAnalogMappingNode
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
 from ._lane_node import LaneNode
+from ._not_gate_node import AndGateNode, NotGateNode, OrGateNode, XorGateNode
 from ._output_node import OutputNode
 from ._timing_nodes import AdvanceNode, BroadenLeftNode
 
@@ -24,36 +35,80 @@ class ChannelOutputEditor(QWidget):
     def __init__(self, channel_output: ChannelOutput, parent: Optional[QWidget] = None):
         super().__init__(parent)
 
-        self.graph = NodeGraph(self)
-        self.graph.register_node(ConstantNode)
-        self.graph.register_node(DeviceTriggerNode)
-        self.graph.register_node(LaneNode)
-        self.graph.register_node(AdvanceNode)
-        self.graph.register_node(CalibratedAnalogMappingNode)
-        self.graph.register_node(BroadenLeftNode)
-        self.nodes_tree = NodesPaletteWidget(node_graph=self.graph, parent=self)
-        self.nodes_tree.set_category_label("caqtus.sequencer_node.source", "Source")
-        self.nodes_tree.set_category_label("caqtus.sequencer_node.timing", "Timing")
-        self.nodes_tree.set_category_label("caqtus.sequencer_node.mapping", "Mapping")
+        self.graph = ChannelOutputGraph(channel_output)
+
+        self.nodes_palette = NodesPaletteWidget(node_graph=self.graph, parent=self)
+        self.nodes_palette.set_category_label("caqtus.sequencer_node.source", "Source")
+        self.nodes_palette.set_category_label("caqtus.sequencer_node.timing", "Timing")
+        self.nodes_palette.set_category_label(
+            "caqtus.sequencer_node.mapping", "Mapping"
+        )
+        self.nodes_palette.set_category_label("caqtus.sequencer_node.logic", "Logic")
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.graph.widget, 1)
-        layout.addWidget(self.nodes_tree, 0)
+        layout.addWidget(self.nodes_palette, 0)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
-        self.output_node = OutputNode()
-        self.graph.add_node(
-            self.output_node, selected=False, pos=[0, 0], push_undo=False
-        )
-
-        node = self.build_node(channel_output)
-        node.outputs()["out"].connect_to(self.output_node.inputs()["in"])
-        self.graph.auto_layout_nodes()
-        self.graph.set_pipe_collision(True)
-        self.graph.clear_undo_stack()
+        self.graph.resize()
 
     def get_output(self) -> ChannelOutput:
+        return self.graph.get_output()
+
+
+class ChannelOutputGraph(NodeGraph):
+    def __init__(self, channel_output: Optional[ChannelOutput]):
+        super().__init__()
+        self.register_node(ConstantNode)
+        self.register_node(DeviceTriggerNode)
+        self.register_node(LaneNode)
+        self.register_node(AdvanceNode)
+        self.register_node(CalibratedAnalogMappingNode)
+        self.register_node(BroadenLeftNode)
+        self.register_node(NotGateNode)
+        self.register_node(AndGateNode)
+        self.register_node(OrGateNode)
+        self.register_node(XorGateNode)
+
+        self.output_node = OutputNode("out")
+        self.add_node(self.output_node, selected=False, pos=[0, 0], push_undo=False)
+
+        if channel_output:
+            node = self.build_node(channel_output)
+            node.outputs()["out"].connect_to(self.output_node.inputs()["in"])
+        self.auto_layout_nodes(down_stream=False)
+        self.set_pipe_collision(True)
+        self.clear_undo_stack()
+        self.zoom_to_nodes()
+
+        self.auto_layout_action = QAction(self.widget)
+        self.auto_layout_action.setShortcut(QKeySequence("Ctrl+L"))
+        self.auto_layout_action.triggered.connect(self._on_refit)
+        self.widget.addAction(self.auto_layout_action)
+
+    def _on_refit(self):
+        self.auto_layout_nodes()
+        self.zoom_to_nodes()
+
+    def zoom_to_nodes(self) -> QRect:
+        """Zoom the graph view to fit all nodes."""
+
+        return zoom_to_nodes(self)
+
+    def resize(self) -> None:
+        """Resize the graph view to fit all nodes and zoom in."""
+
+        self.fit_to_selection()
+        self.set_zoom(2)
+
+    def get_output(self) -> ChannelOutput:
+        """Return the channel output represented by the graph.
+
+        Raises:
+            InvalidNodeConfigurationError: If the graph is not correctly configured.
+        """
+
         connected_node = self.output_node.connected_node()
         if connected_node is None:
             raise MissingInputError("No node is connected to the output node")
@@ -68,7 +123,7 @@ class ChannelOutputEditor(QWidget):
     def build_constant(self, constant: Constant) -> ConstantNode:
         node = ConstantNode()
         node.set_value(constant.value)
-        self.graph.add_node(node, selected=False, push_undo=False)
+        self.add_node(node, selected=False, push_undo=False)
         return node
 
     @build_node.register
@@ -77,7 +132,7 @@ class ChannelOutputEditor(QWidget):
     ) -> DeviceTriggerNode:
         node = DeviceTriggerNode()
         node.set_device_name(device_trigger.device_name)
-        self.graph.add_node(node, selected=False, push_undo=False)
+        self.add_node(node, selected=False, push_undo=False)
         if device_trigger.default is not None:
             default_node = self.build_node(device_trigger.default)
             default_node.outputs()["out"].connect_to(node.default_port)
@@ -87,7 +142,7 @@ class ChannelOutputEditor(QWidget):
     def build_lane_node(self, lane_values: LaneValues) -> LaneNode:
         node = LaneNode()
         node.set_lane_name(lane_values.lane)
-        self.graph.add_node(node, selected=False, push_undo=False)
+        self.add_node(node, selected=False, push_undo=False)
         if lane_values.default is not None:
             default_node = self.build_node(lane_values.default)
             default_node.outputs()["out"].connect_to(node.default_port)
@@ -97,7 +152,7 @@ class ChannelOutputEditor(QWidget):
     def build_advance_node(self, advance: Advance) -> AdvanceNode:
         node = AdvanceNode()
         node.set_advance(advance.advance)
-        self.graph.add_node(node, selected=False, push_undo=False)
+        self.add_node(node, selected=False, push_undo=False)
         input_node = self.build_node(advance.input_)
         input_node.outputs()["out"].connect_to(node.input_port)
         return node
@@ -109,7 +164,7 @@ class ChannelOutputEditor(QWidget):
         node = CalibratedAnalogMappingNode()
         node.set_units(analog_mapping.input_units, analog_mapping.output_units)
         node.set_data_points(analog_mapping.measured_data_points)
-        self.graph.add_node(node, selected=False, push_undo=False)
+        self.add_node(node, selected=False, push_undo=False)
         input_node = self.build_node(analog_mapping.input_)
         input_node.outputs()["out"].connect_to(node.input_port)
         return node
@@ -118,9 +173,47 @@ class ChannelOutputEditor(QWidget):
     def build_broaden_left_node(self, broaden_left: BroadenLeft) -> BroadenLeftNode:
         node = BroadenLeftNode()
         node.set_width(broaden_left.width)
-        self.graph.add_node(node, selected=False, push_undo=False)
+        self.add_node(node, selected=False, push_undo=False)
         input_node = self.build_node(broaden_left.input_)
         input_node.outputs()["out"].connect_to(node.input_port)
+        return node
+
+    @build_node.register
+    def build_not_gate_node(self, not_gate: NotGate) -> NotGateNode:
+        node = NotGateNode()
+        self.add_node(node, selected=False, push_undo=False)
+        input_node = self.build_node(not_gate.input_)
+        input_node.outputs()["out"].connect_to(node.input_port)
+        return node
+
+    @build_node.register
+    def build_and_gate_node(self, and_gate: AndGate) -> AndGateNode:
+        node = AndGateNode()
+        self.add_node(node, selected=False, push_undo=False)
+        input_node_1 = self.build_node(and_gate.input_1)
+        input_node_2 = self.build_node(and_gate.input_2)
+        input_node_1.outputs()["out"].connect_to(node.input_port_1)
+        input_node_2.outputs()["out"].connect_to(node.input_port_2)
+        return node
+
+    @build_node.register
+    def build_or_gate_node(self, or_gate: OrGate) -> OrGateNode:
+        node = OrGateNode()
+        self.add_node(node, selected=False, push_undo=False)
+        input_node_1 = self.build_node(or_gate.input_1)
+        input_node_2 = self.build_node(or_gate.input_2)
+        input_node_1.outputs()["out"].connect_to(node.input_port_1)
+        input_node_2.outputs()["out"].connect_to(node.input_port_2)
+        return node
+
+    @build_node.register
+    def build_xor_gate_node(self, xor_gate: XorGate) -> XorGateNode:
+        node = XorGateNode()
+        self.add_node(node, selected=False, push_undo=False)
+        input_node_1 = self.build_node(xor_gate.input_1)
+        input_node_2 = self.build_node(xor_gate.input_2)
+        input_node_1.outputs()["out"].connect_to(node.input_port_1)
+        input_node_2.outputs()["out"].connect_to(node.input_port_2)
         return node
 
 
@@ -200,9 +293,87 @@ def construct_broaden_left(node: BroadenLeftNode) -> BroadenLeft:
     return BroadenLeft(width=width, input_=input_)
 
 
+@construct_output.register
+def construct_not_gate(node: NotGateNode) -> NotGate:
+    input_node = node.get_input_node()
+    if input_node is None:
+        raise MissingInputError(f"Not gate node {node.name()} must have an input node")
+    else:
+        input_ = construct_output(input_node)
+    return NotGate(input_=input_)
+
+
+@construct_output.register
+def construct_and_gate(node: AndGateNode) -> AndGate:
+    input_node_1, input_node_2 = node.get_input_nodes()
+    if input_node_1 is None:
+        raise MissingInputError(
+            f"And gate node {node.name()} must have an input node 1"
+        )
+    else:
+        input_1 = construct_output(input_node_1)
+
+    if input_node_2 is None:
+        raise MissingInputError(
+            f"And gate node {node.name()} must have an input node 2"
+        )
+    else:
+        input_2 = construct_output(input_node_2)
+
+    return AndGate(input_1=input_1, input_2=input_2)
+
+
+@construct_output.register
+def construct_or_gate(node: OrGateNode) -> OrGate:
+    input_node_1, input_node_2 = node.get_input_nodes()
+    if input_node_1 is None:
+        raise MissingInputError(f"Or gate node {node.name()} must have an input node 1")
+    else:
+        input_1 = construct_output(input_node_1)
+
+    if input_node_2 is None:
+        raise MissingInputError(f"Or gate node {node.name()} must have an input node 2")
+    else:
+        input_2 = construct_output(input_node_2)
+
+    return OrGate(input_1=input_1, input_2=input_2)
+
+
+@construct_output.register
+def construct_xor_gate(node: XorGateNode) -> XorGate:
+    input_node_1, input_node_2 = node.get_input_nodes()
+    if input_node_1 is None:
+        raise MissingInputError(
+            f"Xor gate node {node.name()} must have an input node 1"
+        )
+    else:
+        input_1 = construct_output(input_node_1)
+
+    if input_node_2 is None:
+        raise MissingInputError(
+            f"Xor gate node {node.name()} must have an input node 2"
+        )
+    else:
+        input_2 = construct_output(input_node_2)
+
+    return XorGate(input_1=input_1, input_2=input_2)
+
+
 class InvalidNodeConfigurationError(ValueError):
     pass
 
 
 class MissingInputError(InvalidNodeConfigurationError):
     pass
+
+
+def zoom_to_nodes(graph: NodeGraph) -> QRect:
+    all_nodes = graph.all_nodes()
+
+    group = graph.scene().createItemGroup([node.view for node in all_nodes])
+    rect = group.boundingRect().adjusted(-10, -10, 10, 10)
+    graph.scene().destroyItemGroup(group)
+
+    graph.viewer().setSceneRect(rect)
+    graph.viewer().fitInView(rect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+    return rect  # type: ignore[reportReturnType]

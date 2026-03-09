@@ -3,25 +3,27 @@ from __future__ import annotations
 from typing import Optional, Mapping, Any
 
 import attrs
-from cattrs.gen import make_dict_structure_fn, override
 
+import caqtus.formatter as fmt
 from caqtus.shot_compilation import ShotContext
-from caqtus.types.expression import Expression
+from caqtus.shot_compilation.lane_compilation import (
+    compile_digital_lane,
+    compile_analog_lane,
+    DimensionedSeries,
+)
+from caqtus.shot_compilation.timed_instructions import Pattern
+from caqtus.shot_compilation.timing import Time
+from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane, AnalogTimeLane
-from caqtus.types.units import Unit
+from caqtus.types.units import dimensionless
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization, add_exc_note
-from ._compile_digital_lane import compile_digital_lane
-from ._constant import Constant
-from .compile_analog_lane import compile_analog_lane
 from ..channel_output import ChannelOutput
-from ...instructions import SequencerInstruction, Pattern
+from ...timing import TimeStep, ns
 
 
 @attrs.define
 class LaneValues(ChannelOutput):
     """Indicates that the output should be the values taken by a given lane.
-
 
     Attributes:
         lane: The name of the lane from which to take the values.
@@ -48,12 +50,11 @@ class LaneValues(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
-        required_unit: Optional[Unit],
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ) -> DimensionedSeries:
         """Evaluate the output of a channel as the values of a lane.
 
         This function will look in the shot time lanes to find the lane referenced by
@@ -71,76 +72,47 @@ class LaneValues(ChannelOutput):
             if self.default is not None:
                 return self.default.evaluate(
                     required_time_step,
-                    required_unit,
                     prepend,
                     append,
                     shot_context,
                 )
             else:
-                raise ValueError(
-                    f"Could not find lane <{lane_name}> when evaluating output "
-                    f"<{self}>"
-                )
+                raise InvalidValueError(
+                    f"Could not find {fmt.lane(lane_name)}"
+                ) from None
         if isinstance(lane, DigitalTimeLane):
-            if required_unit is not None:
-                raise ValueError(
-                    f"Cannot evaluate digital lane <{lane_name}> with unit "
-                    f"{required_unit:~}"
-                )
-            with add_exc_note(f"When evaluating digital lane <{lane_name}>"):
-                lane_values = compile_digital_lane(
-                    lane, required_time_step, shot_context
-                )
+            lane_values = compile_digital_lane(
+                lane,
+                shot_context.get_step_start_times(),
+                Time(required_time_step * ns),
+                shot_context.get_parameters(),
+            )
+            result = DimensionedSeries(lane_values, units=dimensionless)
         elif isinstance(lane, AnalogTimeLane):
-            with add_exc_note(f"When evaluating analog lane <{lane_name}>"):
-                lane_values = compile_analog_lane(
-                    lane, required_unit, required_time_step, shot_context
-                )
+            result = compile_analog_lane(
+                lane,
+                shot_context.get_parameters(),
+                shot_context.get_step_start_times(),
+                Time(required_time_step * ns),
+            )
         else:
-            raise TypeError(f"Cannot evaluate values of lane with type {type(lane)}")
-        prepend_pattern = prepend * Pattern([lane_values[0]])
-        append_pattern = append * Pattern([lane_values[-1]])
-        return prepend_pattern + lane_values + append_pattern
+            raise InvalidTypeError(
+                f"Don't know how to compile lane {fmt.lane(lane_name)} with type "
+                f"{fmt.type_(type(lane))}"
+            )
+
+        prepend_value = result.values[0]
+        prepend_pattern = prepend * Pattern([prepend_value])
+        append_value = result.values[-1]
+        append_pattern = append * Pattern([append_value])
+        return DimensionedSeries(
+            values=prepend_pattern + result.values + append_pattern,
+            units=result.units,
+        )
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         return 0, 0
-
-
-def structure_lane_default(default_data, _):
-    # We need this custom structure hook, because in the past the default value of a
-    # LaneValues was a Constant and not any ChannelOutput.
-    # In that case, the type of the default value was not serialized, so we need to
-    # deal with this special case.
-    if default_data is None:
-        return None
-    elif isinstance(default_data, str):
-        default_expression = serialization.structure(default_data, Expression)
-        return Constant(value=default_expression)
-    elif "type" in default_data:
-        return serialization.structure(default_data, ChannelOutput)
-    else:
-        return serialization.structure(default_data, Constant)
-
-
-structure_lane_values = make_dict_structure_fn(
-    LaneValues,
-    serialization.converters["json"],
-    default=override(struct_hook=structure_lane_default),
-)
-
-
-def unstructure_lane_values(lane_values):
-    return {
-        "lane": lane_values.lane,
-        "default": serialization.unstructure(
-            lane_values.default, Optional[ChannelOutput]
-        ),
-    }
-
-
-serialization.register_structure_hook(LaneValues, structure_lane_values)
-serialization.register_unstructure_hook(LaneValues, unstructure_lane_values)

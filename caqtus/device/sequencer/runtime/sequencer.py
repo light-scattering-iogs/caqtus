@@ -1,112 +1,92 @@
-from abc import ABC, abstractmethod
-from typing import ClassVar
+from __future__ import annotations
+
+import abc
+import contextlib
+import decimal
+from abc import ABC
+from typing import ClassVar, Protocol
 
 import attrs
 
 from caqtus.device.runtime import Device
-from ..instructions import SequencerInstruction
+from caqtus.shot_compilation.timed_instructions import TimedInstruction
+from ..timing import TimeStep
 from ..trigger import Trigger, is_trigger
 
 
 @attrs.define(slots=False)
 class Sequencer(Device, ABC):
-    """Base class for all sequencers.
+    """Abstract base class for a sequencer device.
 
-    Fields:
+    This function defines the methods that a sequencer device must implement to be
+    compatible with the caqtus framework.
+
+    Attributes:
         time_step: The time step of the sequencer in nanoseconds.
+            This value cannot be changed after the sequencer has been created.
         trigger: Indicates how the sequence is started and how it is clocked.
+            This value cannot be changed after the sequencer has been created.
     """
 
     channel_number: ClassVar[int]
 
-    time_step: int = attrs.field(
-        on_setattr=attrs.setters.frozen, converter=int, validator=attrs.validators.ge(1)
-    )
-    trigger: Trigger = attrs.field(
-        on_setattr=attrs.setters.frozen,
-    )
+    time_step: TimeStep = attrs.field(on_setattr=attrs.setters.frozen)
+    trigger: Trigger = attrs.field(on_setattr=attrs.setters.frozen)
 
-    _sequence_programmed: bool = attrs.field(default=False, init=False)
-    _sequence_started: bool = attrs.field(default=False, init=False)
+    @time_step.validator  # type: ignore
+    def _validate_time_step(self, _, value):
+        if not isinstance(value, decimal.Decimal):
+            raise TypeError("Time step must be a decimal number")
+        if value <= 0:
+            raise ValueError("Time step must be greater than zero")
 
     @trigger.validator  # type: ignore
     def _validate_trigger(self, _, value):
         if not is_trigger(value):
             raise ValueError(f"Invalid trigger {value}")
 
-    @abstractmethod
-    def update_parameters(
-        self, sequence: SequencerInstruction, *args, **kwargs
-    ) -> None:
-        """Update the parameters of the sequencer.
+    @abc.abstractmethod
+    def program_sequence(self, sequence: TimedInstruction) -> ProgrammedSequence:
+        """Program the sequence into the device.
+
+        This method just writes the sequence to the device. It does not start the
+        sequence.
 
         Args:
             sequence: The sequence to be programmed into the sequencer.
-        """
-
-        if sequence.width != self.channel_number:
-            raise ValueError(
-                f"Invalid number of channels, expected {self.channel_number} but got"
-                f" {sequence.width}."
-            )
-
-    def _set_sequence_programmed(self) -> None:
-        """To call after successful update_parameters."""
-
-        self._sequence_started = False
-        self._sequence_programmed = True
-
-    @abstractmethod
-    def start_sequence(self) -> None:
-        """Start the sequence.
-
-        To be subclassed by the specific sequencer implementation.
-        The base class implementation checks if the sequence has been programmed and
-        sets _sequence_started to True.
-
-        Raises:
-            SequenceNotConfiguredError: If the sequence has not been configured yet.
-        """
-
-        if not self._sequence_programmed:
-            raise SequenceNotConfiguredError("The sequence has not been set yet.")
-
-        self._sequence_started = True
-        self._sequence_programmed = False
-
-    @abstractmethod
-    def has_sequence_finished(self) -> bool:
-        """Check if the sequence has finished.
 
         Returns:
-            True if the sequence has finished, False if it is still running.
-        Raises:
-            SequenceNotStartedError: If start_sequence has not been called yet.
+            An object that can be used to start the sequence.
         """
 
-        if not self._sequence_started:
-            raise SequenceNotStartedError("The sequence has not been started yet.")
-        return True
-
-    def wait_sequence_finished(self) -> None:
-        while not self.has_sequence_finished():
-            pass
-
-    def get_trigger(self) -> Trigger:
-        return self.trigger
+        raise NotImplementedError
 
 
-class SequencerProgrammingError(RuntimeError):
-    pass
+class SequenceStatus(Protocol):
+    """A protocol that defines the interface to check the status of a sequence."""
+
+    @abc.abstractmethod
+    def is_finished(self) -> bool:
+        raise NotImplementedError
 
 
-class SequenceNotStartedError(SequencerProgrammingError):
-    """Raised when the sequence as been configured, but has not been started yet."""
+class ProgrammedSequence(Protocol):
+    """A protocol that defines the interface to start a sequence."""
 
-    pass
+    @abc.abstractmethod
+    def run(self) -> contextlib.AbstractContextManager[SequenceStatus]:
+        """Start the sequence.
 
+        Returns:
+            A context manager that can be used to start a sequence.
 
-class SequenceNotConfiguredError(SequencerProgrammingError):
-    """Raised when the sequence has not been configured yet."""
+            The sequence must be started when the context manager is entered.
+            The context manager must yield a status object that can be used to check
+            the progress of the sequence.
 
-    pass
+            When the context manager is exited, the sequence should be stopped.
+            The context manager must not be exited without error if the sequence is
+            still running.
+        """
+
+        raise NotImplementedError

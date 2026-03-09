@@ -6,21 +6,30 @@ import logging
 import threading
 from collections.abc import Mapping
 from contextlib import AbstractContextManager
-from typing import Optional
+from typing import Optional, assert_type
 
 import anyio
+import anyio.from_thread
+import trio
+import trio.abc
 
 from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.session import ExperimentSessionMaker, PureSequencePath
-from caqtus.types.iteration import StepsConfiguration
+from caqtus.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    ExperimentSession,
+    State,
+    PathNotFoundError,
+    PathIsNotSequenceError,
+    TracebackSummary,
+    InvalidStateTransitionError,
+)
 from caqtus.types.parameter import ParameterNamespace
+from caqtus.utils._trio_instrumentation import LogBlockingTaskInstrument
+from caqtus.utils.result import is_failure_type, Success
+from .._logger import logger
 from ..device_manager_extension import DeviceManagerExtensionProtocol
-from ..sequence_runner import SequenceManager, ShotRetryConfig
-from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
-from ...types.recoverable_exceptions import is_recoverable
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from ..sequence_execution import ShotRetryConfig, run_sequence
 
 
 class ExperimentManager(abc.ABC):
@@ -85,7 +94,7 @@ class Procedure(AbstractContextManager, abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def exception(self) -> Optional[Exception]:
+    def exception(self) -> Optional[BaseException]:
         """Retrieve the exception that occurred while running the last sequence.
 
         If a sequence is currently running, this method will block until the sequence
@@ -191,10 +200,20 @@ class LocalExperimentManager(ExperimentManager):
     ):
         self._procedure_running = threading.Lock()
         self._session_maker = session_maker
-        self._shot_retry_config = shot_retry_config
+        self._shot_retry_config = shot_retry_config or ShotRetryConfig()
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self._active_procedure: Optional[BoundProcedure] = None
         self._device_manager_extension = device_manager_extension
+
+        # We crash the sequences that might have been running previously.
+        # This ensures that only one experiment manager is active at a time.
+        # It also cleans up previous sequences that might still be running if the
+        # previous experiment manager was not properly closed.
+        self._crash_running_sequences()
+
+    def _crash_running_sequences(self) -> None:
+        with self._session_maker() as session:
+            _crash_running_sequences(session)
 
     def __enter__(self):
         self._thread_pool.__enter__()
@@ -253,8 +272,9 @@ class BoundProcedure(Procedure):
         self._sequences: list[PureSequencePath] = []
         self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
         self._shot_retry_config = shot_retry_config
-        self._must_interrupt = threading.Event()
         self._device_manager_extension = device_manager_extension
+        self._cancel_scope: Optional[anyio.CancelScope] = None
+        self._portal: Optional[anyio.from_thread.BlockingPortal] = None
 
     def __repr__(self):
         return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
@@ -278,7 +298,7 @@ class BoundProcedure(Procedure):
     def sequences(self) -> list[PureSequencePath]:
         return self._sequences.copy()
 
-    def exception(self) -> Optional[Exception]:
+    def exception(self) -> Optional[BaseException]:
         if self._sequence_future is None:
             return None
         return self._sequence_future.exception()
@@ -302,7 +322,6 @@ class BoundProcedure(Procedure):
             raise exception
         if self.is_running_sequence():
             raise SequenceAlreadyRunningError("A sequence is already running.")
-        self._must_interrupt.clear()
         self._sequence_future = self._thread_pool.submit(
             self._run_sequence,
             sequence,
@@ -314,11 +333,14 @@ class BoundProcedure(Procedure):
     def interrupt_sequence(self) -> bool:
         if not self.is_running_sequence():
             return False
-        self._must_interrupt.set()
+        assert self._cancel_scope is not None
+        assert self._portal is not None
+        self._portal.call(self._cancel_scope.cancel)
         return True
 
     def wait_until_sequence_finished(self):
         if self.is_running_sequence():
+            assert self._sequence_future is not None
             self._sequence_future.result()
 
     def _run_sequence(
@@ -329,58 +351,31 @@ class BoundProcedure(Procedure):
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
+
+        async def run():
+            with anyio.CancelScope() as self._cancel_scope:
+                async with anyio.from_thread.BlockingPortal() as self._portal:
+                    await run_sequence(
+                        sequence=sequence,
+                        session_maker=self._session_maker,
+                        shot_retry_config=self._shot_retry_config,
+                        global_parameters=global_parameters,
+                        device_configurations=device_configurations,
+                        device_manager_extension=self._device_manager_extension,
+                    )
+
         try:
-            with self._session_maker() as session:
-                iteration = session.sequences.get_iteration_configuration(sequence)
-
-            async def run():
-                sequence_manager = SequenceManager(
-                    sequence=sequence,
-                    session_maker=self._session_maker,
-                    interruption_event=self._must_interrupt,
-                    shot_retry_config=self._shot_retry_config,
-                    global_parameters=global_parameters,
-                    device_configurations=device_configurations,
-                    device_manager_extension=self._device_manager_extension,
-                )
-                if not isinstance(iteration, StepsConfiguration):
-                    raise NotImplementedError(
-                        "Only steps iteration is supported at the moment."
-                    )
-                initial_context = evaluate_initial_context(
-                    sequence_manager.sequence_parameters
-                )
-                async with sequence_manager.run_sequence() as shot_scheduler:
-                    await execute_steps(
-                        iteration.steps, initial_context, shot_scheduler
-                    )
-
-            anyio.run(run, backend="trio")
-        except BaseExceptionGroup as e:
-            recoverable, non_recoverable = e.split(is_recoverable)
-            if recoverable:
-                logger.warning(
-                    "A recoverable error occurred while running the sequence.",
-                    exc_info=recoverable,
-                )
-            if non_recoverable:
-                logger.error(
-                    "A non-recoverable error occurred while running the sequence.",
-                    exc_info=non_recoverable,
-                )
-            raise
+            # TODO: Would like to use anyio.run() here, but I'm not sure how to pass
+            #  the instruments to the underlying trio.run() call.
+            #  anyio.run(run, backend_options={"instruments"=instruments}) does not
+            #  seem to work.
+            trio.run(
+                run,
+                instruments=get_instruments(),
+            )
         except Exception as e:
-            if is_recoverable(e):
-                logger.warning(
-                    "A recoverable error occurred while running the sequence.",
-                    exc_info=e,
-                )
-            else:
-                logger.error(
-                    "A non-recoverable error occurred while running the sequence.",
-                    exc_info=e,
-                )
-            raise
+            logger.error(f"Error while running sequence {sequence}.", exc_info=e)
+        self._cancel_scope = None
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
@@ -393,6 +388,26 @@ class BoundProcedure(Procedure):
             self._running.release()
 
 
+def _crash_running_sequences(session: ExperimentSession) -> None:
+    tb_summary = TracebackSummary.from_exception(
+        RuntimeError(
+            "Sequence was already running when the experiment manager started."
+        )
+    )
+    for path in session.sequences.get_sequences_in_state(State.RUNNING):
+        result = session.sequences.set_crashed(path, tb_summary, stop_time="now")
+        assert not is_failure_type(result, PathNotFoundError)
+        assert not is_failure_type(result, PathIsNotSequenceError)
+        assert not is_failure_type(result, InvalidStateTransitionError)
+        assert_type(result, Success[None])
+    for path in session.sequences.get_sequences_in_state(State.PREPARING):
+        result = session.sequences.set_crashed(path, tb_summary, stop_time="now")
+        assert not is_failure_type(result, PathNotFoundError)
+        assert not is_failure_type(result, PathIsNotSequenceError)
+        assert not is_failure_type(result, InvalidStateTransitionError)
+        assert_type(result, Success[None])
+
+
 class SequenceAlreadyRunningError(RuntimeError):
     pass
 
@@ -401,5 +416,32 @@ class ProcedureNotActiveError(RuntimeError):
     pass
 
 
-class ErrorWhileRunningSequence(RuntimeError):
-    pass
+def get_instruments() -> list[trio.abc.Instrument]:
+    blocking_task_duration_warning = get_blocking_task_duration_warning()
+
+    if not logger.isEnabledFor(logging.WARNING):
+        return []
+
+    if blocking_task_duration_warning is not None:
+        log_blocking_task_instrument = LogBlockingTaskInstrument(
+            duration=blocking_task_duration_warning, logger=logger
+        )
+        return [log_blocking_task_instrument]
+    return []
+
+
+def get_blocking_task_duration_warning() -> float | None:
+    import os
+
+    duration_warning = os.environ.get("CAQTUS_BLOCKING_TASK_DURATION_WARNING", None)
+    if duration_warning is None:
+        return None
+    try:
+        return float(duration_warning)
+    except ValueError:
+        logger.error(
+            "Invalid value for CAQTUS_BLOCKING_TASK_DURATION_WARNING: %s.\n"
+            "Expected a float.",
+            duration_warning,
+        )
+        return None

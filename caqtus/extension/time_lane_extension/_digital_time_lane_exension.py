@@ -1,24 +1,25 @@
+from caqtus.types.timelane import DigitalTimeLane
+from caqtus.utils import serialization
+from caqtus.utils.serialization import JSON
 from ._extension import TimeLaneExtension
-from ...gui.condetrol.timelanes_editor import TimeLaneModel, DigitalTimeLaneModel
-from ...gui.condetrol.timelanes_editor.digital_lane_delegate import (
+from ...gui.condetrol.timelanes_editor import TimeLaneModel
+from ...gui.condetrol.timelanes_editor.digital_lane_editor import (
+    DigitalTimeLaneModel,
     DigitalTimeLaneDelegate,
 )
-from ...types.timelane import DigitalTimeLane
-from ...utils import serialization
-from ...utils.serialization import JSON
 
 
 def create_digital_lane(number_steps: int) -> DigitalTimeLane:
     return DigitalTimeLane([False] * number_steps)
 
 
-def create_lane_model(lane, name: str) -> TimeLaneModel:
-    model = DigitalTimeLaneModel(name)
+def create_lane_model(lane, lane_name: str) -> TimeLaneModel:
+    model = DigitalTimeLaneModel(lane_name)
     model.set_lane(lane)
     return model
 
 
-def create_lane_delegate(lane, name: str) -> DigitalTimeLaneDelegate:
+def create_lane_delegate(lane, lane_name: str) -> DigitalTimeLaneDelegate:
     return DigitalTimeLaneDelegate()
 
 

@@ -1,13 +1,9 @@
 import contextlib
-from typing import TypeVar
 
 from PySide6.QtWidgets import QWidget
 
-T = TypeVar("T", bound=QWidget)
 
-
-@contextlib.contextmanager
-def temporary_widget(widget: T) -> T:
+def temporary_widget[T: QWidget](widget: T) -> contextlib.AbstractContextManager[T]:
     """Context manager that deletes a widget when the context is exited.
 
     When a widget is created for a lifetime shorter than the lifetime of its parent,
@@ -24,7 +20,11 @@ def temporary_widget(widget: T) -> T:
                     widget.do_something()
     """
 
-    try:
-        yield widget
-    finally:
-        widget.deleteLater()
+    @contextlib.contextmanager
+    def wrapper():
+        try:
+            yield widget
+        finally:
+            widget.deleteLater()
+
+    return wrapper()

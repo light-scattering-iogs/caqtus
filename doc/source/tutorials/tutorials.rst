@@ -2,7 +2,10 @@ Tutorials
 =========
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
-    start_condetrol
-    sequencer
+    installation
+    notebooks/data analysis
+    new-device
+    new-sequencer
+    new-camera

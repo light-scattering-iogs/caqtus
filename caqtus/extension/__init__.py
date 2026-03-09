@@ -1,13 +1,13 @@
-"""This module contains components to configure the components to use for a given
-experiment.
+"""Allows to create user-defined components to use on an experiment."""
 
-The class :class:`DeviceExtension` can be used to specify a new type of device.
-
-The class :class:`TimeLaneExtension` can be used to implement a new type time lane.
-"""
-
-from ._experiment import Experiment
+from ._experiment import Experiment, upgrade_database, stamp_database
 from .device_extension import DeviceExtension
 from .time_lane_extension import TimeLaneExtension
 
-__all__ = ["DeviceExtension", "TimeLaneExtension", "Experiment"]
+__all__ = [
+    "Experiment",
+    "DeviceExtension",
+    "TimeLaneExtension",
+    "upgrade_database",
+    "stamp_database",
+]

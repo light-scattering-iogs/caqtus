@@ -1,9 +1,12 @@
 import string
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from caqtus.types.expression import Expression
     from caqtus.types.variable_name import DottedVariableName
+    from caqtus.device import DeviceName
+    from caqtus.types.units import UnitLike
 
 
 class CaqtusFormatter(string.Formatter):
@@ -76,12 +79,37 @@ def fmt_param_assign(name: "DottedVariableName", expression: "Expression") -> st
     return f"parameter assignment '{name}' = '{expression}'"
 
 
-def fmt_type(value: type | str) -> str:
-    return f"type '{value.__name__}'"
+def device(name: "DeviceName") -> str:
+    return f"device '{name}'"
 
 
 def device_param(name: str, value: str) -> str:
     return f"device parameter '{name}' = '{value}'"
+
+
+def expression(expression) -> str:
+    return f"expression '{expression}'"
+
+
+def unit(value: "UnitLike") -> str:
+    return f"unit '{value}'"
+
+
+def shot_param(name: "DottedVariableName") -> str:
+    return f"shot parameter '{name}'"
+
+
+def type_(value: type | str) -> str:
+    if isinstance(value, type):
+        return f"type '{value.__name__}'"
+    elif isinstance(value, str):
+        return f"type '{value}'"
+    else:
+        raise ValueError("Invalid type value")
+
+
+def lane(lane_name: str) -> str:
+    return f"lane '{lane_name}'"
 
 
 def fmt(s: str, *args, **kwargs):

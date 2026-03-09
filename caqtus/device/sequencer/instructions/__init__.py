@@ -1,28 +1,43 @@
-"""This module contains the implementation of timed instructions."""
+import warnings
 
-from ._instructions import (
-    SequencerInstruction,
+from caqtus.shot_compilation.timed_instructions import (
+    TimedInstruction,
     Concatenated,
     Repeated,
     Pattern,
-    join,
+    convert_to_change_arrays,
+    with_name,
+    stack_instructions,
+    merge_instructions,
     concatenate,
+    create_ramp,
+    Ramp,
+    plot_instruction,
+    to_graph,
 )
-from ._ramp import ramp, Ramp
-from ._stack import stack_instructions
-from ._to_time_array import convert_to_change_arrays
-from ._with_name import with_name
+
+warnings.warn(
+    "caqtus.device.sequencer.instructions is deprecated, use "
+    "caqtus.shot_compilation.timed_instructions instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+SequencerInstruction = TimedInstruction
 
 __all__ = [
     "SequencerInstruction",
+    "TimedInstruction",
     "Concatenated",
     "Repeated",
     "Pattern",
     "convert_to_change_arrays",
     "with_name",
     "stack_instructions",
-    "join",
+    "merge_instructions",
     "concatenate",
-    "ramp",
+    "create_ramp",
     "Ramp",
+    "plot_instruction",
+    "to_graph",
 ]

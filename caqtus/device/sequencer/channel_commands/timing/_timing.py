@@ -1,21 +1,22 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Optional, Any
+from typing import Any
 
 import attrs
-import cattrs
-import numpy as np
 
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
-from caqtus.types.parameter import magnitude_in_unit
-from caqtus.types.units import Unit
+from caqtus.types.recoverable_exceptions import InvalidValueError
+from caqtus.types.units import (
+    is_scalar_quantity,
+    DimensionalityError,
+    InvalidDimensionalityError,
+    NANOSECOND,
+)
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization
-from .._structure_hook import structure_channel_output
 from ..channel_output import ChannelOutput
-from ...instructions import SequencerInstruction
+from ...timing import TimeStep
 
 
 @attrs.define
@@ -34,16 +35,15 @@ class Advance(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
-        required_unit: Optional[Unit],
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
-        evaluated_advance = _evaluate_expression_in_unit(
-            self.advance, Unit("ns"), shot_context.get_variables()
+    ):
+        evaluated_advance = _evaluate_in_nanoseconds(
+            self.advance, shot_context.get_parameters()
         )
-        number_ticks_to_advance = round(evaluated_advance / required_time_step)
+        number_ticks_to_advance = round(evaluated_advance / float(required_time_step))
         if number_ticks_to_advance < 0:
             raise ValueError(
                 f"Cannot advance by a negative number of time steps "
@@ -56,7 +56,6 @@ class Advance(ChannelOutput):
             )
         return self.input_.evaluate(
             required_time_step,
-            required_unit,
             prepend - number_ticks_to_advance,
             append + number_ticks_to_advance,
             shot_context,
@@ -64,27 +63,17 @@ class Advance(ChannelOutput):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
-        advance = _evaluate_expression_in_unit(self.advance, Unit("ns"), variables)
+        advance = _evaluate_in_nanoseconds(self.advance, variables)
         if advance < 0:
-            raise ValueError(f"Advance must be a positive number.")
-        advance_ticks = round(advance / time_step)
+            raise InvalidValueError("Advance must be a positive number.")
+        advance_ticks = round(advance / float(time_step))
         input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
             time_step, variables
         )
         return advance_ticks + input_advance, input_delay
-
-
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
-advance_structure_hook = cattrs.gen.make_dict_structure_fn(
-    Advance,
-    serialization.converters["json"],
-    input_=cattrs.override(struct_hook=structure_channel_output),
-)
-
-serialization.register_structure_hook(Advance, advance_structure_hook)
 
 
 @attrs.define
@@ -103,24 +92,27 @@ class Delay(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
-        required_unit: Optional[Unit],
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
-        evaluated_delay = _evaluate_expression_in_unit(
-            self.delay, Unit("ns"), shot_context.get_variables()
+    ):
+        evaluated_delay = _evaluate_in_nanoseconds(
+            self.delay, shot_context.get_parameters()
         )
-        number_ticks_to_delay = round(evaluated_delay / required_time_step)
+        number_ticks_to_delay = round(evaluated_delay / float(required_time_step))
         if number_ticks_to_delay < 0:
             raise ValueError(
                 f"Cannot delay by a negative number of time steps "
                 f"({number_ticks_to_delay})"
             )
+        if number_ticks_to_delay > append:
+            raise ValueError(
+                f"Cannot delay by {number_ticks_to_delay} time steps when only "
+                f"{append} are available"
+            )
         return self.input_.evaluate(
             required_time_step,
-            required_unit,
             prepend + number_ticks_to_delay,
             append - number_ticks_to_delay,
             shot_context,
@@ -128,34 +120,29 @@ class Delay(ChannelOutput):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
-        delay = _evaluate_expression_in_unit(self.delay, Unit("ns"), variables)
+        delay = _evaluate_in_nanoseconds(self.delay, variables)
         if delay < 0:
-            raise ValueError(f"Delay must be a positive number.")
-        delay_ticks = round(delay / time_step)
+            raise ValueError("Delay must be a positive number.")
+        delay_ticks = round(delay / float(time_step))
         input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
             time_step, variables
         )
         return input_advance, delay_ticks + input_delay
 
 
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
-delay_structure_hook = cattrs.gen.make_dict_structure_fn(
-    Delay,
-    serialization.converters["json"],
-    input_=cattrs.override(struct_hook=structure_channel_output),
-)
-
-serialization.register_structure_hook(Delay, delay_structure_hook)
-
-
-def _evaluate_expression_in_unit(
-    expression: Expression,
-    required_unit: Optional[Unit],
-    variables: Mapping[DottedVariableName, Any],
-) -> np.floating:
-    value = expression.evaluate(variables)
-    magnitude = magnitude_in_unit(value, required_unit)
-    return magnitude
+def _evaluate_in_nanoseconds(
+    expression: Expression, variables: Mapping[DottedVariableName, Any]
+) -> float:
+    evaluated = expression.evaluate(variables)
+    if not is_scalar_quantity(evaluated):
+        raise InvalidValueError("Advance must be a scalar quantity.")
+    try:
+        evaluated_advance = evaluated.to_unit(NANOSECOND).magnitude
+    except DimensionalityError as e:
+        raise InvalidDimensionalityError(
+            f"Advance must be expressed in seconds, not {evaluated.units}"
+        ) from e
+    return evaluated_advance

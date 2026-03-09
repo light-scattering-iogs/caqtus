@@ -1,4 +1,4 @@
-from NodeGraphQt import BaseNode
+from caqtus.gui._common.NodeGraphQt import BaseNode
 from caqtus.types.expression import Expression
 
 

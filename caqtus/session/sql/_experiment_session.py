@@ -6,13 +6,13 @@ import sqlalchemy.orm
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils import serialization
 from ._device_configuration_collection import SQLDeviceConfigurationCollection
+from ._parameters_table import SQLParameters
 from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
 )
 from ._serializer import SerializerProtocol
-from .parameters_table import SQLParameters
-from ..experiment_session import (
+from .._experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
 )
@@ -24,7 +24,7 @@ class Active:
     session_context: contextlib.AbstractContextManager[sqlalchemy.orm.Session]
 
     def __str__(self):
-        return f"active"
+        return "active"
 
 
 @attrs.frozen
@@ -32,13 +32,13 @@ class Inactive:
     session_context: contextlib.AbstractContextManager[sqlalchemy.orm.Session]
 
     def __str__(self):
-        return f"inactive"
+        return "inactive"
 
 
 @attrs.frozen
 class Closed:
     def __str__(self):
-        return f"closed"
+        return "closed"
 
 
 SessionState = Inactive | Active | Closed
@@ -48,7 +48,7 @@ class SQLExperimentSession(ExperimentSession):
     """Used to store experiment data in a SQL database.
 
     This class implements the :class:`ExperimentSession` interface and the documentation
-    of the related methods can be found in the :class:`ExperimentSession`documentation.
+    of the related methods can be found in the :class:`ExperimentSession` documentation.
     """
 
     def __init__(
@@ -66,13 +66,19 @@ class SQLExperimentSession(ExperimentSession):
 
         super().__init__(*args, **kwargs)
         self._state = Inactive(session_context=session_context)
-        self.paths = SQLPathHierarchy(parent_session=self)
-        self.sequences = SQLSequenceCollection(
-            parent_session=self, serializer=serializer
-        )
+        self._paths = SQLPathHierarchy(parent_session=self)
+        self._sequences = SQLSequenceCollection(self, serializer)
         self.default_device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self, serializer=serializer
         )
+
+    @property
+    def paths(self) -> SQLPathHierarchy:
+        return self._paths
+
+    @property
+    def sequences(self) -> SQLSequenceCollection:
+        return self._sequences
 
     def get_global_parameters(self) -> ParameterNamespace:
         return _get_global_parameters(self._get_sql_session())

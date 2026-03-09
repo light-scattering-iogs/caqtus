@@ -1,4 +1,9 @@
+import contextlib
+import copyreg
+from collections.abc import AsyncGenerator
+
 import anyio
+import anyio.lowlevel
 import anyio.to_thread
 import numpy as np
 import pytest
@@ -8,6 +13,12 @@ from caqtus.device.camera import Camera, CameraProxy
 from caqtus.device.remote import DeviceProxy
 from caqtus.device.remote.rpc import RPCServer, RPCClient
 from caqtus.types.image import Image
+
+
+class CustomError(Exception):
+    def __init__(self, msg: str, error_code: int):
+        super().__init__(msg)
+        self.error_code = error_code
 
 
 class DeviceMock(Device):
@@ -21,9 +32,22 @@ class DeviceMock(Device):
     def will_raise(self):
         raise ValueError("test")
 
+    def raise_custom_exception(self):
+        raise CustomError("test", 42)
+
+    def raise_exception_with_cause(self):
+        try:
+            raise ValueError("test")
+        except ValueError as e:
+            raise RuntimeError("test") from e
+
     def __exit__(self, exc_type, exc_value, traceback):
-        print("exit")
-        return False
+        if exc_type is not None:
+            print(f"exit with exception {exc_value}")
+            return
+        else:
+            print("exit")
+            return False
 
 
 @pytest.fixture()
@@ -31,32 +55,90 @@ def anyio_backend():
     return "trio"
 
 
-async def run_server(scope: anyio.CancelScope, task_status):
-    with RPCServer(12345) as server, scope:
-        task_status.started()
-        await server.run_async()
+@contextlib.asynccontextmanager
+async def run_server() -> AsyncGenerator[RPCServer, None]:
+    with RPCServer(12345) as server, anyio.CancelScope() as scope:
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(server.run_async)
+            try:
+                yield server
+            finally:
+                scope.cancel()
 
 
 async def test_0(anyio_backend, capsys):
-    server_scope = anyio.CancelScope()
-
-    async def run_client():
+    async with run_server() as server:
         async with (
-            RPCClient("localhost", 12345) as client,
+            RPCClient("localhost", server.port) as client,
             DeviceProxy(client, DeviceMock, "test") as device,
         ):
             assert await device.get_attribute("name") == "test"
             with pytest.raises(ValueError):
                 await device.call_method("will_raise")
-        server_scope.cancel()
-
-    async with anyio.create_task_group() as tg:
-        await tg.start(run_server, server_scope)
-        tg.start_soon(run_client)
 
     captured = capsys.readouterr()
 
     assert captured.out == "enter\nexit\n"
+
+
+async def test_exception_inside_sequence_reraised(anyio_backend, capsys):
+    async with run_server() as server:
+        with pytest.raises(ValueError):
+            async with (
+                RPCClient("localhost", server.port) as client,
+                DeviceProxy(client, DeviceMock, "test"),
+            ):
+                raise ValueError("test")
+
+    captured = capsys.readouterr()
+
+    assert captured.out == "enter\nexit with exception test\n"
+
+
+async def test_cancelled_exception_handled(anyio_backend, capsys):
+    async with run_server() as server:
+        with anyio.CancelScope() as scope:
+            async with (
+                RPCClient("localhost", server.port) as client,
+                DeviceProxy(client, DeviceMock, "test"),
+            ):
+                scope.cancel()
+                await anyio.lowlevel.checkpoint()
+        assert scope.cancel_called
+
+
+def pickle_custom_exception(obj):
+    return CustomError, (obj.args, obj.error_code)
+
+
+async def test_custom_exception(anyio_backend):
+    copyreg.pickle(CustomError, pickle_custom_exception)
+    async with run_server() as server:
+        async with (
+            RPCClient("localhost", server.port) as client,
+            DeviceProxy(client, DeviceMock, "test") as device,
+        ):
+            try:
+                await device.call_method("raise_custom_exception")
+            except CustomError as e:
+                assert e.error_code == 42
+            else:
+                raise AssertionError("CustomException not raised")
+
+
+async def test_exception_with_cause(anyio_backend):
+    async with run_server() as server:
+        async with (
+            RPCClient("localhost", server.port) as client,
+            DeviceProxy(client, DeviceMock, "test") as device,
+        ):
+            try:
+                await device.call_method("raise_exception_with_cause")
+            except RuntimeError as e:
+                assert isinstance(e.__cause__, ValueError)
+                assert str(e.__cause__) == "test"
+            else:
+                raise AssertionError("RuntimeError not raised")
 
 
 class MockCamera(Camera):
@@ -72,6 +154,14 @@ class MockCamera(Camera):
     def update_parameters(self, timeout: float, *args, **kwargs) -> None:
         pass
 
+    @contextlib.contextmanager
+    def acquire(self, exposures: list[float]):
+        self._start_acquisition(exposures)
+        try:
+            yield (self._read_image(exposure) for exposure in exposures)
+        finally:
+            self._stop_acquisition()
+
     def _start_acquisition(self, exposures: list[float]) -> None:
         print("start acquisition")
 
@@ -83,24 +173,15 @@ class MockCamera(Camera):
 
 
 async def test_camera(anyio_backend, capsys):
-    server_scope = anyio.CancelScope()
-
     images = []
-
-    async def run_client():
+    async with run_server() as server:
         async with (
-            RPCClient("localhost", 12345) as client,
+            RPCClient("localhost", server.port) as client,
             CameraProxy(client, MockCamera, "test") as camera,
         ):
             async with camera.acquire([1, 2]) as image_stream:
                 async for image in image_stream:
                     images.append(image)
-
-        server_scope.cancel()
-
-    async with anyio.create_task_group() as tg:
-        await tg.start(run_server, server_scope)
-        tg.start_soon(run_client)
 
     captured = capsys.readouterr()
 

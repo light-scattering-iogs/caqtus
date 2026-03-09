@@ -1,3 +1,5 @@
-from .expression import Expression, EXPRESSION_REGEX, BUILTINS
+"""Defines user expressions that can be evaluated later."""
 
-__all__ = ["Expression", "EXPRESSION_REGEX", "BUILTINS"]
+from ._expression import Expression, expression_builtins, DEFAULT_BUILTINS
+
+__all__ = ["Expression", "expression_builtins", "DEFAULT_BUILTINS"]

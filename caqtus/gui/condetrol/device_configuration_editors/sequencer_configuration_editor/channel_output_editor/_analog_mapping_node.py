@@ -1,15 +1,21 @@
 from collections.abc import Sequence
 from typing import Optional
 
-from NodeGraphQt import BaseNode, NodeBaseWidget
+import numpy as np
 from PySide6.QtCharts import (
     QChart,
     QLineSeries,
-    QVXYModelMapper,
     QChartView,
     QValueAxis,
 )
-from PySide6.QtCore import QAbstractTableModel, Qt, QSortFilterProxyModel, QModelIndex
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QPersistentModelIndex,
+    Qt,
+    QSortFilterProxyModel,
+    QModelIndex,
+    QPointF,
+)
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QWidget,
@@ -19,8 +25,14 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
 )
 
-from caqtus.gui.condetrol.icons import get_icon
+from caqtus.device.output_transform._output_mapping import interpolate
+from caqtus.gui._common.NodeGraphQt import BaseNode, NodeBaseWidget
+from caqtus.gui.condetrol._icons import get_icon
+from caqtus.types.units import Unit, Quantity, dimensionless
+from caqtus.utils.itertools import pairwise
 from .calibrated_analog_mapping_widget_ui import Ui_CalibratedAnalogMappingWigdet
+
+_QMODEL_INDEX = QModelIndex()
 
 
 class CalibratedAnalogMappingNode(BaseNode):
@@ -49,7 +61,7 @@ class CalibratedAnalogMappingNode(BaseNode):
         elif len(input_nodes) == 1:
             return input_nodes[0]
         else:
-            assert False, "There can't be multiple nodes connected to the input"
+            raise AssertionError("There can't be multiple nodes connected to the input")
 
     def get_units(self) -> tuple[Optional[str], Optional[str]]:
         return self._widget._widget.get_units()
@@ -99,35 +111,69 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self._chart = QChart()
         self._chart.setAnimationOptions(QChart.AnimationOption.AllAnimations)
         self._series = QLineSeries()
-        self._series.pointAdded.connect(self.auto_scale)
-        self._series.pointsRemoved.connect(self.auto_scale)
-        self._series.pointReplaced.connect(self.auto_scale)
         self._series.setName("Values")
-        self._mapper = QVXYModelMapper(self)
-        self._mapper.setXColumn(0)
-        self._mapper.setYColumn(1)
-        self._mapper.setSeries(self._series)
-        self._mapper.setModel(self._sorted_model)
+
+        self._model.dataChanged.connect(self._update_series)
+        self._model.rowsInserted.connect(self._update_series)
+        self._model.rowsRemoved.connect(self._update_series)
+        self._model.modelReset.connect(self._update_series)
         self._chart.addSeries(self._series)
 
         self.x_axis = QValueAxis()
         self.x_axis.setTitleText("Input")
-        self._chart.addAxis(self.x_axis, Qt.Alignment.AlignBottom)
+        self._chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
         self._series.attachAxis(self.x_axis)
 
         self.y_axis = QValueAxis()
         self.y_axis.setTitleText("Output")
-        self._chart.addAxis(self.y_axis, Qt.Alignment.AlignRight)
+        self._chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignRight)
         self._series.attachAxis(self.y_axis)
 
         self._chart.layout().setContentsMargins(0, 0, 0, 0)
         self._chartView = QChartView(self._chart, self)
-        self._chartView.setRenderHint(QPainter.Antialiasing)
+        self._chartView.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.inputUnitLineEdit.textChanged.connect(self.set_input_units)
         self.outputUnitLineEdit.textChanged.connect(self.set_output_units)
 
         self.tabWidget.insertTab(0, self._chartView, "Curve")
         self.tabWidget.setCurrentIndex(0)
+
+    def _update_series(self):
+        self._series.clear()
+        number_points = self._sorted_model.rowCount()
+        if number_points == 0:
+            return
+        x_points = []
+        y_points = []
+        for row in range(number_points):
+            x_points.append(self._sorted_model.data(self._sorted_model.index(row, 0)))
+            y_points.append(self._sorted_model.data(self._sorted_model.index(row, 1)))
+        input_units = Unit(u) if (u := self.input_units()) else dimensionless
+        calibration_input_points = Quantity(x_points, input_units)
+        output_units = Unit(u) if (u := self.output_units()) else dimensionless
+        calibration_output_points = Quantity(y_points, output_units)
+
+        if len(x_points) >= 2:
+            input_points = np.concat(
+                [np.linspace(a, b, 50) for a, b in pairwise(x_points)]
+            )
+        else:
+            input_points = x_points
+        input_points = Quantity(input_points, input_units)
+        output_points = interpolate(  # type: ignore[reportCallIssue]
+            input_points,  # type: ignore[reportArgumentType]
+            calibration_input_points,
+            calibration_output_points,
+        )
+
+        new_points = [
+            QPointF(x, y)
+            for x, y in zip(
+                input_points.magnitude, output_points.magnitude, strict=True
+            )
+        ]
+        self._series.append(new_points)
+        self.auto_scale()
 
     def set_data_points(self, values: Sequence[tuple[float, float]]) -> None:
         self._model.set_values(values)
@@ -141,6 +187,7 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
             # where the input_units is an empty string.
             self.inputUnitLineEdit.clear()
             self.x_axis.setTitleText("Input")
+        self._update_series()
 
     def set_output_units(self, output_units: Optional[str]) -> None:
         if output_units:
@@ -151,6 +198,7 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
             # where the input_units is an empty string.
             self.outputUnitLineEdit.clear()
             self.y_axis.setTitleText("Output")
+        self._update_series()
 
     def set_units(
         self, input_units: Optional[str], output_units: Optional[str]
@@ -162,37 +210,48 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         return self._model.get_values()
 
     def get_units(self) -> tuple[Optional[str], Optional[str]]:
+        return self.input_units(), self.output_units()
+
+    def input_units(self) -> Optional[str]:
         input_units = self.inputUnitLineEdit.text()
         if input_units == "":
-            input_units = None
+            return None
+        return input_units
+
+    def output_units(self) -> Optional[str]:
         output_units = self.outputUnitLineEdit.text()
         if output_units == "":
-            output_units = None
-        return input_units, output_units
+            return None
+        return output_units
 
     def auto_scale(self) -> None:
         self._chart.axisX().setRange(*self._model.x_range())
         self._chart.axisY().setRange(*self._model.y_range())
 
     def on_add_button_clicked(self):
-        self._model.insertRow(self._model.rowCount(QModelIndex()))
+        self._model.insertRow(
+            self._sorted_model.mapToSource(self.tableView.currentIndex()).row() + 1
+        )
 
     def on_remove_button_clicked(self):
-        self._model.removeRow(self.tableView.currentIndex().row())
+        self._model.removeRow(
+            self._sorted_model.mapToSource(self.tableView.currentIndex()).row()
+        )
 
 
 class Model(QAbstractTableModel):
+    # ruff: noqa: N802
     def __init__(self, parent=None):
         super().__init__(parent)
         self._values = []
 
-    def rowCount(self, parent):
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX):
         return len(self._values)
 
-    def columnCount(self, parent):
+    def columnCount(self, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX):
         return 2
 
-    def data(self, index, role):
+    def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
                 return self._values[index.row()][0]
@@ -200,7 +259,7 @@ class Model(QAbstractTableModel):
                 return self._values[index.row()][1]
         return None
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role: int = Qt.ItemDataRole.EditRole):  # noqa: N802
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
                 self._values[index.row()] = (value, self._values[index.row()][1])
@@ -231,7 +290,7 @@ class Model(QAbstractTableModel):
             | Qt.ItemFlag.ItemIsSelectable
         )
 
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(self, section, orientation, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
@@ -242,13 +301,17 @@ class Model(QAbstractTableModel):
                 return str(section)
         return None
 
-    def insertRow(self, row, parent=QModelIndex()):
+    def insertRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
+    ):
         self.beginInsertRows(parent, row, row)
         self._values.insert(row, (0.0, 0.0))
         self.endInsertRows()
         return True
 
-    def removeRow(self, row, parent=QModelIndex()):
+    def removeRow(
+        self, row, parent: QModelIndex | QPersistentModelIndex = _QMODEL_INDEX
+    ):
         self.beginRemoveRows(parent, row, row)
         del self._values[row]
         self.endRemoveRows()
@@ -259,7 +322,7 @@ class ItemEditorFactory(QItemEditorFactory):
     def __init__(self):
         super().__init__()
 
-    def createEditor(self, userType, parent):
+    def createEditor(self, userType, parent):  # noqa: N802, N803
         if userType == 6:
             spin_box = QDoubleSpinBox(parent)
             spin_box.setDecimals(3)

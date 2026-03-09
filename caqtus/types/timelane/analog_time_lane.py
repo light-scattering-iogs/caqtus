@@ -1,10 +1,10 @@
 from typing import assert_never
 
 import attrs
-from caqtus.types.expression import Expression
 
+from caqtus.types.expression import Expression
 from caqtus.utils import serialization
-from .timelane import TimeLane
+from .timelane import TimeLane, Span
 
 
 class Ramp:
@@ -49,8 +49,10 @@ class AnalogTimeLane(TimeLane[Expression | Ramp]):
     should enforce them:
 
     #. A ramp should not be the first or last value of the lane.
-    #. There should not be two consecutive ramps in the lane. Use a single ramp block spanning multiple steps instead.
-    #. Expressions representing values with units should all have the same dimension for a given lane.
+    #. There should not be two consecutive ramps in the lane. Use a single ramp block
+        spanning multiple steps instead.
+    #. Expressions representing values with units should all have the same dimension
+        for a given lane.
 
     Examples:
 
@@ -60,7 +62,11 @@ class AnalogTimeLane(TimeLane[Expression | Ramp]):
         from caqtus.types.expression import Expression
 
         # Creates an analog time lane with known values
-        lane = AnalogTimeLane([Expression("0 MHz")] + [Ramp()] * 2 + [Expression("10 MHz")])
+        lane = AnalogTimeLane(
+            [Expression("0 MHz")]
+            + [Ramp()] * 2
+            + [Expression("10 MHz")]
+        )
 
         # Creates an analog time lane with a placeholder expression
         lane = AnalogTimeLane([Expression("2 * x"), Expression("y")])
@@ -79,7 +85,7 @@ def unstructure_hook(lane: AnalogTimeLane):
 
 def structure_hook(data, _) -> AnalogTimeLane:
     structured = serialization.structure(
-        data["spanned_values"], list[tuple[Expression | Ramp, int]]
+        data["spanned_values"], list[tuple[Expression | Ramp, Span]]
     )
     return AnalogTimeLane.from_spanned_values(structured)
 

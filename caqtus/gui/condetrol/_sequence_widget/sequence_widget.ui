@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SequenceWidget</class>
+ <widget class="QWidget" name="SequenceWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>742</width>
+    <height>412</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="tabPosition">
+       <enum>QTabWidget::TabPosition::North</enum>
+      </property>
+      <property name="currentIndex">
+       <number>2</number>
+      </property>
+      <widget class="QWidget" name="Constants">
+       <attribute name="title">
+        <string>Constants</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="iteration_tab">
+       <attribute name="title">
+        <string>Iteration</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="Timelanes">
+       <attribute name="title">
+        <string>Shot</string>
+       </attribute>
+      </widget>
+     </widget>
+     <widget class="QUndoView" name="undoView"/>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

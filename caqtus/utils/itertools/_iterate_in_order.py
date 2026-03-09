@@ -9,13 +9,15 @@ def iterate_in_order(
 ) -> Iterator[T]:
     """Iterate over an iterable in order of the index of its elements.
 
-    The indices returned by the index function must be unique and consecutive, starting from 0.
+    The indices returned by the index function must be unique and consecutive,
+        starting from 0.
 
-    This function can be useful when you need to process elements in a specific order even if they are generated in a
-    random order.
+    This function can be useful when you need to process elements in a specific
+        order, even if they are generated in a random order.
 
     Raises:
-        ValueError: if the index of an element is not unique or if there is a gap in the indices.
+        ValueError: if the index of an element is not unique or if there is a gap in
+            the indices.
     """
 
     result = {}

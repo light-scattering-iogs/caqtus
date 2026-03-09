@@ -1,5 +1,6 @@
-import attrs as attrs
+"""Contains utility functions that are not-specific to the package functionalities."""
 
+from . import result
 from ._add_exc_note import add_exc_note
 from ._log_duration import log_duration
 from ._log_exception import log_exception
@@ -10,6 +11,6 @@ __all__ = [
     "log_duration",
     "DurationTimer",
     "DurationTimerLog",
-    "attrs",
     "add_exc_note",
+    "result",
 ]

@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from typing import Optional
 
 import attrs
@@ -8,11 +7,7 @@ from caqtus.gui.condetrol.timelanes_editor.extension import (
     LaneModelFactory,
     LaneDelegateFactory,
 )
-from caqtus.session.shot import TimeLane
-
-# noinspection PyPep8Naming
-from caqtus.types.timelane import TimeLaneType as L
-from caqtus.utils.serialization import JSON
+from caqtus.types.timelane import TimeLane, LaneLoader, LaneDumper
 
 
 def no_lane_delegate_factory(lane: TimeLane, lane_name: str) -> None:
@@ -20,8 +15,8 @@ def no_lane_delegate_factory(lane: TimeLane, lane_name: str) -> None:
 
 
 @attrs.frozen
-class TimeLaneExtension:
-    """Contains the information necessary to extend Condetrol with a new lane.
+class TimeLaneExtension[L: TimeLane]:
+    """Define how to implement a time lane plugin.
 
     Attributes:
         label: An identifier for this type of lane to be displayed to the user.
@@ -48,8 +43,8 @@ class TimeLaneExtension:
 
     label: str = attrs.field(converter=str)
     lane_type: type[L] = attrs.field()
-    dumper: Callable[[L], JSON] = attrs.field()
-    loader: Callable[[JSON], L] = attrs.field()
+    dumper: LaneDumper[L] = attrs.field()
+    loader: LaneLoader[L] = attrs.field()
     lane_factory: LaneFactory[L] = attrs.field()
     lane_model_factory: LaneModelFactory[L] = attrs.field()
     lane_delegate_factory: LaneDelegateFactory[L] = attrs.field(
@@ -57,7 +52,7 @@ class TimeLaneExtension:
     )
     type_tag: Optional[str] = attrs.field(default=None)
 
-    @lane_type.validator
+    @lane_type.validator  # type: ignore[reportAttributeAccessIssue]
     def _validate_lane_type(self, attribute, value):
         if not issubclass(value, TimeLane):
             raise ValueError(f"{value} is not a subclass of TimeLane")
