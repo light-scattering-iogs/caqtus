@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.gui.condetrol.icons import get_icon
+from caqtus.gui.condetrol._icons import get_icon
 from caqtus.gui.qtutil import block_signals
 from caqtus.session.shot import TimeLanes, TimeLane
 from ._delegate import TimeLaneDelegate
