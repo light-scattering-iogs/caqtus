@@ -75,6 +75,9 @@ class TimeLanesEditor(QWidget):
     def undo_stack(self):
         return self.view._model.undo_stack
 
+    def get_time_lanes(self):
+        return self.view.get_time_lanes()
+
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
 
